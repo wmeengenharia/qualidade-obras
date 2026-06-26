@@ -1513,8 +1513,19 @@ function sincronizarDB(manual){
 function iniciarAutoSync(){
   if(_syncTimer) clearInterval(_syncTimer);
   _syncTimer = setInterval(function(){
-    if(!document.hidden && !_localDirty) sincronizarDB(false);
+    if(document.hidden) return;
+    if(_localDirty){
+      // há edições/submissões feitas offline ainda não enviadas: tenta reenviar
+      _tentarReenviarTexto();
+    } else {
+      sincronizarDB(false);
+    }
   }, 30000); // a cada 30 segundos
+}
+
+// Reenvia ao JSONBin o que foi preenchido/submetido offline, assim que houver conexão
+function _tentarReenviarTexto(){
+  if(_localDirty && navigator.onLine && _jbConfigurado()) salvarDB();
 }
 
 function salvarDB(){
@@ -3550,7 +3561,11 @@ iniciarAutoSync();
 popularSelect();
 popularSelectMaterial();
 // Quando a internet voltar, sobe fotos que ficaram presas no aparelho
-window.addEventListener("online", function(){ reenviarFotosPendentes(); });
+window.addEventListener("online", function(){
+  mostrarStatus("🟢 Conexão voltou — enviando o que ficou pendente...");
+  _tentarReenviarTexto();      // sobe fichas/submissões feitas offline
+  reenviarFotosPendentes();    // sobe fotos tiradas offline
+});
 
 // Registrar Service Worker (PWA)
 if ('serviceWorker' in navigator) {
