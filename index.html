@@ -476,6 +476,23 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
   /* Modais e opcoes de nova ficha */
   .nova-ficha-opt{padding:12px;}
   .nf-grid{grid-template-columns:1fr;}
+
+  /* ===== Cabecalho compacto e mais agradavel no celular ===== */
+  header{padding:9px 12px;gap:7px;}
+  header h1{font-size:13px;line-height:1.2;}
+  header > div:first-child .sub{display:none;}      /* esconde "WME Engenharia · Qualidade" */
+  #dataHoje{display:none;}                            /* data solta ocupa espaco a toa */
+  .obra-atual-bar{gap:8px;}
+  .voltar-obras-btn{padding:8px 12px;}
+  #usuarioBar{gap:6px;align-items:center;}
+  #usuarioBar .u-nome{font-size:12px;font-weight:bold;}
+  #usuarioBar .perfil-tag{font-size:9px;padding:2px 7px;}
+  #usuarioBar button{font-size:11px;padding:6px 9px;border-radius:6px;}
+  #btnPendencias{order:-1;}                           /* sino primeiro, mais acessivel */
+  #statusConexao{font-size:10.5px;}
+  #btnSincronizar{font-size:10.5px;padding:3px 8px;}
+  /* Barra branca "Fichas Salvas": discreta (so aparece dentro de uma ficha) */
+  .modo-toggle .modo-btn{flex:0 1 auto;font-size:12px;padding:8px 14px;}
 }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -1288,6 +1305,7 @@ function logout(){
 }
 
 function _esconderToolbar(){
+  var _tb=document.querySelector(".toolbar"); if(_tb) _tb.style.display="none";
   document.querySelector(".modo-toggle").style.visibility="hidden";
   document.getElementById("obraAtualBar").style.display="none";
   ["imprimirFichaBtn","limparFichaBtn","btnAddLocal","btnRmLocal","btnImportarNF",
@@ -1724,6 +1742,8 @@ function trocarModo(modo){
   var _bM=document.getElementById("btnModoMaterial"); if(_bM) _bM.classList.toggle("ativo", modo==="material");
   var _bSa=document.getElementById("btnModoSalvas"); if(_bSa) _bSa.classList.toggle("ativo", modo==="salvas");
   const ehSalvas = modo==="salvas";
+  // Na lista (salvas) a barra branca de ferramentas é redundante → esconde; aparece só dentro de uma ficha
+  var _tb=document.querySelector(".toolbar"); if(_tb) _tb.style.display = ehSalvas ? "none" : "";
   atualizarSeletorFicha(); // seletor "Serviço:/Material:" só aparece ao escolher (some quando a ficha abre)
   document.getElementById("btnAddLocal").style.display = modo==="servico" ? "" : "none";
   document.getElementById("btnRmLocal").style.display = modo==="servico" ? "" : "none";
@@ -1765,6 +1785,7 @@ function renderAtual(){
 function renderSeletorObra(){
   const main = document.getElementById("main");
   document.getElementById("obraAtualBar").style.display = "none";
+  var _tb=document.querySelector(".toolbar"); if(_tb) _tb.style.display = "none"; // sem barra de ferramentas na tela de obras
   document.querySelector(".modo-toggle").style.visibility = "hidden";
   ["imprimirFichaBtn","limparFichaBtn","btnAddLocal","btnRmLocal","btnImportarNF",
    "lblServico","servicoSelect","lblMaterial","materialSelect"].forEach(function(id){
