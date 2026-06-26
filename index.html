@@ -324,6 +324,8 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .aprov-alerta a{color:inherit;font-weight:bold;}
 .btn-nova-ficha{font-size:13px;font-weight:bold;padding:9px 16px;background:var(--verde);color:#fff;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.15);}
 .btn-nova-ficha:hover{background:var(--verde-escuro);}
+.btn-teste{background:#7e57c2;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:bold;padding:7px 12px;margin-bottom:10px;cursor:pointer;}
+.btn-teste:hover{background:#673ab7;}
 .nova-ficha-opt{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:14px;text-align:left;margin-bottom:10px;transition:all .12s;}
 .nova-ficha-opt:hover{border-color:var(--verde);background:#f1f8e9;}
 .nova-ficha-opt .nf-ico{font-size:24px;}
@@ -427,6 +429,38 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
   .fichas-grid{grid-template-columns:1fr;}
   .login-titulo img{max-height:60px;}
   .toolbar .obra-atual-bar{width:100%;}
+
+  /* ===== Melhorias de UI/UX no celular ===== */
+  html,body{overflow-x:hidden;max-width:100%;}
+  /* Inputs maiores (e evita o zoom automatico do iOS ao focar) */
+  input[type=text],input[type=date],input[type=email],input[type=password],select,textarea{font-size:16px !important;}
+  /* Cabecalho empilha de forma limpa */
+  header{flex-direction:column;align-items:stretch;}
+  header h1{font-size:13px;line-height:1.25;}
+  header > div:last-child{align-items:stretch !important;}
+  .obra-atual-bar{width:100%;}
+  .obra-dropdown{flex:1;}
+  .obra-chip{width:100%;justify-content:flex-start;}
+  .obra-chip .nome{max-width:60vw;}
+  .obra-dropdown-menu{left:0;right:0;width:100%;min-width:unset;}
+  .user-badge{width:100%;justify-content:flex-start;gap:6px;}
+  .user-badge .u-nome{flex-basis:100%;}
+  .user-badge button{font-size:11px;padding:7px 10px;}
+  /* Tabelas largas rolam dentro de si (nao quebram a pagina) */
+  .ficha-doc{font-size:12px;}
+  .scroll-wrapper{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .tbl-cabecalho,.tbl-nc,.tbl-receb,.tbl-lotes{display:block;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  /* Botoes de acao ocupam a largura (mais faceis de tocar) */
+  .btn-nova-ficha,.btn-teste{width:100%;text-align:center;padding:11px 12px;font-size:13px;}
+  /* Listas: 1 coluna */
+  .salvas-grid,.fichas-grid{grid-template-columns:1fr !important;display:grid;gap:10px;}
+  .salvas-topo{flex-direction:column;align-items:stretch;gap:8px;}
+  .ficha-card,.obra-card{width:100% !important;}
+  .filtros-bar{gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;padding-bottom:4px;}
+  .filtro-chip{font-size:11px;padding:7px 10px;white-space:nowrap;flex:0 0 auto;}
+  /* Modais e opcoes de nova ficha */
+  .nova-ficha-opt{padding:12px;}
+  .nf-grid{grid-template-columns:1fr;}
 }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -2524,6 +2558,7 @@ function renderFicha(){
   const _ehVisual = sessao && sessao.perfil==="visualizador";
   main.innerHTML = `
   ${_ehVisual?'<div style="background:#e3f2fd;border:1px solid #42a5f5;border-radius:4px;padding:7px 14px;margin-bottom:10px;font-size:12px;color:#1565c0;">👁️ <b>Modo visualização</b> — você tem acesso somente leitura</div>':''}
+  ${ehAdmin() && !_bloqueada ? '<button type="button" class="btn-teste" onclick="preencherTeste()">🧪 Preencher dados de teste</button>' : ''}
   <div class="ficha-doc${_bloqueada?' ficha-bloqueada':''}">
     ${_bloqueada?'<div class="bloquear-overlay"></div>':''}
 
@@ -2685,6 +2720,7 @@ function renderFichaMaterial(){
   const _ehVisualM = sessao && sessao.perfil==="visualizador";
   main.innerHTML = `
   ${_ehVisualM?'<div style="background:#e3f2fd;border:1px solid #42a5f5;border-radius:4px;padding:7px 14px;margin-bottom:10px;font-size:12px;color:#1565c0;">👁️ <b>Modo visualização</b> — você tem acesso somente leitura</div>':''}
+  ${ehAdmin() && !_bloqueadaM ? '<button type="button" class="btn-teste" onclick="preencherTeste()">🧪 Preencher dados de teste</button>' : ''}
   <div class="ficha-doc${_bloqueadaM?' ficha-bloqueada':''}">
     ${_bloqueadaM?'<div class="bloquear-overlay"></div>':''}
 
@@ -2984,6 +3020,38 @@ function validarItensPreenchidos(pularFotos){
     if(vazios>0) return "Preencha todos os "+vazios+" resultado(s) de verificação antes de aprovar.";
   }
   return null; // OK
+}
+
+// ===== PREENCHIMENTO DE TESTE (admin) — preenche a ficha aberta com dados validos
+// para testar o fluxo rapido (status "NA" nao exige foto -> ja pode submeter).
+function preencherTeste(){
+  if(!ehAdmin()){ alert("Disponivel apenas para administrador (para testes)."); return; }
+  var est = estadoAtual(); if(!est){ alert("Abra uma ficha primeiro."); return; }
+  var hoje = new Date().toLocaleDateString("pt-BR");
+  est.obra = obraAtual || est.obra || "Teste";
+  if(modoAtual==="servico"){
+    if(!est.respInsp) est.respInsp = "Inspetor Teste";
+    if(!est.data) est.data = hoje;
+    if(!est.inspecionadoPor) est.inspecionadoPor = "Inspetor Teste";
+    if(!est.dataFechamento) est.dataFechamento = hoje;
+    (est.status||[]).forEach(function(row,ri){ (row||[]).forEach(function(_,li){ est.status[ri][li] = "NA"; }); });
+  } else {
+    if(!est.respReceb) est.respReceb = "Recebedor Teste";
+    if(!est.data) est.data = hoje;
+    if(!est.recebimentos || !est.recebimentos.length) est.recebimentos = [{}];
+    var r = est.recebimentos[0];
+    if(!r.fornecedor) r.fornecedor = "Fornecedor Teste";
+    if(!r.dataEntrega) r.dataEntrega = hoje;
+    if(!r.nf) r.nf = "000";
+    if(!r.descricao) r.descricao = "Material de teste";
+    if(!r.qtde) r.qtde = "1";
+    est.inspecionadoPor = est.inspecionadoPor || "Recebedor Teste";
+    est.dataFechamento = est.dataFechamento || hoje;
+    est.resultados = (est.resultados||[]).map(function(){ return "C"; });
+    if(est.resultadosCustom) est.resultadosCustom = est.resultadosCustom.map(function(){ return "C"; });
+  }
+  salvarDB(); renderAtual();
+  mostrarStatus("🧪 Ficha preenchida com dados de teste — já pode submeter");
 }
 
 function htmlAprovacao(est){
