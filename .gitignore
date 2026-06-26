@@ -1,0 +1,10 @@
+# Ignora TUDO por padrão — só vão para o GitHub os arquivos do app abaixo.
+# (protege Publicar.ps1 [token Netlify], memory.md, backups, gh-token.txt, a fonte .html.html)
+*
+!.gitignore
+!.nojekyll
+!index.html
+!sw.js
+!manifest.json
+!icon.svg
+!README.md

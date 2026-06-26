@@ -1,0 +1,3539 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Fichas de Verificação - WME Engenharia</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#3f7d3a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FV WME">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+:root{
+  --verde:#5fa744;
+  --verde-escuro:#3f7d3a;
+  --cinza:#eef0ee;
+  --borda:#000;
+  --a:#c8e6c9; --a-t:#1b5e20;
+  --r:#ffcdd2; --r-t:#b71c1c;
+  --ar:#ffe0b2; --ar-t:#e65100;
+  --na:#e0e0e0; --na-t:#424242;
+}
+*{box-sizing:border-box;}
+body{font-family:Calibri,Arial,Helvetica,sans-serif;margin:0;background:var(--cinza);color:#000;}
+header{background:var(--verde-escuro);color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+header h1{font-size:18px;margin:0;}
+header .sub{font-size:12px;opacity:.9;}
+.toolbar{background:#fff;border-bottom:1px solid #ccc;padding:12px 24px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+.toolbar label{font-size:13px;font-weight:bold;}
+select, input[type=text], input[type=date]{
+  font-family:inherit;font-size:13px;padding:6px 8px;border:1px solid #ccc;border-radius:4px;background:#fff;color:#000;
+}
+select#servicoSelect, select#materialSelect{min-width:340px;}
+.modo-toggle{display:flex;gap:6px;}
+.modo-btn{background:#fff;color:var(--verde-escuro);}
+.modo-btn.ativo{background:var(--verde-escuro);color:#fff;}
+button{
+  font-family:inherit;font-size:13px;padding:7px 14px;border-radius:4px;border:1px solid var(--verde-escuro);
+  background:var(--verde-escuro);color:#fff;cursor:pointer;
+}
+button.secundario{background:#fff;color:var(--verde-escuro);}
+button.perigo{background:#fff;color:#b71c1c;border-color:#b71c1c;}
+button:hover{opacity:.88;}
+main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
+.empty{text-align:center;color:#888;padding:60px 20px;background:#fff;border:1px solid #ccc;border-radius:6px;}
+
+/* ===== Documento (réplica do layout original) ===== */
+.ficha-doc{background:#fff;border:1px solid #999;padding:14px;margin-bottom:24px;font-size:12px;}
+.ficha-doc table{width:100%;border-collapse:collapse;}
+.ficha-doc td, .ficha-doc th{border:1px solid var(--borda);padding:4px 8px;vertical-align:middle;}
+
+/* cabeçalho estilo formulário original */
+.tbl-cabecalho{margin-bottom:10px;}
+.tbl-cabecalho col.c1{width:150px;}
+.tbl-cabecalho col.c2{width:130px;}
+.tbl-cabecalho col.c3{width:auto;}
+.tbl-cabecalho col.c4{width:130px;}
+.tbl-cabecalho col.c5{width:190px;}
+.logo-cell{text-align:center;background:#fff;}
+.logo-badge{display:flex;align-items:center;justify-content:center;}
+.logo-img{display:block;margin:0 auto;max-width:140px;max-height:70px;width:auto;height:auto;object-fit:contain;}
+.logo-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;width:120px;height:60px;border:2px dashed #ccc;border-radius:6px;color:#aaa;font-size:11px;cursor:pointer;gap:2px;}
+.logo-placeholder:hover{border-color:var(--verde-escuro);color:var(--verde-escuro);}
+@media print{.logo-placeholder{display:none !important;}}
+.lbl-mini{font-weight:bold;font-size:11px;text-align:center;background:#fff;white-space:nowrap;}
+.titulo-cell{font-weight:bold;font-size:17px;text-align:center;letter-spacing:.5px;}
+.servico-nome{font-weight:bold;font-size:13px;text-align:center;text-transform:uppercase;}
+.ref-cell{font-weight:bold;font-size:11px;text-align:left;}
+.objetivo-texto{font-size:11px;text-align:center;line-height:1.35;}
+.val-mini{padding:2px 4px;}
+.val-mini input{width:100%;border:none;background:transparent;font-size:12px;font-family:inherit;padding:2px;}
+.val-mini input:focus{background:#fff8d6;outline:1px solid var(--verde-escuro);}
+
+/* rótulos de grupo (Verificação / Local da Verificação) */
+.grupo-lbl{font-style:italic;font-weight:bold;font-size:11.5px;text-decoration:underline;border:none !important;padding:2px 4px 4px;background:#fff;}
+
+/* tabela de verificação */
+.tbl-verificacao th{background:var(--cinza);font-size:11px;font-style:italic;text-align:left;}
+.tbl-verificacao td{font-size:11.5px;}
+.col-n{width:30px;text-align:center;}
+.col-local{width:75px;text-align:center;}
+.local-head{display:flex;flex-direction:column;gap:2px;align-items:center;}
+.local-head input{width:80px;text-align:center;font-size:10.5px;font-weight:bold;border:none;background:transparent;}
+.local-head input:focus{background:#fff8d6;outline:1px solid var(--verde-escuro);}
+.tbl-verificacao td input[type=text]{width:100%;border:none;background:transparent;font-size:11.5px;padding:2px;}
+.tbl-verificacao td input[type=text]:focus{background:#fff8d6;outline:1px solid var(--verde-escuro);}
+.status-btn{
+  width:100%;min-height:26px;border:1px solid #999;border-radius:0;cursor:pointer;font-weight:bold;font-size:11.5px;
+  background:#fff;color:#aaa;
+}
+.status-btn.A{background:var(--a);color:var(--a-t);border-color:var(--a-t);}
+.status-btn.R{background:var(--r);color:var(--r-t);border-color:var(--r-t);}
+.status-btn.AR{background:var(--ar);color:var(--ar-t);border-color:var(--ar-t);}
+.status-btn.NA{background:var(--na);color:var(--na-t);border-color:#999;}
+
+.locais-actions{margin:6px 0 10px;font-size:11.5px;color:#666;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+
+/* não conformidade */
+.nc-titulo{font-style:italic;font-weight:bold;text-decoration:underline;font-size:12px;margin:14px 0 6px;}
+.tbl-nc{table-layout:fixed;}
+.tbl-nc th{font-style:italic;font-size:11px;text-align:left;background:#fff;}
+.tbl-nc td{padding:3px 6px;}
+.tbl-nc input{width:100%;height:22px;box-sizing:border-box;border:none;background:transparent;font-size:11.5px;padding:2px 4px;font-family:inherit;}
+.tbl-nc input:focus{background:#fff8d6;outline:1px solid var(--verde-escuro);}
+.tbl-nc input[type=date]{appearance:auto;-webkit-appearance:auto;}
+.nc-row-rm{background:#fff;color:#b71c1c;border-color:#b71c1c;padding:3px 8px;font-size:10.5px;}
+.nc-vazio{text-align:center;color:#999;font-style:italic;}
+.nc-actions{margin:8px 0 4px;}
+
+/* rodapé / aprovação */
+.rodape{margin-top:14px;}
+.rodape-duplo{display:flex;gap:16px;}
+.rodape-metade{flex:1;min-width:0;}
+.rodape-bloco{display:flex;justify-content:space-between;font-size:11px;font-style:italic;margin-bottom:2px;}
+.rodape-linha{display:flex;border:1px solid var(--borda);margin-bottom:10px;}
+.rodape-linha .nome{flex:1;border-right:1px solid var(--borda);padding:6px 8px;}
+.rodape-linha .data{width:140px;padding:6px 8px;}
+.rodape-linha input{width:100%;border:none;background:transparent;font-size:12px;font-family:inherit;}
+.rodape-linha input:focus{background:#fff8d6;outline:1px solid var(--verde-escuro);}
+.consideracoes{font-size:10.5px;font-weight:bold;margin:6px 0;}
+.norma-tec{font-size:11px;font-weight:bold;margin:4px 0 10px;}
+.legenda-final{display:flex;justify-content:space-between;align-items:flex-end;font-size:10.5px;flex-wrap:wrap;gap:6px;border-top:1px solid #ccc;padding-top:6px;}
+.legenda-final .itens{display:flex;gap:14px;flex-wrap:wrap;}
+.legenda-final .itens b{font-style:normal;}
+.codigo-doc{font-size:10.5px;color:#333;}
+
+/* ===== Fichas Salvas ===== */
+.salvas-topo{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
+.salvas-topo h2{font-size:16px;margin:0;color:var(--verde-escuro);}
+.salvas-filtro{display:flex;gap:8px;flex-wrap:wrap;}
+.salvas-filtro button{font-size:12px;padding:5px 12px;}
+.salvas-grid{display:flex;flex-wrap:wrap;gap:16px;}
+.ficha-card{background:#fff;border:1px solid #ccc;border-radius:6px;padding:14px 16px;width:280px;cursor:pointer;transition:box-shadow .15s,border-color .15s;}
+.ficha-card:hover{box-shadow:0 3px 10px rgba(0,0,0,.15);border-color:var(--verde-escuro);}
+.ficha-card .card-badge{font-size:10.5px;font-weight:bold;background:var(--verde-escuro);color:#fff;padding:2px 8px;border-radius:3px;display:inline-block;margin-bottom:8px;}
+.ficha-card .card-badge.fvm{background:#1565c0;}
+.ficha-card .card-titulo{font-weight:bold;font-size:13px;margin-bottom:8px;line-height:1.3;}
+.ficha-card .card-info{font-size:11.5px;color:#555;margin-bottom:3px;}
+.ficha-card .card-info span{font-weight:bold;color:#333;}
+.ficha-card .card-progress-txt{font-size:11px;color:#555;margin-top:8px;}
+.progress-bar{height:5px;background:#eee;border-radius:3px;margin-top:4px;}
+.progress-fill{height:5px;background:var(--verde);border-radius:3px;transition:width .3s;}
+.progress-fill.parcial{background:#fb8c00;}
+.progress-fill.vazio{background:#e0e0e0;}
+.salvas-vazio{text-align:center;color:#888;padding:60px 20px;background:#fff;border:1px solid #ccc;border-radius:6px;width:100%;}
+
+/* ===== Ficha de Material (FVM) ===== */
+.tbl-mat th{background:var(--cinza);font-size:11px;font-style:italic;text-align:left;}
+.tbl-mat td{font-size:11.5px;}
+.col-resultado{width:190px;text-align:center;}
+.resultado-btn{width:100%;min-height:26px;border:1px solid #999;cursor:pointer;font-weight:bold;font-size:11px;background:#fff;color:#aaa;}
+.resultado-btn.C{background:var(--a);color:var(--a-t);border-color:var(--a-t);}
+.resultado-btn.NC{background:var(--r);color:var(--r-t);border-color:var(--r-t);}
+
+.tbl-receb{margin:10px 0;}
+.tbl-receb td{padding:3px 6px;}
+.tbl-receb input{width:100%;border:none;background:transparent;font-size:12px;font-family:inherit;padding:2px;}
+.tbl-receb input:focus{background:#fff8d6;outline:1px solid var(--verde-escuro);}
+.lbl-receb{font-weight:bold;font-size:10.5px;text-align:center;background:var(--cinza);white-space:nowrap;}
+
+.tbl-lotes{margin:10px 0;}
+.tbl-lotes td{font-size:11px;vertical-align:top;padding:6px 8px;}
+.tbl-lotes .lbl-lotes{font-weight:bold;font-style:italic;background:var(--cinza);text-align:center;}
+
+.cubic-box{font-size:11px;border:1px solid var(--borda);padding:8px;margin:10px 0;}
+.cubic-box .grupo-lbl2{font-weight:bold;font-style:italic;text-decoration:underline;display:block;margin-bottom:6px;}
+.cubic-box label{display:inline-block;margin-right:10px;margin-bottom:4px;}
+.cubic-box input{width:60px;border:1px solid #ccc;border-radius:3px;padding:2px 4px;font-size:11px;font-family:inherit;}
+.cubic-result{font-weight:bold;margin-top:4px;}
+
+/* ===== Ficha Bloqueada ===== */
+.ficha-bloqueada{position:relative;}
+.ficha-bloqueada .bloquear-overlay{
+  position:absolute;top:0;left:0;right:0;bottom:0;z-index:10;cursor:not-allowed;
+}
+.aprov-section{position:relative;z-index:11;}
+.ficha-bloqueada .status-btn,.ficha-bloqueada .resultado-btn{cursor:not-allowed;opacity:.85;}
+.banner-bloqueado{
+  display:flex;align-items:center;gap:8px;
+  background:#e8f5e9;border:1px solid #4caf50;border-radius:4px;
+  padding:8px 14px;margin-bottom:10px;font-size:12.5px;font-weight:bold;color:#2e7d32;
+}
+.banner-reprovado{background:#ffebee;border-color:#ef5350;color:#c62828;}
+
+/* ===== Aprovação ===== */
+.aprov-section{margin-top:14px;border:1px solid var(--borda);border-radius:4px;overflow:hidden;}
+.aprov-header{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:var(--cinza);flex-wrap:wrap;gap:8px;}
+.aprov-header strong{font-size:12px;}
+.aprov-badge{font-size:11px;font-weight:bold;padding:3px 10px;border-radius:20px;white-space:nowrap;}
+.aprov-badge.pendente{background:#fff3e0;color:#e65100;border:1px solid #fb8c00;}
+.aprov-badge.aprovado{background:#e8f5e9;color:#2e7d32;border:1px solid #4caf50;}
+.aprov-badge.reprovado{background:#ffebee;color:#c62828;border:1px solid #ef5350;}
+.aprov-badge.submetido{background:#e3f2fd;color:#1565c0;border:1px solid #1976d2;}
+.aprov-badge.rascunho{background:#ede7f6;color:#5e35b1;border:1px solid #9575cd;}
+.rascunho-toggle{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#4527a0;background:#f3effa;border:1px solid #d1c4e9;border-radius:6px;padding:8px 11px;margin-bottom:8px;cursor:pointer;}
+.rascunho-toggle input{width:16px;height:16px;cursor:pointer;}
+.aprov-aviso.rascunho{background:#ede7f6;border-color:#9575cd;color:#4527a0;}
+.aprov-body{padding:10px 12px;font-size:12px;}
+.aprov-acoes{display:flex;gap:8px;margin-top:8px;}
+.btn-aprovar{background:#2e7d32;border-color:#2e7d32;color:#fff;}
+.btn-reprovar{background:#c62828;border-color:#c62828;color:#fff;}
+.btn-submeter{background:#1565c0;border-color:#1565c0;color:#fff;}
+.btn-aprovar:disabled,.btn-submeter:disabled{background:#bdbdbd;border-color:#bdbdbd;color:#f0f0f0;cursor:not-allowed;opacity:.8;}
+.aprov-aviso{background:#fff8e1;border:1px solid #ffb300;border-radius:5px;padding:8px 11px;font-size:12px;color:#7a5c00;margin-bottom:8px;}
+.aprov-registro{font-size:11.5px;color:#333;line-height:1.8;}
+
+/* ===== Fotos ===== */
+.fotos-section{margin-top:14px;}
+.fotos-titulo{font-style:italic;font-weight:bold;text-decoration:underline;font-size:12px;margin-bottom:8px;}
+.fotos-grid{display:flex;flex-wrap:wrap;gap:10px;}
+.foto-item{position:relative;width:160px;}
+.foto-item img{width:160px;height:120px;object-fit:cover;border:1px solid #ccc;border-radius:4px;display:block;}
+.foto-item input{width:100%;border:none;border-top:1px solid #eee;font-size:11px;padding:3px 4px;font-family:inherit;background:#fafafa;}
+.foto-item input:focus{background:#fff8d6;outline:none;}
+.foto-rm{position:absolute;top:3px;right:3px;background:rgba(183,28,28,.85);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;}
+.fotos-add{margin-top:8px;}
+
+/* ===== Fotos por item de inspeção ===== */
+.cel-foto{margin-top:3px;text-align:center;}
+.foto-cel-btn{background:none;border:1px dashed #ccc;border-radius:4px;cursor:pointer;font-size:14px;padding:2px 4px;color:#999;display:block;width:100%;margin:0 auto;line-height:1.4;}
+.foto-cel-btn.foto-req{border-color:#e53935;color:#e53935;background:#fff8f8;}
+.foto-cel-thumb{width:100%;max-height:54px;object-fit:cover;border:1px solid #bbb;border-radius:3px;display:block;cursor:pointer;}
+.foto-cel-rm{background:rgba(183,28,28,.82);color:#fff;border:none;border-radius:50%;width:15px;height:15px;font-size:9px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;line-height:1;vertical-align:middle;margin-left:2px;}
+.nc-foto-cel{text-align:center;vertical-align:middle;width:70px;}
+/* Seção de fotos por local (impressão e tela) */
+.fotos-locais-section{margin-top:14px;}
+.fotos-local-group{margin-bottom:10px;}
+.fotos-local-nome{font-weight:bold;font-size:11px;text-transform:uppercase;border-bottom:1px solid #ccc;padding-bottom:2px;margin-bottom:6px;}
+.fotos-grid-local{display:flex;flex-wrap:wrap;gap:8px;}
+.foto-local-item{width:140px;}
+.foto-local-item .foto-label{font-size:10px;color:#555;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.foto-local-item img{width:140px;height:95px;object-fit:cover;border:1px solid #ccc;border-radius:3px;display:block;}
+
+/* ===== Modal ===== */
+#modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);z-index:9000;display:none;align-items:center;justify-content:center;}
+#modal-overlay.ativo{display:flex;}
+#modal-box{background:#fff;border-radius:8px;padding:26px 28px;min-width:340px;max-width:460px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.3);}
+#modal-box h3{margin:0 0 14px;font-size:15px;color:var(--verde-escuro);}
+#modal-box label{display:block;font-size:12.5px;font-weight:bold;margin-bottom:4px;}
+#modal-box input[type=text],#modal-box input[type=password]{width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;font-family:inherit;margin-bottom:12px;box-sizing:border-box;}
+#modal-box input:focus{outline:1px solid var(--verde-escuro);border-color:var(--verde-escuro);}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:6px;}
+.modal-msg{font-size:12px;color:#c62828;margin-bottom:8px;min-height:16px;}
+
+@media print{
+  .aprov-acoes,.fotos-add,.foto-rm,.foto-cel-btn,.foto-cel-rm{display:none !important;}
+  .foto-item img,.foto-local-item{page-break-inside:avoid;}
+  .fotos-locais-section{margin-top:10px;}
+}
+
+@media print{
+  header, .toolbar, .locais-actions, .nc-actions, button{display:none !important;}
+  .status-btn, .resultado-btn{display:block !important;}
+  input.print-hidden{display:none !important;}
+  .print-val{
+    display:block;white-space:pre-wrap;word-break:break-word;
+    font-family:inherit;font-size:inherit;padding:2px 4px;
+    width:100%;box-sizing:border-box;
+    height:22px;overflow:hidden;
+  }
+  /* campos de NC: altura livre para caber o texto inteiro */
+  .tbl-nc .print-val{height:auto;overflow:visible;min-height:22px;}
+  /* campos do rodapé são um pouco maiores */
+  .rodape-linha .print-val{height:28px;}
+  /* campos do cabeçalho: altura livre para o texto não ser cortado */
+  .val-mini .print-val{height:auto;min-height:20px;overflow:visible;}
+  /* Remover scroll horizontal em print */
+  .scroll-wrapper{overflow:visible !important;}
+  /* Fixar larguras de colunas para manter alinhamento */
+  .tbl-cabecalho, .tbl-verificacao, .tbl-nc, .tbl-mat, .tbl-receb, .tbl-lotes{
+    table-layout:fixed !important;width:100% !important;
+  }
+  body{background:#fff;}
+  main{margin:0;padding:0;max-width:100%;}
+  .ficha-doc{border:none;overflow:visible;}
+  @page{size:A4 landscape;margin:8mm;}
+}
+
+/* ===== Login / Autenticação ===== */
+.login-screen{max-width:400px;margin:60px auto;background:#fff;border:1px solid #ccc;border-radius:8px;padding:36px 32px;box-shadow:0 4px 20px rgba(0,0,0,.12);}
+.login-screen h2{margin:0 0 6px;font-size:18px;color:var(--verde-escuro);}
+.login-screen label{display:block;font-size:12.5px;font-weight:bold;margin-bottom:4px;margin-top:12px;}
+.login-screen input[type=email],.login-screen input[type=password],.login-screen input[type=text]{width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;font-family:inherit;box-sizing:border-box;}
+.login-screen input:focus{outline:1px solid var(--verde-escuro);border-color:var(--verde-escuro);}
+.login-btn{width:100%;margin-top:18px;padding:10px;font-size:14px;}
+.login-erro{color:#c62828;font-size:12px;margin-top:10px;min-height:16px;}
+.login-titulo{display:flex;align-items:center;gap:14px;margin-bottom:20px;}
+/* Barra de usuário no header */
+.user-badge{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.user-badge .u-nome{font-size:12px;opacity:.9;}
+.perfil-tag{font-size:10px;padding:2px 8px;border-radius:12px;font-weight:bold;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);}
+.user-badge button{font-size:11px;padding:3px 10px;background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4);color:#fff;}
+.user-badge button:hover{background:rgba(255,255,255,.28);}
+/* Sino / Pendências de aprovação */
+#btnPendencias{position:relative;}
+#btnPendencias.tem-pend{background:#ffb300;color:#3b2f00;border-color:#e0a000;font-weight:bold;animation:pendPulse 1.8s infinite;}
+#btnPendencias.tem-pend:hover{background:#ffc233;}
+.pend-badge{position:absolute;top:-7px;right:-7px;background:#c62828;color:#fff;border-radius:10px;font-size:10px;font-weight:bold;min-width:17px;height:17px;line-height:17px;text-align:center;padding:0 4px;box-shadow:0 0 0 2px var(--verde-escuro);}
+@keyframes pendPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,179,0,.55);}50%{box-shadow:0 0 0 6px rgba(255,179,0,0);}}
+/* Lista de pendências no modal */
+.pend-obra{font-size:12px;font-weight:bold;color:var(--verde-escuro);margin:12px 0 4px;border-bottom:1px solid #e0e0e0;padding-bottom:3px;}
+.pend-obra:first-child{margin-top:0;}
+.pend-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid #e0e0e0;border-radius:5px;margin-bottom:6px;cursor:pointer;background:#fff;transition:background .12s;}
+.pend-item:hover{background:#fff8e1;border-color:#ffb300;}
+.pend-item .pend-tag{font-size:10px;font-weight:bold;padding:2px 7px;border-radius:4px;background:#1565c0;color:#fff;white-space:nowrap;}
+.pend-item .pend-tag.fvm{background:#6a1b9a;}
+.pend-item .pend-corpo{flex:1;min-width:0;}
+.pend-item .pend-tit{font-size:12.5px;font-weight:bold;color:#222;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pend-item .pend-sub{font-size:11px;color:#666;}
+.pend-item .pend-ir{font-size:11px;color:#1565c0;white-space:nowrap;}
+/* Filtros de fichas por status (lista da obra) */
+.aprov-alerta{background:#fff8e1;border:1px solid #ffb300;border-radius:6px;padding:9px 14px;margin:10px 0;font-size:13px;color:#7a5c00;}
+.filtros-bar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 16px;}
+.filtro-chip{font-size:12px;padding:6px 12px;border-radius:18px;border:1px solid #cfcfcf;background:#fff;color:#444;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .12s;}
+.filtro-chip:hover{border-color:#5fa744;}
+.filtro-chip.ativo{background:var(--verde-escuro);color:#fff;border-color:var(--verde-escuro);font-weight:bold;}
+.filtro-chip.destaque{border-color:#ffb300;box-shadow:0 0 0 2px rgba(255,179,0,.25);}
+.filtro-chip.destaque.ativo{background:#e65100;border-color:#e65100;box-shadow:none;}
+.filtro-chip .chip-n{font-size:11px;font-weight:bold;background:rgba(0,0,0,.08);border-radius:10px;padding:0 7px;min-width:18px;text-align:center;}
+.filtro-chip.ativo .chip-n{background:rgba(255,255,255,.25);}
+.aprov-alerta.reprov{background:#ffebee;border-color:#e57373;color:#b71c1c;}
+.aprov-alerta a{color:inherit;font-weight:bold;}
+.btn-nova-ficha{font-size:13px;font-weight:bold;padding:9px 16px;background:var(--verde);color:#fff;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.15);}
+.btn-nova-ficha:hover{background:var(--verde-escuro);}
+.nova-ficha-opt{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:14px;text-align:left;margin-bottom:10px;transition:all .12s;}
+.nova-ficha-opt:hover{border-color:var(--verde);background:#f1f8e9;}
+.nova-ficha-opt .nf-ico{font-size:24px;}
+.nova-ficha-opt .nf-tit{font-weight:bold;color:#222;}
+.nova-ficha-opt .nf-sub{font-size:12px;color:#777;}
+.nova-ficha-opt .nf-logo{flex:0 0 auto;width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;color:#fff;letter-spacing:.5px;box-shadow:0 1px 4px rgba(0,0,0,.25);}
+.nova-ficha-opt .nf-logo.fvs{background:var(--verde-escuro);}
+.nova-ficha-opt .nf-logo.fvm{background:#6a1b9a;}
+.nova-ficha-opt .nf-emoji{font-size:26px;flex:0 0 auto;width:40px;text-align:center;line-height:1;}
+.nf-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.nf-grid .nova-ficha-opt{margin-bottom:0;}
+@media (max-width:700px){ .nf-grid{grid-template-columns:1fr;} }
+/* Histórico por ficha */
+.hist-section{margin-top:14px;border:1px solid #e0e0e0;border-radius:4px;overflow:hidden;}
+.hist-header{background:var(--cinza);padding:7px 12px;display:flex;align-items:center;justify-content:space-between;}
+.hist-header strong{font-size:12px;}
+.hist-list{max-height:180px;overflow-y:auto;font-size:11px;}
+.hist-row{display:flex;gap:6px;padding:4px 12px;border-bottom:1px solid #f0f0f0;align-items:baseline;}
+.hist-row:last-child{border-bottom:none;}
+.hist-ts{color:#aaa;white-space:nowrap;min-width:118px;}
+.hist-user{font-weight:bold;min-width:90px;color:#444;}
+.hist-acao{color:#333;flex:1;}
+@media print{.hist-section{display:none !important;}}
+/* Gestão de usuários */
+.user-list{display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;margin:8px 0;}
+.user-row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f9f9f9;border:1px solid #e5e5e5;border-radius:4px;}
+.user-row .u-info{flex:1;}
+.user-row .u-info b{font-size:13px;display:block;}
+.user-row .u-info span{font-size:11.5px;color:#666;}
+.tag{font-size:10.5px;padding:2px 8px;border-radius:10px;font-weight:bold;}
+.tag-admin{background:#e8f5e9;color:#2e7d32;border:1px solid #4caf50;}
+.tag-gestor{background:#fff8e1;color:#e65100;border:1px solid #ffa726;}
+.tag-inspetor{background:#e3f2fd;color:#1565c0;border:1px solid #42a5f5;}
+.tag-visualizador{background:#f3e5f5;color:#6a1b9a;border:1px solid #ab47bc;}
+.tag-inativo{background:#f5f5f5;color:#999;border:1px solid #ccc;}
+/* Acesso por obra */
+#modal-box input[type=checkbox]{width:auto;margin:0;accent-color:var(--verde-escuro);}
+
+/* ===== Seletor de Obra ===== */
+.obra-selector{max-width:720px;margin:40px auto;padding:0 16px;}
+.obra-selector h2{font-size:18px;margin-bottom:20px;color:var(--verde-escuro);}
+.obras-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;}
+.obra-card{background:#fff;border:2px solid #ddd;border-radius:8px;padding:18px 16px;cursor:pointer;transition:border-color .15s,box-shadow .15s;position:relative;}
+.obra-card:hover{border-color:var(--verde-escuro);box-shadow:0 2px 10px rgba(0,0,0,.12);}
+.obra-card .obra-nome{font-weight:bold;font-size:14px;margin-bottom:6px;padding-right:22px;}
+.obra-card .obra-info{font-size:12px;color:#666;}
+.obra-card-nova{border-style:dashed;color:var(--verde-escuro);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:90px;background:#f9fdf7;}
+.obra-card-nova:hover{background:var(--cinza);}
+.obra-card .obra-edit-btn{position:absolute;top:8px;right:8px;background:none;border:none;color:#bbb;font-size:15px;cursor:pointer;padding:0;line-height:1;}
+.obra-card .obra-edit-btn:hover{color:var(--verde-escuro);}
+.obra-card-logo-thumb{max-height:38px;max-width:90px;object-fit:contain;display:block;margin-bottom:6px;}
+#modal-box.modal-wide{max-width:540px;}
+.obra-atual-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.voltar-obras-btn{font-size:12.5px;font-weight:600;padding:7px 14px;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.45);border-radius:20px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .14s;white-space:nowrap;}
+.voltar-obras-btn:hover{background:#fff;color:var(--verde-escuro);border-color:#fff;transform:translateX(-2px);}
+.obra-dropdown{position:relative;}
+.obra-chip{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.32);border-radius:22px;padding:4px 14px 4px 5px;cursor:pointer;transition:background .14s;}
+.obra-chip:hover{background:rgba(255,255,255,.3);}
+.obra-chip .obra-chip-ic{width:28px;height:28px;border-radius:50%;background:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:15px;flex:0 0 auto;}
+.obra-chip .nome{font-size:13.5px;font-weight:bold;color:#fff;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.obra-chip .obra-chip-caret{color:#fff;font-size:11px;opacity:.9;}
+.obra-dropdown-menu{position:absolute;top:calc(100% + 6px);left:0;background:#fff;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.22);padding:6px;min-width:250px;max-height:340px;overflow-y:auto;z-index:1000;}
+.obra-dd-item{display:flex;align-items:center;gap:9px;width:100%;padding:9px 11px;border:none;background:#fff;border-radius:7px;cursor:pointer;font-size:13px;text-align:left;color:#333;}
+.obra-dd-item:hover{background:#f1f8e9;}
+.obra-dd-item.atual{background:#eafbe5;font-weight:bold;color:var(--verde-escuro);}
+.obra-dd-item .obra-dd-ic{font-size:15px;flex:0 0 auto;}
+.obra-dd-item .obra-dd-nome{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.obra-dd-item .obra-dd-check{color:var(--verde);font-weight:bold;}
+.obra-dd-vazio{padding:12px;color:#888;font-size:12px;text-align:center;}
+
+/* ===== RESPONSIVO MOBILE ===== */
+@media (max-width: 700px){
+  header{padding:10px 12px;gap:6px;}
+  header h1{font-size:14px;}
+  header .sub{font-size:11px;}
+  .toolbar{padding:8px 10px;flex-direction:column;align-items:stretch;gap:8px;}
+  .toolbar label{font-size:12px;}
+  select#servicoSelect, select#materialSelect{min-width:unset;width:100%;}
+  .modo-toggle{flex-wrap:wrap;gap:4px;}
+  .modo-btn{flex:1;font-size:11px;padding:5px 6px;text-align:center;}
+  #imprimirFichaBtn,#limparFichaBtn{font-size:11px;padding:5px 8px;}
+  main{padding:8px 6px;}
+  .login-screen{margin:16px auto;padding:20px 16px;border-radius:6px;}
+  .login-screen h2{font-size:16px;}
+  .login-btn{font-size:13px;padding:10px;}
+  .ficha-doc{padding:6px;font-size:11px;}
+  .ficha-doc td, .ficha-doc th{padding:2px 4px;}
+  .titulo-cell{font-size:13px;}
+  .tbl-cabecalho{font-size:10px;}
+  .rodape-duplo{flex-direction:column;gap:10px;}
+  .rodape-metade{width:100%;}
+  .aprov-acoes{flex-direction:column;gap:6px;}
+  .aprov-acoes button{width:100%;}
+  .btn-aprovar,.btn-reprovar,.btn-submeter{font-size:12px;padding:8px 12px;}
+  #modal-box{width:96vw;max-width:96vw;padding:18px 14px;}
+  .modal-footer{flex-direction:column-reverse;gap:8px;}
+  .modal-footer button{width:100%;}
+  .obra-seletor{padding:12px 10px;}
+  .obra-card{padding:10px 12px;}
+  .ficha-card{padding:10px 12px;}
+  .fichas-grid{grid-template-columns:1fr;}
+  .login-titulo img{max-height:60px;}
+  .toolbar .obra-atual-bar{width:100%;}
+}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>WME ENGENHARIA — Fichas de Verificação Digital</h1>
+    <div class="sub">WME Engenharia · Qualidade</div>
+  </div>
+  <div id="obraAtualBar" class="obra-atual-bar" style="display:none;">
+    <button type="button" class="voltar-obras-btn" onclick="mostrarSeletorObra()" title="Ver todas as obras">← Obras</button>
+    <div class="obra-dropdown">
+      <button type="button" class="obra-chip" id="obraChipBtn" onclick="toggleObraDropdown(event)" title="Trocar de obra">
+        <span class="obra-chip-ic">🏗️</span>
+        <span class="nome" id="obraAtualLabel"></span>
+        <span class="obra-chip-caret">▾</span>
+      </button>
+      <div class="obra-dropdown-menu" id="obraDropdownMenu" style="display:none;"></div>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+    <div id="usuarioBar" class="user-badge" style="display:none;">
+      <span class="u-nome" id="usuarioNome"></span>
+      <span class="perfil-tag" id="usuarioPerfil"></span>
+      <button type="button" id="btnPendencias" onclick="abrirPendencias()" title="Pendências de aprovação" style="display:none;">🔔 Pendências<span id="pendBadgeCount" class="pend-badge" style="display:none;">0</span></button>
+      <button type="button" id="btnUsuarios" onclick="abrirGerenciarUsuarios()" style="display:none;">👥 Usuários</button>
+      <button type="button" id="btnLogo" onclick="configurarLogo()" style="display:none;">🖼️ Logo</button>
+      <button type="button" onclick="meuPerfil()">Meu Perfil</button>
+      <button type="button" onclick="logout()">Sair</button>
+    </div>
+    <div class="sub" id="dataHoje"></div>
+    <div class="sub" style="display:flex;align-items:center;gap:6px;">
+      <span id="statusConexao" style="font-size:11px;opacity:.85;">⏳ Conectando...</span>
+      <button type="button" id="btnSincronizar" onclick="sincronizarDB(true)" title="Buscar atualizações agora" style="font-size:11px;padding:2px 7px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.35);border-radius:4px;color:inherit;cursor:pointer;display:none;">🔄 Sincronizar</button>
+    </div>
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="modo-toggle">
+    <button type="button" class="modo-btn" id="btnModoSalvas" onclick="trocarModo('salvas')">📋 Fichas Salvas</button>
+  </div>
+  <label for="servicoSelect" id="lblServico">Serviço:</label>
+  <select id="servicoSelect"></select>
+  <label for="materialSelect" id="lblMaterial" style="display:none;">Material:</label>
+  <select id="materialSelect" style="display:none;"></select>
+  <button id="imprimirFichaBtn" onclick="imprimirFicha()">🖨️ Imprimir / Exportar PDF</button>
+  <button class="secundario" id="btnAddLocal" onclick="adicionarLocal()">+ Local de Verificação</button>
+  <button class="secundario" id="btnRmLocal" onclick="removerLocal()">− Local de Verificação</button>
+  <button class="secundario" id="btnImportarNF" style="display:none;" onclick="importarNF()">📎 Importar NF (PDF)</button>
+  <button id="limparFichaBtn" class="perigo" onclick="limparFicha()">Limpar esta ficha</button>
+</div>
+<input type="file" id="nfFileInput" accept=".pdf" style="display:none;">
+<input type="file" id="logoFileInput" accept="image/*" style="display:none;">
+
+<div id="modal-overlay" onclick="fecharModal(event)">
+  <div id="modal-box">
+    <h3 id="modal-titulo"></h3>
+    <div id="modal-corpo"></div>
+    <div class="modal-msg" id="modal-msg"></div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+<input type="file" id="fotoInput" accept="image/*" multiple capture="environment" style="display:none;">
+<input type="file" id="fotoItemInput" accept="image/*" capture="environment" style="display:none;">
+<main id="main">
+  <div class="empty">Selecione um serviço acima para abrir a ficha.</div>
+</main>
+
+<script>
+const SERVICOS = [
+{id:"01",titulo:"LOCAÇÃO DA OBRA",ref:"IE_01",codigo:"WME_FVS_01_R05",norma:"NBR 14645-3 - Locação Topográfica e Controle Dimensional da Obra",itens:[
+ {item:"Nível",metodo:"Conferir a transferência do RN para os cavaletes",tol:"±1cm"},
+ {item:"Coordenadas dos eixos",metodo:"Conferir as distâncias entre os eixos",tol:"±2cm"},
+ {item:"Esquadro",metodo:"Conferir esquadro da obra",tol:"±2mm/m"}]},
+{id:"02",titulo:"FUNDAÇÃO",ref:"IE_02",codigo:"WME_FVS_02_R06",norma:"NBR 6122 - Projeto e Execução de Fundações",itens:[
+ {item:"Profundidade",metodo:"Trena",tol:"Conforme Projeto"},
+ {item:"Cota de arrasamento",metodo:"Mangueira de Nível",tol:"±2cm"},
+ {item:"Excentricidade de estacas",metodo:"Topografia",tol:"Conforme Projeto"},
+ {item:"Dimensões",metodo:"Trena",tol:"±2cm"},
+ {item:"Armação",metodo:"Visual",tol:"Conforme Projeto"},
+ {item:"Arranques",metodo:"Visual",tol:"Conforme Projeto"}]},
+{id:"03",titulo:"COMPACTAÇÃO DE ATERRO",ref:"IE_03",codigo:"WME_FVS_03_R05",norma:"NBR 7182 - Solo - Ensaio de compactação",itens:[
+ {item:"Demarcação Topográfica",metodo:"Trena",tol:"Conforme Projeto"},
+ {item:"Espessura de camadas",metodo:"Visual",tol:"5cm"},
+ {item:"Umidade de compactação",metodo:"Visual",tol:"Umidade moderada"},
+ {item:"Estabilidade do aterro",metodo:"Análise laboratorial (quando aplicável)",tol:"Conforme Laudo"},
+ {item:"Inclinação de taludes",metodo:"Trena",tol:"Conforme Projeto"},
+ {item:"Acabamento",metodo:"Visual",tol:"Uniformidade do Terreno"}]},
+{id:"04",titulo:"ALVENARIA ESTRUTURAL",ref:"IE_04",codigo:"WME_FVS_04_R05",norma:"NBR 15961-2 - Alvenaria Estrutural — Blocos de Concreto (ficha original possui 1ª e 2ª verificação por local)",itens:[
+ {item:"Primeira fiada",metodo:"Visual",tol:"Conforme Projeto"},
+ {item:"Amarração das fiadas",metodo:"Visual",tol:"Conforme Projeto"},
+ {item:"Concretagem dos pilaretes",metodo:"Visual",tol:"Sem falhas"},
+ {item:"Prumo",metodo:"Prumo de Face / Régua",tol:"2mm/m"},
+ {item:"Alinhamento",metodo:"Linha de Nylon / Régua",tol:"2mm/m"},
+ {item:"Nível",metodo:"Nível de Bolha",tol:"2mm/m"},
+ {item:"Esquadro",metodo:"Esquadro",tol:"2mm/m"},
+ {item:"Juntas",metodo:"Trena",tol:"2mm"},
+ {item:"Instalações elétricas",metodo:"Visual",tol:"Conforme Projeto"},
+ {item:"Instalações Hidráulicas",metodo:"Visual",tol:"Conforme Projeto"}]},
+{id:"05",titulo:"ALVENARIA NÃO ESTRUTURAL",ref:"IE_05",codigo:"WME_FVS_05_R05",norma:"NBR 8545 - Execução de Alvenaria sem função estrutural (ficha original possui 1ª e 2ª verificação por local)",itens:[
+ {item:"Primeira fiada",metodo:"Visual",tol:"Conforme Projeto"},
+ {item:"Amarração das fiadas",metodo:"Visual",tol:"Conforme Projeto"},
+ {item:"Prumo",metodo:"Prumo de Face / Régua",tol:"2mm/m"},
+ {item:"Alinhamento",metodo:"Linha de Nylon / Régua",tol:"2mm/m"},
+ {item:"Nível",metodo:"Nível de Bolha",tol:"2mm/m"},
+ {item:"Esquadro",metodo:"Esquadro",tol:"2mm/m"},
+ {item:"Juntas",metodo:"Trena",tol:"±2mm"}]},
+{id:"06",titulo:"MONTAGEM DE ARMADURA",ref:"IE_06",codigo:"WME_FVS_06_R05",norma:"NBR 14931 - Execução de Estruturas de Concreto",itens:[
+ {item:"Dimensão da peça estrutural",metodo:"Trena",tol:"Conforme Projeto"},
+ {item:"Quantidades de ferragem longitudinal",metodo:"Visual",tol:"Conforme Projeto"},
+ {item:"Posicionamento de ferragem longitudinal",metodo:"Visual",tol:"±1cm"},
+ {item:"Bitola da ferragem",metodo:"Trena",tol:"Conforme Projeto"},
+ {item:"Espaçamento da ferragem transversal",metodo:"Trena",tol:"±1cm"},
+ {item:"Ancoragem, emendas",metodo:"Trena",tol:"Conforme Projeto"}]},
+{id:"07",titulo:"FORMA",ref:"IE_07",codigo:"WME_FVS_07_R04",norma:"NBR 15696 - Fôrmas e Escoramentos para Estruturas de Concreto",itens:[
+ {item:"Prumo",metodo:"Prumo de Face",tol:"1mm/m"},
+ {item:"Cobrimento",metodo:"Trena",tol:"±5mm"},
+ {item:"Travamento",metodo:"Trena",tol:"±2cm"},
+ {item:"Alinhamento",metodo:"Linha de Nylon",tol:"±2mm/m"},
+ {item:"Limpeza e aplicação de desmoldante (quando necessário)",metodo:"Visual",tol:"-"}]},
+{id:"08",titulo:"CONCRETAGEM DE PEÇA ESTRUTURAL",ref:"IE_08",codigo:"WME_FVS_08_R06",norma:"NBR 14931 - Execução de Estruturas de Concreto",itens:[
+ {item:"Slump teste",metodo:"Cone",tol:"Conforme Projeto"},
+ {item:"Lançamento",metodo:"Visual",tol:"Sem falhas"},
+ {item:"Adensamento",metodo:"Visual",tol:"Ausência de \"bicheiras\" (massa homogênea)"},
+ {item:"Nivelamento (piso, laje...)",metodo:"Visual (equipamento)",tol:"Conforme projeto"},
+ {item:"Resistência",metodo:"Análise laboratorial",tol:"Maior ou igual ao projeto"},
+ {item:"Acabamento",metodo:"Visual",tol:"Superfície lisa"}]},
+{id:"09",titulo:"INSTALAÇÕES ELÉTRICAS",ref:"IE_09",codigo:"WME_FVS_09_R06",norma:"NBR 5410 - Instalações Elétricas de Baixa Tensão",itens:[
+ {item:"Verificar se há corrente",metodo:"Amperímetro",tol:"Conforme Projeto"},
+ {item:"Tensão",metodo:"Voltímetro / Projeto",tol:"Conforme Projeto"},
+ {item:"Paralelos e intermediários",metodo:"Projeto",tol:"Conforme Projeto"},
+ {item:"Proteção dos circuitos",metodo:"Projeto",tol:"Conforme Projeto"},
+ {item:"Locação de quadros, eletrodutos, calhas e perfilados",metodo:"Visual",tol:"Conforme Projeto"},
+ {item:"Bitola e qualidade dos cabos",metodo:"Visual",tol:"Conforme Projeto"},
+ {item:"Tomadas, interruptores e pontos de luz",metodo:"Lâmpada de Teste",tol:"Em funcionamento"},
+ {item:"Indicação dos circuitos nos quadros",metodo:"Visual",tol:"Conforme Projeto"},
+ {item:"Posição de caixas de passagem",metodo:"Visual",tol:"Conforme Projeto"}]},
+{id:"10",titulo:"INSTALAÇÕES HIDRÁULICAS",ref:"IE_10",codigo:"WME_FVS_10_R07",norma:"NBR 8160 - Sistemas Prediais de Esgoto Sanitário",itens:[
+ {item:"Posição dos pontos",metodo:"Projeto / Trena",tol:"±2cm"},
+ {item:"Posição e diâmetro das tubulações",metodo:"Visual",tol:"Conforme projeto"},
+ {item:"Inclinação da tubulação de esgoto e pluvial",metodo:"Nível de Bolha",tol:"±2mm/m"},
+ {item:"Colocação de CAP",metodo:"Visual",tol:"100% protegido"},
+ {item:"Desobstrução / Fluxo de água",metodo:"Visual",tol:"Fluxo constante"},
+ {item:"Pressurização das tubulações",metodo:"Visual",tol:"Sem vazamento"},
+ {item:"Posição de caixas de passagem",metodo:"Visual",tol:"Conforme projeto"}]},
+{id:"11",titulo:"IMPERMEABILIZAÇÃO",ref:"IE_11",codigo:"WME_FVS_11_R05",norma:"NBR 9574 - Execução de Impermeabilização",itens:[
+ {item:"Preparação da superfície",metodo:"Visual",tol:"Ausência de imperfeições"},
+ {item:"Homogeneidade",metodo:"Visual",tol:"Superfície 100% coberta"}]},
+{id:"12",titulo:"REVESTIMENTO INTERNO DE ÁREA ÚMIDA",ref:"IE_12",codigo:"WME_FVS_12_R05",norma:"NBR 13753 - Revestimento de Paredes com Placas Cerâmicas",itens:[
+ {item:"Prumo",metodo:"Prumo de linha",tol:"2mm/m"},
+ {item:"Esquadro",metodo:"Esquadro metálico",tol:"2mm/m"},
+ {item:"Alinhamento",metodo:"Linha de Nylon",tol:"2mm/m"},
+ {item:"Acabamento",metodo:"Visual",tol:"Superfície plana e sem falhas"},
+ {item:"Espessura das juntas",metodo:"Trena",tol:"±1mm"},
+ {item:"Rejuntamento e limpeza",metodo:"Visual",tol:"-"},
+ {item:"Caimento",metodo:"Visual",tol:"Conforme Projeto"}]},
+{id:"13",titulo:"REVESTIMENTO INTERNO DE ÁREA SECA",ref:"IE_13",codigo:"WME_FVS_13_R05",norma:"NBR 7200 - Execução de Revestimento de Paredes e Tetos",itens:[
+ {item:"Prumo",metodo:"Prumo de linha",tol:"2mm/m"},
+ {item:"Esquadro",metodo:"Esquadro metálico",tol:"2mm/m"},
+ {item:"Alinhamento",metodo:"Linha de Nylon",tol:"2mm/m"},
+ {item:"Acabamento",metodo:"Visual",tol:"Superfície plana e sem falhas"}]},
+{id:"14",titulo:"REVESTIMENTO EXTERNO",ref:"IE_14",codigo:"WME_FVS_14_R05",norma:"NBR 7200 - Execução de Revestimento de Paredes e Tetos",itens:[
+ {item:"Planicidade",metodo:"Prumo",tol:"2mm/m"},
+ {item:"Esquadro",metodo:"Esquadro metálico",tol:"±2mm/m"},
+ {item:"Juntas",metodo:"Trena",tol:"±1mm"},
+ {item:"Arremate",metodo:"Visual",tol:"Sem falhas"}]},
+{id:"15",titulo:"CONTRAPISO",ref:"IE_15",codigo:"WME_FVS_15_R05",norma:"NBR 15575-3 - Desempenho de Edificações Habitacionais",itens:[
+ {item:"Nivelamento",metodo:"Nível de mangueira",tol:"±3mm/m"},
+ {item:"Acabamento",metodo:"Visual",tol:"Ausência de imperfeições"},
+ {item:"Juntas de dilatação",metodo:"Visual",tol:"Conforme Projeto"}]},
+{id:"16",titulo:"REVESTIMENTO DE PISO INTERNO DE ÁREA SECA",ref:"IE_16",codigo:"WME_FVS_16_R05",norma:"NBR 13753 - Revestimento de Pisos com Placas Cerâmicas",itens:[
+ {item:"Nivelamento",metodo:"Mangueira de nível",tol:"2mm/m"},
+ {item:"Acabamento",metodo:"Visual",tol:"Sem imperfeições"}]},
+{id:"17",titulo:"REVESTIMENTO DE PISO INTERNO DE ÁREA ÚMIDA",ref:"IE_17",codigo:"WME_FVS_17_R05",norma:"NBR 13753 - Revestimento de Pisos com Placas Cerâmicas",itens:[
+ {item:"Nivelamento",metodo:"Mangueira de nível",tol:"±2mm/m"},
+ {item:"Juntas",metodo:"Trena",tol:"±1mm/m"},
+ {item:"Acabamento",metodo:"Visual",tol:"Superfície plana e sem falhas"}]},
+{id:"18",titulo:"REVESTIMENTO DE PISO INTERNO ÁREA EXTERNA",ref:"IE_18",codigo:"WME_FVS_18_R05",norma:"NBR 13753 - Revestimento de Pisos com Placas Cerâmicas",itens:[
+ {item:"Nivelamento",metodo:"Mangueira de nível",tol:"±2mm/m"},
+ {item:"Juntas",metodo:"Trena",tol:"±1mm"},
+ {item:"Arremates",metodo:"Visual",tol:"Sem falhas"}]},
+{id:"19.1",titulo:"COBERTURA COM TELHA CERÂMICA",ref:"IE_19",codigo:"WME_FVS_19.1_R05",norma:"NBR 8039 - Telhas de Concreto - Requisitos",itens:[
+ {item:"Esquadro",metodo:"Esquadro metálico",tol:"1mm/m"},
+ {item:"Travamento",metodo:"Projeto",tol:"Conforme projeto"},
+ {item:"Permeabilidade",metodo:"Visual",tol:"Ausência de vazamento"},
+ {item:"Alinhamento",metodo:"Linha de Nylon",tol:"±2mm/m"}]},
+{id:"19.2",titulo:"COBERTURA COM TELHA METÁLICA",ref:"IE_19",codigo:"WME_FVS_19.2_R05",norma:"NBR 8039 - Telhas de Concreto - Requisitos",itens:[
+ {item:"Montagem dos elementos estruturais",metodo:"Visual",tol:"Conforme Projeto"},
+ {item:"Acabamento das soldas",metodo:"Visual",tol:"Sem descontinuidades"},
+ {item:"Pintura",metodo:"Visual",tol:"Sem falhas"},
+ {item:"Permeabilidade",metodo:"Visual",tol:"Ausência de vazamentos"}]},
+{id:"20",titulo:"EXECUÇÃO DE FORRO",ref:"IE_20",codigo:"WME_FVS_20_R03",norma:"NBR 12775 - Chapas de Gesso - Determinação de Características Físicas",itens:[
+ {item:"Nivelamento",metodo:"Mangueira de nível",tol:"±2mm/m"},
+ {item:"Acabamento",metodo:"Visual",tol:"Sem falhas"}]},
+{id:"21",titulo:"COLOCAÇÃO DE BATENTES E PORTA",ref:"IE_21",codigo:"WME_FVS_21_R03",norma:"NBR 15930 - Portas de Madeira de Edificações",itens:[
+ {item:"Esquadro",metodo:"Esquadro metálico",tol:"±1mm/m"},
+ {item:"Prumo",metodo:"Prumo de linha",tol:"±1mm/m"},
+ {item:"Alinhamento",metodo:"Linha de náilon",tol:"±2mm/m"}]},
+{id:"22",titulo:"COLOCAÇÃO DE JANELA",ref:"IE_22",codigo:"WME_FVS_22_R03",norma:"NBR 10821 - Caixilhos para Edificações",itens:[
+ {item:"Esquadro",metodo:"Esquadro metálico",tol:"±1mm/m"},
+ {item:"Prumo",metodo:"Prumo de linha",tol:"±1mm/m"},
+ {item:"Alinhamento",metodo:"Linha de náilon",tol:"±2mm/m"}]},
+{id:"23",titulo:"PINTURA INTERNA",ref:"IE_23",codigo:"WME_FVS_23_R03",norma:"NBR 15079 - Tintas para Edificações - Terminologia",itens:[
+ {item:"Proteção de peças que não serão pintadas",metodo:"Visual",tol:"Sem falhas"},
+ {item:"Forração do chão",metodo:"Visual",tol:"100% forrado"},
+ {item:"Homogeneidade da superfície",metodo:"Visual",tol:"Sem falhas"},
+ {item:"Acabamentos finais",metodo:"Visual",tol:"Em perfeito estado"},
+ {item:"Limpeza",metodo:"Visual",tol:"Ausente de sujeira"}]},
+{id:"24",titulo:"PINTURA EXTERNA",ref:"IE_24",codigo:"WME_FVS_24_R03",norma:"NBR 15079 - Tintas para Edificações - Terminologia",itens:[
+ {item:"Proteção de peças que não serão pintadas",metodo:"Visual",tol:"Sem falhas"},
+ {item:"Forração do chão",metodo:"Visual",tol:"100% forrado"},
+ {item:"Homogeneidade da superfície",metodo:"Visual",tol:"Sem falhas"},
+ {item:"Acabamentos finais",metodo:"Visual",tol:"Em perfeito estado"},
+ {item:"Limpeza",metodo:"Visual",tol:"Ausente de sujeira"}]},
+{id:"25",titulo:"COLOCAÇÃO DE BANCADAS, LOUÇAS E METAIS SANITÁRIOS",ref:"IE_25",codigo:"WME_FVS_25_R03",norma:"NBR 15097-2 - Aparelhos Sanitários de Material Cerâmico",itens:[
+ {item:"Vazamento",metodo:"Visual",tol:"Ausência de vazamento"},
+ {item:"Fixação de louças e metais",metodo:"Visual",tol:"Estável e firme"},
+ {item:"Fixação de bancadas",metodo:"Visual",tol:"Estável e firme"}]},
+{id:"27",titulo:"REFORÇO DE SUBLEITO",ref:"IE_27",codigo:"WME_FVS_27_R02",norma:"ET-DE-P00/002 - Especificação Técnica de Reforço do Subleito",itens:[
+ {item:"Demarcação Topográfica",metodo:"Trena / Estação total",tol:"Conforme Projeto"},
+ {item:"Espessura de camadas",metodo:"Visual / Trena",tol:"Conforme Projeto"},
+ {item:"Ensaios",metodo:"Diversos",tol:"Conforme Projeto"},
+ {item:"Umidade de compactação",metodo:"Visual / Ensaio",tol:"Conforme Projeto"},
+ {item:"Número de passadas do rolo compactador (compactação)",metodo:"Visual",tol:"Conforme Projeto"},
+ {item:"Acabamento",metodo:"Visual",tol:"Conforme Projeto"}]},
+{id:"28",titulo:"SUB BASE DE SOLO BRITA",ref:"IE_28",codigo:"WME_FVS_28_R02",norma:"ET-DE-P00/006 - Especificação Técnica de Sub-base de Solo Brita",itens:[
+ {item:"Demarcação Topográfica",metodo:"Trena / Estação total",tol:"Conforme Projeto"},
+ {item:"Espessura de camadas",metodo:"Visual / Trena",tol:"Conforme Projeto"},
+ {item:"Ensaios",metodo:"Diversos",tol:"Conforme Projeto"},
+ {item:"Umidade de compactação",metodo:"Visual / Ensaio",tol:"Conforme Projeto"},
+ {item:"Número de passadas do rolo compactador (compactação)",metodo:"Visual",tol:"Conforme Projeto"},
+ {item:"Acabamento",metodo:"Visual",tol:"Conforme Projeto"}]},
+{id:"29",titulo:"BASE DE BGS E IMPRIMAÇÃO IMPERMEABILIZANTE",ref:"IE_29",codigo:"WME_FVS_29_R02",norma:"ET-DE-P00/008 e ET-DE-P00/019",itens:[
+ {item:"Limpeza da superfície",metodo:"Manual ou máquina de sopro",tol:"Isenta de sujeira"},
+ {item:"Análise do material",metodo:"Certificado",tol:"Conforme Projeto"},
+ {item:"Distribuição uniforme, em toda a largura da faixa, com velocidade constante do caminhão",metodo:"Visual",tol:"Conforme Projeto"},
+ {item:"Temperatura de aplicação",metodo:"Relógio (caminhão espargidor)",tol:"Conforme Projeto"},
+ {item:"Demarcação Topográfica",metodo:"Trena / Estação total",tol:"Conforme Projeto"},
+ {item:"Espessura de camadas",metodo:"Visual / Trena",tol:"Conforme Projeto"},
+ {item:"Ensaios",metodo:"Diversos",tol:"Conforme Projeto"},
+ {item:"Umidade de compactação",metodo:"Visual / Ensaio",tol:"Conforme Projeto"},
+ {item:"Número de passadas do rolo compactador (compactação)",metodo:"Visual",tol:"Conforme Projeto"},
+ {item:"Acabamento",metodo:"Visual",tol:"Conforme Projeto"}]},
+{id:"30",titulo:"CAUQ E IMPRIMAÇÃO DE LIGAÇÃO",ref:"IE_30",codigo:"WME_FVS_30_R02",norma:"ET-DE-P00/027 e ET-DE-P00/020",itens:[
+ {item:"Limpeza da superfície",metodo:"Manual ou máquina de sopro",tol:"Isenta de sujeira"},
+ {item:"Análise do material",metodo:"Certificado",tol:"Conforme Projeto"},
+ {item:"Distribuição uniforme, em toda a largura da faixa, com velocidade constante do caminhão",metodo:"Visual",tol:"Conforme Projeto"},
+ {item:"Temperatura de aplicação",metodo:"Relógio (caminhão espargidor)",tol:"Conforme Projeto"},
+ {item:"Demarcação Topográfica",metodo:"Trena / Estação total",tol:"Conforme Projeto"},
+ {item:"Espessura de camadas",metodo:"Visual / Trena",tol:"Conforme Projeto"},
+ {item:"Ensaios",metodo:"Diversos",tol:"Conforme Projeto"},
+ {item:"Número de passadas do rolo compactador (compactação)",metodo:"Visual",tol:"Conforme Projeto"},
+ {item:"Acabamento",metodo:"Visual",tol:"Conforme Projeto"}]},
+{id:"31",titulo:"GUARDA-CORPO",ref:"IE_31",codigo:"WME_FVS_31_R01",norma:"NBR 14718 - Guarda-corpos para Edificação",itens:[
+ {item:"Condições iniciais",metodo:"Verificar se as partes onde serão fixados os componentes do guarda-corpo estão acabadas",tol:"-"},
+ {item:"Dimensões",metodo:"Dimensões do guarda-corpo especificadas em projeto (altura do piso acabado até o peitoril, vão entre perfis do gradil)",tol:"≥110cm; vão entre perfis ≤11cm"},
+ {item:"Ancoragem",metodo:"Ancoragem (fixação)",tol:"Projeto específico"},
+ {item:"Acabamento",metodo:"Pintura (manchas, riscos e amassados); verificar vedação dos furos dos parafusos de fixação",tol:"-"},
+ {item:"Vidros",metodo:"Condições de preservação (manchas, trincas, quebras e riscos); vidros devem ser de segurança conforme NBR 7199",tol:"-"},
+ {item:"Limpeza",metodo:"Limpeza geral",tol:"-"}]},
+{id:"32",titulo:"INSTALAÇÃO DE GÁS",ref:"IE_32",codigo:"WME_FVS_32_R01",norma:"NBR 14177 / NBR 15345 / NBR 13523",itens:[
+ {item:"Condições iniciais para início",metodo:"O pano da fachada onde a prumada de gás irá passar deve estar acabado (chapisco, emboço e textura)",tol:"-"},
+ {item:"Estanqueidade",metodo:"Verificar a vedação dos furos de fixação da prumada e da passagem da tubulação",tol:"-"},
+ {item:"Posicionamento",metodo:"Verificar o posicionamento da saída de gás e do medidor",tol:"Conforme Projeto"},
+ {item:"Acabamento",metodo:"Verificar o acabamento da pintura das tubulações e uniformidade do acabamento das soldas",tol:"-"},
+ {item:"Testes",metodo:"Verificar e acompanhar os testes de pressurização e estanqueidade da rede",tol:"Sem ocorrência de vazamentos"},
+ {item:"Limpeza",metodo:"Verificar a limpeza dos locais de instalação",tol:"-"}]},
+{id:"33",titulo:"PAREDE DE DRYWALL",ref:"IE_33",codigo:"WME_FVS_33_R01",norma:"NBR 15758 - Sistemas Construtivos em Chapas de Gesso (Drywall)",itens:[
+ {item:"Condições iniciais para início",metodo:"Os eixos de referência devem estar transferidos, o piso concluído, limpo e desobstruído",tol:"-"},
+ {item:"Definição das guias",metodo:"Traçado no piso o local das guias, posição de portas e pontos de carga; marcação no teto com prumo de face",tol:"Espaçamento entre pinos: máx. 60cm"},
+ {item:"Montantes",metodo:"Verificar o posicionamento dos montantes de partida e nas paredes laterais",tol:"Espaçamento entre montantes: 40 a 60cm"},
+ {item:"Embutidos",metodo:"Antes do fechamento das paredes, verificar se as instalações foram posicionadas, testadas e liberadas",tol:"-"},
+ {item:"Montagem das placas",metodo:"Verificar cortes, posição de caixas e tubulações, prumo e planeza com prumo de face e régua de alumínio de 2m",tol:"±3mm"},
+ {item:"Acabamento final",metodo:"Verificar fixações, condições do preenchimento das juntas e pintura",tol:"Sem desníveis e incrustações"},
+ {item:"Limpeza",metodo:"Limpeza geral dos ambientes",tol:"-"}]},
+{id:"34",titulo:"MONTAGEM DE PEÇAS PRÉ-MOLDADAS",ref:"IE_34",codigo:"WME_FVS_34_R00",norma:"NBR 9062 - Projeto e Execução de Estruturas de Concreto Pré-moldado",itens:[
+ {item:"Dimensão",metodo:"Trena",tol:"±1cm"},
+ {item:"Posicionamento e localização",metodo:"Visual",tol:"Conforme Projeto"},
+ {item:"Prumo e alinhamento",metodo:"Prumo de face",tol:"Conforme Projeto"},
+ {item:"Nível",metodo:"Mangueira de nível",tol:"±1cm"},
+ {item:"Eixos de instalação",metodo:"Trena",tol:"±1cm"},
+ {item:"Método de fixação ou chumbamento",metodo:"Visual",tol:"Conforme Projeto"}]},
+{id:"35",titulo:"INSTALAÇÃO DE CALHAS",ref:"IE_35",codigo:"WME_FVS_35_R00",norma:"NBR 10844 - Instalações Prediais de Águas Pluviais",itens:[
+ {item:"Inclinação das calhas",metodo:"Nível / Mangueira de nível",tol:"≥ 0,5% (mín. para escoamento)"},
+ {item:"Alinhamento das calhas",metodo:"Linha de nylon / Trena",tol:"≤ 5mm"},
+ {item:"Fixação e espaçamento dos suportes",metodo:"Visual / Trena",tol:"Conforme Projeto / Fabricante"},
+ {item:"Dimensões da seção transversal",metodo:"Trena",tol:"Conforme Projeto"},
+ {item:"Sobreposição das emendas",metodo:"Trena",tol:"≥ 10cm"},
+ {item:"Vedação das emendas e juntas",metodo:"Visual",tol:"Sem infiltração"},
+ {item:"Posicionamento em relação à cobertura",metodo:"Visual / Trena",tol:"Conforme Projeto"},
+ {item:"Posição e fixação das descidas pluviais",metodo:"Visual / Trena",tol:"Conforme Projeto / Fabricante"},
+ {item:"Deságue e saída das descidas",metodo:"Visual",tol:"Sem obstáculos / Conforme Projeto"},
+ {item:"Proteção e acabamento",metodo:"Visual",tol:"Sem danos / Conforme Projeto"},
+ {item:"Teste de estanqueidade (simulação de chuva)",metodo:"Visual",tol:"Sem vazamentos ou infiltrações"}]}
+];
+
+const CATEGORIAS = [
+ {nome:"Preliminares", ic:"📐", ids:["01"]},
+ {nome:"Fundação e Estrutura", ic:"🏗️", ids:["02","03","04","05","06","07","08","34"]},
+ {nome:"Instalações", ic:"🔌", ids:["09","10","32"]},
+ {nome:"Impermeabilização e Revestimentos", ic:"🧱", ids:["11","12","13","14","15","16","17","18"]},
+ {nome:"Cobertura e Forro", ic:"🏠", ids:["19.1","19.2","20","35"]},
+ {nome:"Esquadrias e Drywall", ic:"🚪", ids:["21","22","31","33"]},
+ {nome:"Pintura e Acabamentos", ic:"🎨", ids:["23","24","25"]},
+ {nome:"Pavimentação e Terraplenagem", ic:"🛣️", ids:["27","28","29","30"]}
+];
+
+const OBJETIVO_TEXTO = "Verificar e aprovar a execução dos serviços controlados, conforme IE (Instrução de Execução) e PQO (Plano da Qualidade da Obra).";
+const CONSIDERACOES_TEXTO = "*Considerações: Um serviço NC poderá ser liberado somente quando autorizado pelo responsável da obra.";
+
+/* ================= FICHA DE VERIFICAÇÃO DE MATERIAL (FVM) ================= */
+const OBJETIVO_TEXTO_MAT = "Verificar e aprovar o recebimento dos materiais controlados, conforme IR (Instrução de Recebimento) e PQO (Plano da Qualidade da Obra).";
+const CONSIDERACOES_TEXTO_MAT = "*Considerações: Um material Não Conforme poderá ser recebido e aplicado somente quando autorizado pelo responsável pela obra.";
+const P_NF = "As informações que constam na NF devem estar completas e corretas conforme Pedido de Compra (Razão Social, CNPJ, cond. de pagto., nº pedido, etc.).";
+const P_PRAZO = "Deverá estar de acordo com o Pedido de Compra.";
+
+const MATERIAIS = [
+{id:"M01",material:"AREIA",ref:"IR_01",codigo:"WME_FVM_01_R02",norma:"NM 248",cubicagem:true,
+ criterios:[P_NF, P_PRAZO,
+  "Deverá estar de acordo com o Pedido de Compra. Todos os caminhões devem ser cubicados.",
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Deverá ter a qualidade necessária para uma boa utilização, apresentando ausência de sujeiras (pedra, madeira, etc.) ou matéria orgânica. / Analise visual."],
+ lotes:"100% - O lote é formado por caminhão, e todos devem ser analisados.",
+ preservacao:"Deve ser acondicionada em baias, separadas por tipo (fina, média e grossa) e devidamente identificada."},
+{id:"M02",material:"BRITA",ref:"IR_02",codigo:"WME_FVM_02_R02",norma:"7225",cubicagem:true,
+ criterios:[P_NF, P_PRAZO,
+  "Deverá estar de acordo com o Pedido de Compra. Todos os caminhões devem ser cubicados.",
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Deverá ter a qualidade necessária para uma boa utilização, apresentando ausência de sujeiras (pedra, madeira, etc.) ou matéria orgânica. / Analise visual."],
+ lotes:"100% - O lote é formado por caminhão, e todos devem ser analisados.",
+ preservacao:"Deve ser acondicionada em baias, separadas por tipo e devidamente identificada."},
+{id:"M03",material:"AÇO",ref:"IR_03",codigo:"WME_FVM_03_R03",norma:"7480",
+ criterios:[P_NF, P_PRAZO,
+  "Deverá estar de acordo com o Pedido de Compra / Projeto.",
+  "Deverá estar de acordo com o Pedido de Compra / Projeto.",
+  "Resistência do Aço deve ser conforme especificado no Pedido de Compra e Certificado de Qualidade (Laudo) do fabricante. / Verificar a presença de oxidação."],
+ lotes:"O lote será formado por cada entrega.",
+ preservacao:"Armazenar em local sem contato direto com solo, separado por tipo e identificado."},
+{id:"M04",material:"ARGAMASSA INDUSTRIALIZADA",ref:"IR_04",codigo:"WME_FVM_04_R02",norma:"14081-1",
+ criterios:[P_NF, P_PRAZO,
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Os sacos NÃO devem estar rasgados, molhados, manchados ou vencidos (ver validade)."],
+ lotes:"O lote será formado por pedido, sendo que todos os pedidos deverão ser verificados.",
+ preservacao:"Armazenar em local abrigado de chuva, afastado das paredes e solo, empilhado conforme especificação do fabricante e devidamente identificado."},
+{id:"M05",material:"BLOCO DE VEDAÇÃO",ref:"IR_05",codigo:"WME_FVM_05_R03",norma:"15961-2",
+ criterios:[P_NF, P_PRAZO,
+  "Qtde. - Conforme Pedido de Compra. / Dimensões - verificar a altura, largura, comprimento e espessura das paredes (variação máxima aceitável +- 5mm).",
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Verificar a existência de trincas e quebras, principalmente nas quinas. Resistência - deve constar na NF e estar conforme Pedido / Projeto."],
+ lotes:"O lote será formado por 100 unidades. A cada lote deverá ser analisado 05 unidades.",
+ preservacao:"Os blocos devem ser empilhados por tipo, de maneira a facilitar a identificação dos lotes, em lugar de fácil acesso e próximo ao local de aplicação."},
+{id:"M06",material:"BLOCO ESTRUTURAL",ref:"IR_06",codigo:"WME_FVM_06_R02",norma:"15961-2",
+ criterios:[P_NF, P_PRAZO,
+  "Qtde. - Conforme Pedido de Compra. / Dimensões - verificar a altura, largura, comprimento e espessura das paredes (variação máxima aceitável +- 3mm).",
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Verificar a existência de trincas e quebras, principalmente nas quinas. Resistência - deve constar na NF e estar conforme Pedido / Projeto."],
+ lotes:"O lote será formado por 100 unidades. A cada lote deverá ser analisado 05 unidades.",
+ preservacao:"Os blocos devem ser empilhados por tipo, de maneira a facilitar a identificação dos lotes, em lugar de fácil acesso e próximo ao local de aplicação."},
+{id:"M07",material:"CONCRETO USINADO",ref:"IR_07",codigo:"WME_FVM_07_R03",norma:"7212",
+ criterios:[P_NF, P_PRAZO,
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Lacre - verificar se o lacre da bica do caminhão não está violado e se o nº coincide com o da NF.",
+  "Resistência - deve constar na NF e estar conforme Pedido / Projeto. Ensaios *"],
+ lotes:"O lote será formado por um caminhão entregue em obra. Todos os caminhões deverão ser analisados.",
+ preservacao:"Não se aplica.",
+ ensaios:"Verificar IR 07 para aplicação dos ensaios. Registrar local de aplicação (concreto estrutural) no FQ_66."},
+{id:"M08",material:"ESQUADRIAS METÁLICAS",ref:"IR_08",codigo:"WME_FVM_08_R02",norma:"10821-3",
+ criterios:[P_NF, P_PRAZO,
+  "Qtde: Deverá estar de acordo com o Pedido de Compra. Dimensões: tolerância +- 2mm (requadro / altura / largura).",
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Verificar se as peças não possuem defeitos como: amassados, pontos com quebras, falta de acessórios, soldas, rebites soltos ou rompidos, corrosão, riscos e tratamento superficial adequado."],
+ lotes:"O lote é formado pela qtde de peças do mesmo tipo e entregues na obra por um caminhão. A amostragem para inspeção (dimensão e funcionamento) é de 10% por tipo. Para qtde e qualidade verificar 100% das peças.",
+ preservacao:"Armazenar em local abrigado de chuva e sol em embalagem original, por tipo e lado a lado. Devidamente identificado."},
+{id:"M09",material:"FIOS E CABOS",ref:"IR_09",codigo:"WME_FVM_09_R02",norma:"6814",
+ criterios:[P_NF, P_PRAZO,
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Deverá estar de acordo com o Pedido de Compra (bitola, cor, isolamento e material).",
+  "Verificar se os fios e cabos não possuem defeitos como proteção desencapada, cor, etc."],
+ lotes:"O lote será formado por entrega na obra, todo lote deve ser analisado.",
+ preservacao:"Armazenar em lugar fechado (com porta) e coberto. Devidamente separados (por tipo) e identificado."},
+{id:"M10",material:"FORMAS PRONTAS",ref:"IR_10",codigo:"WME_FVM_10_R02",norma:"15696",
+ criterios:[P_NF, P_PRAZO,
+  "Deverá estar de acordo com o Pedido de Compra/ Projeto.",
+  "Deverá estar de acordo com o Pedido de Compra/ Projeto.",
+  "Deverá ter a qualidade necessária para uma boa utilização."],
+ lotes:"O lote será formado por entrega, todas deverão ser verificadas.",
+ preservacao:"Armazenar em local abrigado de chuva, empilhamento conforme orientação do fornecedor e devidamente identificado."},
+{id:"M11",material:"MADEIRA PARA ESTRUTURA DE TELHADO",ref:"IR_11",codigo:"WME_FVM_11_R03",norma:"9487",
+ criterios:[P_NF, P_PRAZO,
+  "Qtde - Deverá estar de acordo com o Pedido de Compra. Separar as peças por dimensões para uma melhor conferência.",
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Deverá ter a qualidade necessária para uma boa utilização."],
+ lotes:"O lote será formado por entrega, todas entregas devem ser verificadas.",
+ preservacao:"Empilhar horizontalmente evitando o contato direto com o solo e protegido contra intempéries."},
+{id:"M12",material:"METAIS SANITÁRIOS",ref:"IR_12",codigo:"WME_FVM_12_R03",norma:"15750",
+ criterios:[P_NF, P_PRAZO,
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Verificar se não há nenhum defeito aparente nas peças como riscos, peças quebradas ou qualquer outro tipo de anormalidade."],
+ lotes:"O lote será formado por 10 unidades. Analisar 01 unidade de cada lote escolhido aleatoriamente.",
+ preservacao:"Armazenar em almoxarifado fechado (com porta) e abrigado de chuva. Devidamente separado por tipo e identificado."},
+{id:"M13",material:"PEDRAS NATURAIS",ref:"IR_13",codigo:"WME_FVM_13_R03",norma:"7225",
+ criterios:[P_NF, P_PRAZO,
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Verificar se as peças não possuem cantos quebrados, riscos e se o tratamento superficial está adequado."],
+ lotes:"O lote será formado pela qtde de peças por tipo entregues por caminhão. A amostra para inspeção (dimensão) é de 10 peças aleatórias.",
+ preservacao:"Armazenar em local trancado e evitar o acesso ao local."},
+{id:"M14",material:"PISOS E REVESTIMENTOS",ref:"IR_14",codigo:"WME_FVM_14_R02",norma:"13753",
+ criterios:[P_NF, P_PRAZO,
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Verificar se as peças não possuem cantos quebrados, riscos e se o tratamento superficial está adequado."],
+ lotes:"O lote será formado pela qtde de peças por tipo entregues por caminhão. A amostra para inspeção (dimensão) é de 10 peças aleatórias.",
+ preservacao:"Armazenar em local fechado, separado por tipo, em sua embalagem original e empilhadas conforme especificação do fabricante."},
+{id:"M15",material:"PORTAS E BATENTES",ref:"IR_15",codigo:"WME_FVM_15_R02",norma:"15930-2",
+ criterios:[P_NF, P_PRAZO,
+  "Qtde: Deverá estar de acordo com o Pedido de Compra. Dimensões: tolerância de +- 3mm (largura, altura, espessura).",
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Deverá ter a qualidade necessária para uma boa utilização."],
+ lotes:"O lote será formado por pedido, todos devem ser analisados.",
+ preservacao:"Armazenar em local abrigado de chuva, separado por tipo e devidamente identificado."},
+{id:"M16",material:"TELHAS",ref:"IR_16",codigo:"WME_FVM_16_R03",norma:"15310 - Cerâmica / 13858-2 - Concreto",
+ criterios:[P_NF, P_PRAZO,
+  "Qtde: Deverá estar de acordo com o Pedido de Compra. Dimensões: tolerância +- 10mm (comprimento e largura).",
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Verificar se as peças não possuem defeitos como: cantos quebrados, riscos e se o tratamento superficial está adequado."],
+ lotes:"O lote será formado pela qtde de peças por tipo entregues por caminhão. A amostra para inspeção (dimensão) é de 10 peças aleatórias.",
+ preservacao:"Empilhar horizontalmente sem contato com o solo."},
+{id:"M17",material:"TINTAS",ref:"IR_17",codigo:"WME_FVM_17_R03",norma:"11702",
+ criterios:[P_NF, P_PRAZO,
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Deverá estar de acordo com o Pedido de Compra (tipo, cor).",
+  "Deverá ter a qualidade necessária para uma boa utilização."],
+ lotes:"O lote será formado pela qtde de tintas por tipo entregues por caminhão. Verificar todas entregas.",
+ preservacao:"Armazenar em local abrigado, ventilado e fechado, separado por tipo, empilhado conforme especificação do fabricante e afastada do solo."},
+{id:"M18",material:"TUBOS E CONEXÕES",ref:"IR_18",codigo:"WME_FVM_18_R02",norma:"15750",
+ criterios:[P_NF, P_PRAZO,
+  "Qtde - Deverá estar de acordo com o Pedido de Compra. Dimensões - verificar diâmetro conforme Pedido de Compra.",
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Verificar se as peças não possuem defeitos como trincas ou rachaduras."],
+ lotes:"O lote será formado por entrega, todas devem ser analisadas.",
+ preservacao:"Tubos - armazenar na posição horizontal, separados por tipo e diâmetro e sem contato com o solo. Conexões - armazenar em almoxarifado fechado, separado por tipo e diâmetro."},
+{id:"M19",material:"LOUÇAS SANITÁRIAS",ref:"IR_19",codigo:"WME_FVM_19_R03",norma:"14162",
+ criterios:[P_NF, P_PRAZO,
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Verificar se as peças não possuem defeitos como trincas ou rachaduras."],
+ lotes:"O lote será formado por entrega, analisar todos.",
+ preservacao:"Armazenar em lugar fechado, coberto e empilhado conforme especificação do fabricante."},
+{id:"M20",material:"FORRO",ref:"IR_20",codigo:"WME_FVM_20_R02",norma:"12775",
+ criterios:["As informações que constam na NF devem estar completas e corretas conforme Pedido de Compra (Razão Social, CNPJ, end., cond. de pagto., nº pedido, etc.).", P_PRAZO,
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Deverá ter a qualidade necessária para uma boa utilização."],
+ lotes:"O lote será formado pela qtde de peças por tipo entregues por caminhão. A amostra para inspeção (dimensão) é de 10 peças aleatórias.",
+ preservacao:"Armazenar em local fechado e coberto, em sua embalagem original e empilhados conforme instrução do fabricante."},
+{id:"M21",material:"CIMENTO",ref:"IR_21",codigo:"WME_FVM_21_R02",norma:"5732",
+ criterios:[P_NF, P_PRAZO,
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Deverá estar de acordo com o Pedido de Compra.",
+  "Os sacos NÃO devem estar rasgados, molhados, manchados ou vencidos (ver validade)."],
+ lotes:"O lote será formado por pedido, sendo que todos os pedidos deverão ser verificados.",
+ preservacao:"Armazenar em local abrigado de chuva, afastado das paredes e solo, separado por tipo, empilhado conforme especificação do fabricante e identificado."},
+{id:"M22",material:"PLACA DE DRYWALL",ref:"IR_22",codigo:"WME_FVM_22_R01",norma:"12775",
+ criterios:[P_NF, P_PRAZO,
+  "Deverá estar de acordo com o Pedido de Compra / Projeto.",
+  "Deverá estar de acordo com o Pedido de Compra / Projeto.",
+  "Resistência do Aço deve ser conforme especificado no Pedido de Compra e Certificado de Qualidade (Laudo) do fabricante. / Verificar a presença de oxidação."],
+ lotes:"Formar lotes por pedido.",
+ preservacao:"Deve ser armazenado em local fechado e abrigado de chuva e umidade, sem contato direto com o solo ou paredes, separados por tipo e o empilhamento conforme instruções do fabricante."},
+{id:"M23",material:"PEÇAS PRÉ-MOLDADAS",ref:"IR_23",codigo:"WME_FVM_23_R00",norma:"9062 - Projeto e execução de estruturas de concreto pré-moldado",
+ criterios:[P_NF, P_PRAZO,
+  "Qtde. - Conforme Pedido de Compra. / Dimensões - verificar a altura, largura, comprimento e posicionamento de inserts, tubos, consoles, etc.",
+  "Fazer a inspeção visual na peça garantindo que não exista qualquer tipo de avaria que afete a estética, resistência e funcionalidade da peça. Verificar também a integridade de todos os acessórios.",
+  "Verificar a existência de trincas e quebras, principalmente nas quinas. Resistência - deve constar na NF e estar conforme Pedido / Projeto."],
+ lotes:"O lote deve ser formado por peças iguais contempladas na mesma entrega porém todas as peças precisam ser avaliadas.",
+ preservacao:"As peças devem ser armazenados por tipo, de maneira a facilitar a identificação das mesmas, em lugar de fácil acesso e próximo ao local de aplicação."}
+];
+
+const CATEGORIAS_MAT = [
+ {nome:"Agregados e Aglomerantes", ic:"🪨", ids:["M01","M02","M04","M21"]},
+ {nome:"Estrutura e Concreto", ic:"🏗️", ids:["M03","M07","M10","M23"]},
+ {nome:"Alvenaria", ic:"🧱", ids:["M05","M06"]},
+ {nome:"Esquadrias, Portas e Metais", ic:"🚪", ids:["M08","M15","M12","M19"]},
+ {nome:"Elétrica e Hidráulica", ic:"🔌", ids:["M09","M18"]},
+ {nome:"Revestimentos e Acabamentos", ic:"🎨", ids:["M14","M13","M16","M17","M20","M22","M11"]}
+];
+
+const LABELS_VERIF_MAT = ["PEDIDO x NF","PRAZO DE ENTREGA","QUANTIDADE / DIMENSÕES","TIPO / FABRICANTE / MODELO / CARACTERISTICAS","QUALIDADE / INTEGRIDADE"];
+
+function getLogo(){
+  const obraLogo = obraAtual && DB.obraLogos && DB.obraLogos[obraAtual];
+  if(obraLogo) return '<img src="'+obraLogo+'" alt="Logo" class="logo-img">';
+  if(DB.logoBase64) return '<img src="'+DB.logoBase64+'" alt="WME" class="logo-img">';
+  if(ehAdmin()) return '<div class="logo-placeholder" onclick="configurarLogo()" title="Clique para configurar o logo">📷<br><span>Logo</span></div>';
+  return '<div class="logo-placeholder">WME</div>';
+}
+
+// =================================================================
+// CONFIGURAÇÃO JSONBIN — preencha com seus dados
+// 1. Crie conta gratuita em https://jsonbin.io
+// 2. Vá em "API Keys" → copie a "Master Key" → cole em BIN_KEY
+// 3. Clique em "Create Bin" → conteúdo inicial: {} → crie
+// 4. Copie o ID do bin (ex: 65f2a3b4e41b4d34f86b8cde) → cole em BIN_ID
+// =================================================================
+const JSONBIN = {
+  BIN_ID:  "6a3c122ada38895dfef88e25",
+  BIN_KEY: "$2a$10$jG50KdVrbwbHJqd4NmCzZuSp0Wr/W6PBP3ZgM1Sr7mP3CnP41OBTu"
+};
+// =================================================================
+// SUPABASE — fotos ficam no Storage (não mais base64 no JSONBin).
+// Resolve o limite de 100KB do JSONBin e a perda de fotos.
+// =================================================================
+const SUPABASE = {
+  URL:    "https://ycdgsrrkmddcexsitjwj.supabase.co",
+  KEY:    "sb_publishable_cvNpYPRNp1ecD9Q1yJqk6g_rO-8Gonk",
+  BUCKET: "fotos"
+};
+const FOTO_PLACEHOLDER = "__FOTO_LOCAL__"; // marca foto ainda não enviada (no JSONBin)
+function _supabaseOk(){ return SUPABASE.URL && SUPABASE.KEY && SUPABASE.URL.indexOf("http")===0; }
+function _ehBase64(v){ return typeof v==="string" && v.indexOf("data:image")===0; }
+
+// Converte dataURL (base64) em Blob para upload
+function _dataURLparaBlob(dataURL){
+  var arr=dataURL.split(","), mime=((arr[0].match(/:(.*?);/))||[])[1]||"image/jpeg";
+  var bstr=atob(arr[1]), n=bstr.length, u8=new Uint8Array(n);
+  while(n--) u8[n]=bstr.charCodeAt(n);
+  return new Blob([u8],{type:mime});
+}
+
+// Sobe uma foto (base64) para o Storage e devolve a URL pública (Promise)
+function subirFotoStorage(dataURL){
+  if(!_supabaseOk()) return Promise.reject(new Error("supabase off"));
+  var nome=Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,9)+".jpg";
+  return fetch(SUPABASE.URL+"/storage/v1/object/"+SUPABASE.BUCKET+"/"+nome,{
+    method:"POST",
+    headers:{"apikey":SUPABASE.KEY,"Authorization":"Bearer "+SUPABASE.KEY,"Content-Type":"image/jpeg","x-upsert":"true"},
+    body:_dataURLparaBlob(dataURL)
+  }).then(function(r){
+    if(!r.ok) throw new Error("upload HTTP "+r.status);
+    return SUPABASE.URL+"/storage/v1/object/public/"+SUPABASE.BUCKET+"/"+nome;
+  });
+}
+
+// Recebe uma foto nova (base64): tenta subir; se falhar (offline) guarda base64
+// localmente e devolve o base64 (será reenviado depois). cb(valorParaGuardar)
+function processarFotoNova(dataURL, cb){
+  subirFotoStorage(dataURL).then(function(url){
+    cb(url);
+  }).catch(function(){
+    mostrarStatus("⚠️ Foto salva no aparelho (enviada à nuvem quando houver internet)");
+    cb(dataURL); // mantém base64 local; reenviarFotosPendentes() sobe depois
+  });
+}
+
+// Versão do DB para enviar ao JSONBin: troca base64 de FICHAS por placeholder
+// (logos ficam, são pequenos). Mantém o payload bem abaixo de 100KB.
+function _dbParaNuvem(){
+  function _ph(v){ return _ehBase64(v) ? FOTO_PLACEHOLDER : v; }
+  var clone=JSON.parse(JSON.stringify(DB));
+  var f=clone.fichas||{};
+  Object.keys(f).forEach(function(obra){
+    var o=f[obra]||{};
+    Object.keys(o).forEach(function(fid){
+      var e=o[fid]; if(!e||typeof e!=="object") return;
+      if(Array.isArray(e.fotosItens)) e.fotosItens=e.fotosItens.map(function(row){ return Array.isArray(row)?row.map(_ph):row; });
+      if(Array.isArray(e.fotosNc)) e.fotosNc=e.fotosNc.map(_ph);
+      if(Array.isArray(e.fotos)) e.fotos=e.fotos.map(function(p){ return (p&&typeof p==="object")?{base64:_ph(p.base64),legenda:p.legenda}:p; });
+    });
+  });
+  return clone;
+}
+
+// Ao receber dados da nuvem, repõe as fotos locais onde a nuvem só tem placeholder
+// (fotos ainda não enviadas). Sem base64 local, vira null (mostra "sem foto").
+function _restaurarFotos(novo, antigo){
+  if(!novo) return novo;
+  var nf=novo.fichas||{}, af=(antigo&&antigo.fichas)||{};
+  Object.keys(nf).forEach(function(obra){
+    var no=nf[obra]||{}, ao=af[obra]||{};
+    Object.keys(no).forEach(function(fid){
+      var ne=no[fid], ae=ao[fid]||{}; if(!ne||typeof ne!=="object") return;
+      if(Array.isArray(ne.fotosItens)) ne.fotosItens.forEach(function(row,ri){
+        if(Array.isArray(row)) row.forEach(function(v,li){
+          if(v===FOTO_PLACEHOLDER){ var l=ae.fotosItens&&ae.fotosItens[ri]&&ae.fotosItens[ri][li]; row[li]=(l&&l!==FOTO_PLACEHOLDER)?l:null; }
+        });
+      });
+      if(Array.isArray(ne.fotosNc)) ne.fotosNc.forEach(function(v,ni){
+        if(v===FOTO_PLACEHOLDER){ var l=ae.fotosNc&&ae.fotosNc[ni]; ne.fotosNc[ni]=(l&&l!==FOTO_PLACEHOLDER)?l:null; }
+      });
+      if(Array.isArray(ne.fotos)) ne.fotos.forEach(function(p,i){
+        if(p&&p.base64===FOTO_PLACEHOLDER){ var l=ae.fotos&&ae.fotos[i]&&ae.fotos[i].base64; p.base64=(l&&l!==FOTO_PLACEHOLDER)?l:""; }
+      });
+    });
+  });
+  return novo;
+}
+
+// Procura fotos ainda em base64 no DB local e as envia ao Storage, trocando por URL
+var _reenviando=false;
+function reenviarFotosPendentes(){
+  if(!_supabaseOk() || _reenviando) return;
+  var tarefas=[];
+  var f=DB.fichas||{};
+  Object.keys(f).forEach(function(obra){
+    var o=f[obra]||{};
+    Object.keys(o).forEach(function(fid){
+      var e=o[fid]; if(!e||typeof e!=="object") return;
+      (e.fotosItens||[]).forEach(function(row,ri){ if(Array.isArray(row)) row.forEach(function(v,li){ if(_ehBase64(v)) tarefas.push({val:v,set:function(u){ e.fotosItens[ri][li]=u; }}); }); });
+      (e.fotosNc||[]).forEach(function(v,ni){ if(_ehBase64(v)) tarefas.push({val:v,set:function(u){ e.fotosNc[ni]=u; }}); });
+      (e.fotos||[]).forEach(function(p,i){ if(p&&_ehBase64(p.base64)) tarefas.push({val:p.base64,set:function(u){ e.fotos[i].base64=u; }}); });
+    });
+  });
+  if(!tarefas.length) return;
+  _reenviando=true;
+  mostrarStatus("⏳ Enviando "+tarefas.length+" foto(s) para a nuvem...");
+  var chain=Promise.resolve(), ok=0;
+  tarefas.forEach(function(t){ chain=chain.then(function(){ return subirFotoStorage(t.val).then(function(u){ t.set(u); ok++; }).catch(function(){}); }); });
+  chain.then(function(){
+    _reenviando=false;
+    if(ok>0){ salvarDB(); renderAtual(); mostrarStatus("🟢 "+ok+" foto(s) enviada(s) para a nuvem"); }
+  });
+}
+// Senhas internas — altere conforme necessário
+const SENHA_APROVACAO = "wme@aprov";   // senha para aprovar/reprovar fichas
+const SENHA_ADMIN     = "wme@admin";   // senha para excluir fichas
+// =================================================================
+
+const STORAGE_KEY = "fvs_digital_state_v1";
+let DB = {};
+let _saveTimer = null;
+let _jbOk = false;
+
+function mostrarStatus(txt){ const el=document.getElementById("statusConexao"); if(el) el.textContent=txt; }
+function _jbConfigurado(){ return JSONBIN.BIN_ID && !JSONBIN.BIN_ID.includes("COLE"); }
+
+// ===================================================================
+// AUTENTICAÇÃO / SESSÃO
+// ===================================================================
+let sessao = null; // {id, nome, email, perfil}
+
+function hashSenha(s){
+  let h=5381; for(let i=0;i<s.length;i++) h=((h<<5)+h)^s.charCodeAt(i);
+  return (h>>>0).toString(36);
+}
+function podeEditar(){ return sessao&&(sessao.perfil==="admin"||sessao.perfil==="gestor"||sessao.perfil==="inspetor"); }
+function podeAprovar(){ return sessao&&(sessao.perfil==="admin"||sessao.perfil==="gestor"); }
+function ehAdmin(){ return sessao&&sessao.perfil==="admin"; }
+
+function carregarSessao(){
+  try{ sessao=JSON.parse(localStorage.getItem("fvs_sessao"))||null; }catch(e){sessao=null;}
+}
+function salvarSessaoStorage(){
+  localStorage.setItem("fvs_sessao",JSON.stringify(sessao));
+}
+
+function registrarLog(acao, extra){
+  if(!DB.log) DB.log=[];
+  var entry={ts:new Date().toISOString(),usuario:sessao?sessao.nome:"?",email:sessao?sessao.email:"?",acao:acao};
+  if(extra) Object.keys(extra).forEach(function(k){entry[k]=extra[k];});
+  DB.log.push(entry);
+  if(DB.log.length>2000) DB.log=DB.log.slice(-2000);
+}
+function registrarHistorico(fichaId, acao, detalhe){
+  if(!obraAtual||!DB.fichas||!DB.fichas[obraAtual]) return;
+  var est=DB.fichas[obraAtual][fichaId]; if(!est) return;
+  if(!est.historico) est.historico=[];
+  est.historico.push({ts:new Date().toISOString(),usuario:sessao?sessao.nome:"?",email:sessao?sessao.email:"?",acao:acao,detalhe:detalhe||""});
+  if(est.historico.length>500) est.historico=est.historico.slice(-500);
+}
+
+function atualizarHeaderUsuario(){
+  var bar=document.getElementById("usuarioBar"); if(!bar) return;
+  if(!sessao){bar.style.display="none";return;}
+  bar.style.display="";
+  document.getElementById("usuarioNome").textContent="👤 "+sessao.nome;
+  var pTag=document.getElementById("usuarioPerfil");
+  pTag.textContent=sessao.perfil.charAt(0).toUpperCase()+sessao.perfil.slice(1);
+  var btnU=document.getElementById("btnUsuarios");
+  if(btnU) btnU.style.display=ehAdmin()?"":"none";
+  var btnL=document.getElementById("btnLogo");
+  if(btnL) btnL.style.display=ehAdmin()?"":"none";
+  atualizarBadgePendencias();
+}
+
+// ===== PENDÊNCIAS DE APROVAÇÃO (sino) =====
+// Lista todas as fichas SUBMETIDAS que o usuário atual pode aprovar,
+// respeitando o acesso por obra (admin vê todas; demais só as autorizadas).
+function listarPendenciasAprovacao(){
+  var res=[];
+  if(!sessao || !podeAprovar()) return res;
+  var fichas=DB.fichas||{};
+  var obras=DB.obras||[];
+  obras.forEach(function(obra){
+    if(!ehAdmin()){
+      var acesso=DB.obraAcessos && DB.obraAcessos[obra];
+      if(acesso && acesso.indexOf(sessao.id)<0) return; // sem acesso a esta obra
+    }
+    var of=fichas[obra]||{};
+    Object.keys(of).forEach(function(id){
+      var est=of[id];
+      if(!est || !est.aprovacao || est.aprovacao.status!=="submetido") return;
+      var serv=SERVICOS.find(function(s){return s.id===id;});
+      var tipo,badge,badgeCls,titulo;
+      if(serv){ tipo="servico"; badge="FVS "+id; badgeCls=""; titulo=serv.titulo; }
+      else{
+        var mat=MATERIAIS.find(function(m){return m.id===id;});
+        if(!mat) return;
+        tipo="material"; badge="FVM "+id.replace("M",""); badgeCls="fvm"; titulo=mat.material;
+      }
+      res.push({obra:obra,tipo:tipo,id:id,badge:badge,badgeCls:badgeCls,titulo:titulo,
+                por:(est.aprovacao.por||"—"),data:(est.aprovacao.data||"—")});
+    });
+  });
+  return res;
+}
+
+function atualizarBadgePendencias(){
+  var btn=document.getElementById("btnPendencias");
+  if(!btn) return;
+  if(!sessao || !podeAprovar()){ btn.style.display="none"; return; }
+  var n=listarPendenciasAprovacao().length;
+  var cnt=document.getElementById("pendBadgeCount");
+  btn.style.display="";
+  if(n>0){
+    btn.classList.add("tem-pend");
+    if(cnt){ cnt.textContent=n>99?"99+":n; cnt.style.display=""; }
+    btn.title=n+" ficha(s) aguardando sua aprovação";
+  }else{
+    btn.classList.remove("tem-pend");
+    if(cnt) cnt.style.display="none";
+    btn.title="Nenhuma ficha aguardando aprovação";
+  }
+}
+
+function abrirPendencias(){
+  var lista=listarPendenciasAprovacao();
+  if(lista.length===0){
+    abrirModal("🔔 Pendências de Aprovação",
+      '<p style="font-size:13px;margin:0;color:#2e7d32;">🎉 Nenhuma ficha aguardando sua aprovação no momento.</p>',
+      '<button type="button" onclick="fecharModalForce()">Fechar</button>');
+    return;
+  }
+  // Agrupar por obra mantendo a ordem de DB.obras
+  var grupos={};
+  lista.forEach(function(p){ (grupos[p.obra]=grupos[p.obra]||[]).push(p); });
+  var corpo='<p style="font-size:12px;color:#555;margin:0 0 10px;">Fichas submetidas que aguardam sua decisão. Clique para abrir e aprovar/reprovar.</p>';
+  Object.keys(grupos).forEach(function(obra){
+    corpo+='<div class="pend-obra">🏗️ '+escapeHtml(obra)+'</div>';
+    grupos[obra].forEach(function(p){
+      var oArg=p.obra.replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+      corpo+='<div class="pend-item" onclick="irParaPendencia(\''+oArg+'\',\''+p.tipo+'\',\''+p.id+'\')">'
+        +'<span class="pend-tag '+p.badgeCls+'">'+escapeHtml(p.badge)+'</span>'
+        +'<div class="pend-corpo">'
+          +'<div class="pend-tit">'+escapeHtml(p.titulo)+'</div>'
+          +'<div class="pend-sub">📋 Submetida por '+escapeHtml(p.por)+(p.data&&p.data!=="—"?' · '+escapeHtml(p.data):'')+'</div>'
+        +'</div>'
+        +'<span class="pend-ir">Abrir →</span>'
+      +'</div>';
+    });
+  });
+  abrirModal("🔔 Pendências de Aprovação ("+lista.length+")", corpo,
+    '<button type="button" onclick="fecharModalForce()">Fechar</button>');
+}
+
+function irParaPendencia(obra,tipo,id){
+  fecharModalForce();
+  selecionarObra(obra);
+  abrirFichaSalva(tipo,id);
+}
+
+function logout(){
+  if(sessao){ registrarLog("logout"); salvarDB(); }
+  sessao=null;
+  localStorage.removeItem("fvs_sessao");
+  atualizarHeaderUsuario();
+  renderAtual();
+}
+
+function _esconderToolbar(){
+  document.querySelector(".modo-toggle").style.visibility="hidden";
+  document.getElementById("obraAtualBar").style.display="none";
+  ["imprimirFichaBtn","limparFichaBtn","btnAddLocal","btnRmLocal","btnImportarNF",
+   "lblServico","servicoSelect","lblMaterial","materialSelect"].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.style.display="none";
+  });
+}
+
+function renderLogin(){
+  _esconderToolbar();
+  var usuarios=DB.usuarios||[];
+  var main=document.getElementById("main");
+  var _logoLogin = DB.logoBase64
+    ? '<img src="'+DB.logoBase64+'" alt="WME" style="max-height:72px;max-width:220px;object-fit:contain;">'
+    : '<div style="font-size:42px;">🏗️</div><div style="font-weight:bold;font-size:15px;color:var(--verde-escuro);">WME ENGENHARIA</div>';
+  if(usuarios.length===0){
+    main.innerHTML='<div class="login-screen">'
+      +'<div class="login-titulo" style="justify-content:center;">'+_logoLogin+'</div>'
+      +'<div style="font-size:12px;color:#666;text-align:center;margin-bottom:8px;">Fichas de Verificação Digital</div>'
+      +'<h2>Primeiro Acesso</h2>'
+      +'<p style="font-size:12.5px;color:#555;margin:0 0 4px;">Crie a conta de administrador para começar.</p>'
+      +'<label>Nome completo</label><input type="text" id="login-nome" placeholder="Seu nome">'
+      +'<label>E-mail</label><input type="email" id="login-email" placeholder="email@empresa.com">'
+      +'<label>Senha</label><input type="password" id="login-senha" placeholder="Mínimo 4 caracteres">'
+      +'<label>Confirmar senha</label><input type="password" id="login-senha2" placeholder="Repita a senha">'
+      +'<button class="login-btn" onclick="criarPrimeiroAdmin()">Criar conta e entrar</button>'
+      +'<div class="login-erro" id="login-erro"></div></div>';
+    setTimeout(function(){var el=document.getElementById("login-nome");if(el)el.focus();},100);
+  } else {
+    main.innerHTML='<div class="login-screen">'
+      +'<div class="login-titulo" style="justify-content:center;">'+_logoLogin+'</div>'
+      +'<div style="font-size:12px;color:#666;text-align:center;margin-bottom:8px;">Fichas de Verificação Digital</div>'
+      +'<h2>Entrar</h2>'
+      +'<label>E-mail</label><input type="email" id="login-email" placeholder="email@empresa.com" onkeydown="if(event.key===\'Enter\')document.getElementById(\'login-senha\').focus()">'
+      +'<label>Senha</label><input type="password" id="login-senha" placeholder="Sua senha" onkeydown="if(event.key===\'Enter\')tentarLogin()">'
+      +'<button class="login-btn" onclick="tentarLogin()">Entrar</button>'
+      +'<div class="login-erro" id="login-erro"></div></div>';
+    setTimeout(function(){var el=document.getElementById("login-email");if(el)el.focus();},100);
+  }
+}
+
+function criarPrimeiroAdmin(){
+  var nome=((document.getElementById("login-nome")||{}).value||"").trim();
+  var email=((document.getElementById("login-email")||{}).value||"").trim().toLowerCase();
+  var senha=(document.getElementById("login-senha")||{}).value||"";
+  var senha2=(document.getElementById("login-senha2")||{}).value||"";
+  var erroEl=document.getElementById("login-erro");
+  if(!nome||!email||!senha){erroEl.textContent="Preencha todos os campos.";return;}
+  if(senha!==senha2){erroEl.textContent="As senhas não coincidem.";return;}
+  if(senha.length<4){erroEl.textContent="Senha deve ter ao menos 4 caracteres.";return;}
+  if(!DB.usuarios) DB.usuarios=[];
+  var id="u"+Date.now();
+  DB.usuarios.push({id:id,nome:nome,email:email,senhaHash:hashSenha(senha),perfil:"admin",ativo:true,criadoEm:new Date().toISOString()});
+  sessao={id:id,nome:nome,email:email,perfil:"admin"};
+  registrarLog("primeiro-acesso");
+  salvarSessaoStorage();
+  salvarDB();
+  atualizarHeaderUsuario();
+  trocarModo(modoAtual);
+}
+
+function tentarLogin(){
+  var email=((document.getElementById("login-email")||{}).value||"").trim().toLowerCase();
+  var senha=(document.getElementById("login-senha")||{}).value||"";
+  var erroEl=document.getElementById("login-erro");
+  if(!email||!senha){erroEl.textContent="Preencha e-mail e senha.";return;}
+  var user=(DB.usuarios||[]).find(function(u){return u.email===email&&u.senhaHash===hashSenha(senha)&&u.ativo;});
+  if(!user){erroEl.textContent="E-mail ou senha incorretos.";return;}
+  sessao={id:user.id,nome:user.nome,email:user.email,perfil:user.perfil};
+  registrarLog("login");
+  salvarSessaoStorage();
+  salvarDB();
+  atualizarHeaderUsuario();
+  trocarModo(modoAtual);
+}
+
+// ===== GERENCIAR USUÁRIOS (Admin) =====
+function abrirGerenciarUsuarios(){
+  if(!ehAdmin()){alert("Acesso restrito ao administrador.");return;}
+  renderGerenciarUsuarios();
+}
+function renderGerenciarUsuarios(){
+  var usuarios=DB.usuarios||[];
+  var linhas=usuarios.map(function(u){
+    var tagCls=u.ativo?("tag-"+u.perfil):"tag-inativo";
+    var tagTxt=u.ativo?({admin:"Admin",gestor:"Gestor",inspetor:"Inspetor",visualizador:"Visualizador"}[u.perfil]||u.perfil):"Inativo";
+    return '<div class="user-row">'
+      +'<div class="u-info"><b>'+escapeHtml(u.nome)+'</b><span>'+escapeHtml(u.email)+'</span></div>'
+      +'<span class="tag '+tagCls+'">'+tagTxt+'</span>'
+      +'<button type="button" class="secundario" style="font-size:11px;padding:3px 8px;" onclick="editarUsuario(\''+u.id+'\')">'+(u.id===sessao.id?'Editar (você)':'Editar')+'</button>'
+    +'</div>';
+  }).join("")||'<div style="color:#888;font-size:12px;padding:8px;">Nenhum usuário cadastrado.</div>';
+  abrirModal("👥 Gerenciar Usuários",
+    '<div class="user-list">'+linhas+'</div><hr style="margin:8px 0;">',
+    '<button type="button" class="secundario" onclick="fecharModalForce()">Fechar</button>'
+    +'<button type="button" onclick="abrirCriarUsuario()">+ Novo Usuário</button>'
+  );
+}
+function editarUsuario(id){
+  var u=(DB.usuarios||[]).find(function(u){return u.id===id;}); if(!u) return;
+  abrirModal("Editar Usuário",
+    '<label>Nome:</label><input type="text" id="eu-nome" value="'+escapeHtml(u.nome)+'">'
+    +'<label>E-mail:</label><input type="email" id="eu-email" value="'+escapeHtml(u.email)+'">'
+    +'<label>Perfil:</label><select id="eu-perfil" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-size:13px;font-family:inherit;margin-bottom:12px;">'
+    +'<option value="admin"'+(u.perfil==="admin"?" selected":"")+'>Administrador — acesso total</option>'
+    +'<option value="gestor"'+(u.perfil==="gestor"?" selected":"")+'>Gestor — aprova fichas, não gerencia usuários/obras</option>'
+    +'<option value="inspetor"'+(u.perfil==="inspetor"?" selected":"")+'>Inspetor / Técnico — preenche fichas</option>'
+    +'<option value="visualizador"'+(u.perfil==="visualizador"?" selected":"")+'>Visualizador — somente leitura</option>'
+    +'</select>'
+    +'<label>Nova senha (deixar em branco para manter):</label><input type="password" id="eu-senha" placeholder="Nova senha">'
+    +'<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:normal;margin-top:6px;">'
+    +'<input type="checkbox" id="eu-ativo"'+(u.ativo?" checked":"")+'> Usuário ativo</label>',
+    '<button type="button" class="secundario" onclick="renderGerenciarUsuarios()">← Voltar</button>'
+    +'<button type="button" onclick="confirmarEditarUsuario(\''+id+'\')">Salvar</button>'
+  );
+}
+function confirmarEditarUsuario(id){
+  var u=(DB.usuarios||[]).find(function(u){return u.id===id;}); if(!u){fecharModalForce();return;}
+  var nome=((document.getElementById("eu-nome")||{}).value||"").trim();
+  var email=((document.getElementById("eu-email")||{}).value||"").trim().toLowerCase();
+  var perfil=(document.getElementById("eu-perfil")||{}).value||"inspetor";
+  var senha=(document.getElementById("eu-senha")||{}).value||"";
+  var ativo=(document.getElementById("eu-ativo")||{}).checked!==false;
+  if(!nome||!email){modalMsg("Nome e e-mail são obrigatórios.");return;}
+  u.nome=nome; u.email=email; u.perfil=perfil; u.ativo=ativo;
+  if(senha){if(senha.length<4){modalMsg("Senha deve ter ao menos 4 caracteres.");return;} u.senhaHash=hashSenha(senha);}
+  registrarLog("editar-usuario",{usuarioEditado:email,perfil:perfil});
+  salvarDB(); modalMsg("✅ Salvo!"); setTimeout(renderGerenciarUsuarios,700);
+}
+function abrirCriarUsuario(){
+  abrirModal("Novo Usuário",
+    '<label>Nome completo:</label><input type="text" id="nu-nome" placeholder="Nome">'
+    +'<label>E-mail:</label><input type="email" id="nu-email" placeholder="email@empresa.com">'
+    +'<label>Perfil:</label><select id="nu-perfil" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-size:13px;font-family:inherit;margin-bottom:12px;">'
+    +'<option value="inspetor">Inspetor / Técnico — preenche fichas</option>'
+    +'<option value="gestor">Gestor — aprova fichas, não gerencia usuários/obras</option>'
+    +'<option value="visualizador">Visualizador — somente leitura</option>'
+    +'<option value="admin">Administrador — acesso total</option>'
+    +'</select>'
+    +'<label>Senha inicial:</label><input type="password" id="nu-senha" placeholder="Mínimo 4 caracteres">',
+    '<button type="button" class="secundario" onclick="renderGerenciarUsuarios()">← Voltar</button>'
+    +'<button type="button" onclick="confirmarCriarUsuario()">Criar Usuário</button>'
+  );
+  setTimeout(function(){var el=document.getElementById("nu-nome");if(el)el.focus();},100);
+}
+function confirmarCriarUsuario(){
+  var nome=((document.getElementById("nu-nome")||{}).value||"").trim();
+  var email=((document.getElementById("nu-email")||{}).value||"").trim().toLowerCase();
+  var perfil=(document.getElementById("nu-perfil")||{}).value||"inspetor";
+  var senha=(document.getElementById("nu-senha")||{}).value||"";
+  if(!nome||!email||!senha){modalMsg("Preencha todos os campos.");return;}
+  if(senha.length<4){modalMsg("Senha deve ter ao menos 4 caracteres.");return;}
+  if(!DB.usuarios) DB.usuarios=[];
+  if(DB.usuarios.find(function(u){return u.email===email;})){modalMsg("E-mail já cadastrado.");return;}
+  var id="u"+Date.now();
+  DB.usuarios.push({id:id,nome:nome,email:email,senhaHash:hashSenha(senha),perfil:perfil,ativo:true,criadoEm:new Date().toISOString()});
+  registrarLog("criar-usuario",{novo:email,perfil:perfil});
+  salvarDB(); modalMsg("✅ Usuário criado!"); setTimeout(renderGerenciarUsuarios,700);
+}
+
+// ===== HISTÓRICO POR FICHA =====
+function htmlHistorico(est){
+  var hist=est.historico||[]; if(hist.length===0) return "";
+  var linhas=hist.slice().reverse().slice(0,60).map(function(h){
+    var dt=h.ts?new Date(h.ts).toLocaleString("pt-BR"):"";
+    return '<div class="hist-row">'
+      +'<span class="hist-ts">'+dt+'</span>'
+      +'<span class="hist-user">'+escapeHtml(h.usuario||"")+'</span>'
+      +'<span class="hist-acao">'+escapeHtml(h.acao||"")+(h.detalhe?' — '+escapeHtml(h.detalhe):'')+'</span>'
+    +'</div>';
+  }).join("");
+  return '<div class="hist-section">'
+    +'<div class="hist-header"><strong>📋 Histórico</strong>'
+    +'<span style="font-size:11px;color:#888;">Últimas '+Math.min(hist.length,60)+' de '+hist.length+'</span></div>'
+    +'<div class="hist-list">'+linhas+'</div>'
+    +'</div>';
+}
+
+function migrarDB(){
+  if(!DB.fichas)      DB.fichas      = {};
+  if(!DB.obras)       DB.obras       = [];
+  if(!DB.obraAcessos) DB.obraAcessos = {};
+  if(!DB.obraLogos)   DB.obraLogos   = {};
+  // Migrar estrutura antiga: chaves diretas (ex: "1", "M01") para dentro de fichas
+  var TODOS_IDS = SERVICOS.map(function(s){return s.id;}).concat(MATERIAIS.map(function(m){return m.id;}));
+  var antigas = {};
+  Object.keys(DB).forEach(function(k){
+    if(k!=="obras" && k!=="fichas" && TODOS_IDS.indexOf(k)>=0){
+      antigas[k] = DB[k];
+    }
+  });
+  if(Object.keys(antigas).length > 0){
+    var nome = "(Importadas)";
+    if(!DB.fichas[nome]) DB.fichas[nome] = {};
+    Object.keys(antigas).forEach(function(k){ DB.fichas[nome][k] = antigas[k]; delete DB[k]; });
+    if(DB.obras.indexOf(nome)<0) DB.obras.push(nome);
+  }
+}
+
+function carregarDB(){
+  // 1. Carrega cache local imediatamente (app abre rápido)
+  try{ DB = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }catch(e){ DB = {}; }
+  migrarDB();
+  carregarSessao();
+  if(!_jbConfigurado()){ mostrarStatus("🔴 JSONBin não configurado (modo local)"); renderAtual(); return; }
+  // 2. Busca dados atualizados da nuvem
+  mostrarStatus("⏳ Carregando dados...");
+  fetch("https://api.jsonbin.io/v3/b/"+JSONBIN.BIN_ID+"/latest", {
+    headers:{"X-Master-Key": JSONBIN.BIN_KEY}
+  }).then(function(r){ return r.json(); }).then(function(data){
+    const nuvem = data.record || {};
+    const tsLocal = DB._ts || 0;
+    const tsNuvem = nuvem._ts || 0;
+    // Só usa dados da nuvem se forem mais recentes que o localStorage
+    if(tsNuvem >= tsLocal){
+      DB = _restaurarFotos(nuvem, DB); // repõe fotos locais ainda não enviadas
+      migrarDB();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+    } else {
+      // localStorage é mais recente — re-salva na nuvem para atualizar
+      _localDirty = true;
+      salvarDB();
+    }
+    _jbOk = true;
+    _localDirty = false;
+    _ultimoHash = _calcHash(DB);
+    mostrarStatus("🟢 Online — dados sincronizados");
+    const btnS = document.getElementById("btnSincronizar"); if(btnS) btnS.style.display="";
+    atualizarHeaderUsuario();
+    renderAtual();
+    reenviarFotosPendentes(); // sobe ao Storage qualquer foto presa em base64
+  }).catch(function(){
+    mostrarStatus("🔴 Sem conexão (usando dados locais)");
+    renderAtual();
+  });
+}
+
+var _syncTimer = null;
+var _ultimoHash = "";
+var _localDirty = false; // true enquanto há dados locais ainda não confirmados na nuvem
+
+function _calcHash(obj){ try{ var s=JSON.stringify(obj); return s.length+"_"+s.slice(-32); }catch(e){ return ""; } }
+
+function sincronizarDB(manual){
+  if(!_jbConfigurado()) return;
+  // Não sobrescrever dados locais não salvos ainda
+  if(_localDirty && !manual) return;
+  if(manual) mostrarStatus("🔄 Sincronizando...");
+  fetch("https://api.jsonbin.io/v3/b/"+JSONBIN.BIN_ID+"/latest", {
+    headers:{"X-Master-Key": JSONBIN.BIN_KEY}
+  }).then(function(r){ return r.json(); }).then(function(data){
+    const novo = data.record || {};
+    const novoHash = _calcHash(novo);
+    const tsNuvem = novo._ts || 0;
+    const tsLocal = DB._ts || 0;
+    if(novoHash !== _ultimoHash && tsNuvem > tsLocal && !_localDirty){
+      _ultimoHash = novoHash;
+      DB = _restaurarFotos(novo, DB); // repõe fotos locais ainda não enviadas
+      migrarDB();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+      mostrarStatus("🟢 Online — atualizado");
+      atualizarHeaderUsuario();
+      renderAtual();
+    } else if(novoHash === _ultimoHash && manual){
+      mostrarStatus("🟢 Online — já atualizado");
+    } else if(manual && !_localDirty){
+      mostrarStatus("🟢 Online — dados locais mais recentes");
+    }
+  }).catch(function(){
+    if(manual) mostrarStatus("⚠️ Sem conexão");
+  });
+}
+
+function iniciarAutoSync(){
+  if(_syncTimer) clearInterval(_syncTimer);
+  _syncTimer = setInterval(function(){
+    if(!document.hidden && !_localDirty) sincronizarDB(false);
+  }, 30000); // a cada 30 segundos
+}
+
+function salvarDB(){
+  DB._ts = Date.now(); // timestamp para resolver conflitos localStorage vs nuvem
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+  _localDirty = true; // marca que há dados locais não confirmados
+  if(!_jbConfigurado()) return;
+  clearTimeout(_saveTimer);
+  _saveTimer = null;
+  mostrarStatus("✏️ Editando...");
+  _saveTimer = setTimeout(function(){
+    _saveTimer = null; // timer disparou — limpa referência
+    var payload = JSON.stringify(_dbParaNuvem()); // fotos viram placeholder; base64 fica só local
+    fetch("https://api.jsonbin.io/v3/b/"+JSONBIN.BIN_ID, {
+      method:"PUT",
+      headers:{"Content-Type":"application/json","X-Master-Key":JSONBIN.BIN_KEY},
+      body: payload
+    }).then(function(r){ return r.json(); }).then(function(){
+      _jbOk = true;
+      _localDirty = false; // confirmado na nuvem
+      _ultimoHash = _calcHash(DB); // atualiza hash para sync não sobrescrever
+      mostrarStatus("🟢 Online — salvo na nuvem");
+    }).catch(function(){
+      // Mantém _localDirty = true para não perder dados na próxima sync
+      mostrarStatus("⚠️ Salvo localmente (erro na nuvem)");
+    });
+  }, 1500);
+}
+function novoEstado(servico){
+  return {
+    obra:"", respInsp:"", data:"", locais:["Local 1","Local 2","Local 3"],
+    status: servico.itens.map(()=>["","",""]),
+    projeto: servico.itens.map(()=>""),
+    nc: [],
+    aprovadoPor:"", aprovadoData:"", inspecionadoPor:"", dataFechamento:"",
+    aprovacao:{status:"pendente", por:"", data:"", obs:""},
+    fotos:[],
+    fotosItens: servico.itens.map(()=>[null,null,null]),
+    fotosNc: []
+  };
+}
+function getEstado(id){
+  const servico = SERVICOS.find(s=>s.id===id);
+  if(!DB.fichas[obraAtual]) DB.fichas[obraAtual] = {};
+  const obraFichas = DB.fichas[obraAtual];
+  if(!obraFichas[id]) obraFichas[id] = novoEstado(servico);
+  const est = obraFichas[id];
+  if(!est.obra) est.obra = obraAtual;
+  if(!est.status || est.status.length !== servico.itens.length){
+    est.status = servico.itens.map(()=> est.locais.map(()=>""));
+  }
+  if(!est.projeto || est.projeto.length !== servico.itens.length){
+    est.projeto = servico.itens.map(()=>"");
+  }
+  if(!est.nc) est.nc = [];
+  if(!est.aprovacao) est.aprovacao = {status:"pendente", por:"", data:"", obs:""};
+  if(!est.fotos) est.fotos = [];
+  if(!est.fotosNc) est.fotosNc = [];
+  // Sincronizar fotosItens com itens e locais atuais
+  if(!est.fotosItens || est.fotosItens.length !== servico.itens.length){
+    var oldFI = est.fotosItens || [];
+    est.fotosItens = servico.itens.map(function(_,ri){
+      var oldRow = oldFI[ri] || [];
+      return est.locais.map(function(_,li){ return oldRow[li]||null; });
+    });
+  } else {
+    est.fotosItens.forEach(function(row){
+      while(row.length < est.locais.length) row.push(null);
+      while(row.length > est.locais.length) row.pop();
+    });
+  }
+  while(est.fotosNc.length < est.nc.length) est.fotosNc.push(null);
+  while(est.fotosNc.length > est.nc.length) est.fotosNc.pop();
+  return est;
+}
+
+function novoEstadoMaterial(mat){
+  return {
+    obra:"", respReceb:"", data:"",
+    recebimentos:[{fornecedor:"", dataEntrega:"", nf:"", descricao:"", qtde:"", pedido:""}],
+    resultados: mat.criterios.map(()=>""),
+    cubic:{C:"",L:"",M1:"",M2:"",M3:"",M4:"",M5:""},
+    nc: [],
+    aprovadoPor:"", aprovadoData:"", inspecionadoPor:"", dataFechamento:"",
+    aprovacao:{status:"pendente", por:"", data:"", obs:""},
+    fotos:[]
+  };
+}
+function getEstadoMaterial(id){
+  const mat = MATERIAIS.find(m=>m.id===id);
+  if(!DB.fichas[obraAtual]) DB.fichas[obraAtual] = {};
+  const obraFichas = DB.fichas[obraAtual];
+  if(!obraFichas[id]) obraFichas[id] = novoEstadoMaterial(mat);
+  const est = obraFichas[id];
+  if(!est.obra) est.obra = obraAtual;
+  if(!est.resultados || est.resultados.length !== mat.criterios.length){
+    est.resultados = mat.criterios.map(()=>"");
+  }
+  // migrar campos antigos individuais para array recebimentos
+  if(!est.recebimentos){
+    est.recebimentos = [{
+      fornecedor: est.fornecedor||"", dataEntrega: est.dataEntrega||"",
+      nf: est.nf||"", descricao: est.descricao||"",
+      qtde: est.qtde||"", pedido: est.pedido||""
+    }];
+    delete est.fornecedor; delete est.dataEntrega; delete est.nf;
+    delete est.descricao; delete est.qtde; delete est.pedido;
+  }
+  if(!est.criteriosCustom) est.criteriosCustom = [];
+  if(!est.resultadosCustom) est.resultadosCustom = [];
+  // manter arrays em sincronia
+  while(est.resultadosCustom.length < est.criteriosCustom.length) est.resultadosCustom.push("");
+  while(est.resultadosCustom.length > est.criteriosCustom.length) est.resultadosCustom.pop();
+  if(!est.cubic) est.cubic = {C:"",L:"",M1:"",M2:"",M3:"",M4:"",M5:""};
+  if(!est.nc) est.nc = [];
+  if(!est.aprovacao) est.aprovacao = {status:"pendente", por:"", data:"", obs:""};
+  if(!est.fotos) est.fotos = [];
+  return est;
+}
+function estadoAtual(){
+  if(modoAtual==="servico") return servicoAtual ? getEstado(servicoAtual) : null;
+  return materialAtual ? getEstadoMaterial(materialAtual) : null;
+}
+
+let servicoAtual = null;
+let materialAtual = null;
+let modoAtual = "servico";
+let obraAtual = null;
+
+function atualizarSeletorFicha(){
+  // Mostra o seletor apenas durante a escolha (sem ficha aberta); esconde quando a ficha está aberta
+  var sv = modoAtual==="servico" && !servicoAtual;
+  var mv = modoAtual==="material" && !materialAtual;
+  var e;
+  e=document.getElementById("lblServico");     if(e) e.style.display = sv?"":"none";
+  e=document.getElementById("servicoSelect");  if(e) e.style.display = sv?"":"none";
+  e=document.getElementById("lblMaterial");    if(e) e.style.display = mv?"":"none";
+  e=document.getElementById("materialSelect"); if(e) e.style.display = mv?"":"none";
+}
+
+function trocarModo(modo){
+  modoAtual = modo;
+  var _bS=document.getElementById("btnModoServico"); if(_bS) _bS.classList.toggle("ativo", modo==="servico");
+  var _bM=document.getElementById("btnModoMaterial"); if(_bM) _bM.classList.toggle("ativo", modo==="material");
+  var _bSa=document.getElementById("btnModoSalvas"); if(_bSa) _bSa.classList.toggle("ativo", modo==="salvas");
+  const ehSalvas = modo==="salvas";
+  atualizarSeletorFicha(); // seletor "Serviço:/Material:" só aparece ao escolher (some quando a ficha abre)
+  document.getElementById("btnAddLocal").style.display = modo==="servico" ? "" : "none";
+  document.getElementById("btnRmLocal").style.display = modo==="servico" ? "" : "none";
+  document.getElementById("btnImportarNF").style.display = modo==="material" ? "" : "none";
+  // Ocultar botões de ação quando estiver na aba salvas
+  ["imprimirFichaBtn","limparFichaBtn"].forEach(function(id){
+    const el=document.getElementById(id); if(el) el.style.display=ehSalvas?"none":"";
+  });
+  renderAtual();
+}
+
+function atualizarToolbarBloqueio(){
+  const est = estadoAtual();
+  const bloq = fichaEstaBloqueada(est);
+  const btnLimpar = document.getElementById("limparFichaBtn");
+  const btnAddL   = document.getElementById("btnAddLocal");
+  const btnRmL    = document.getElementById("btnRmLocal");
+  if(btnLimpar) btnLimpar.style.opacity = bloq?"0.35":"";
+  if(btnLimpar) btnLimpar.style.pointerEvents = bloq?"none":"";
+  if(btnAddL)   btnAddL.style.display = (modoAtual==="servico" && !bloq)?"":"none";
+  if(btnRmL)    btnRmL.style.display  = (modoAtual==="servico" && !bloq)?"":"none";
+}
+
+function renderAtual(){
+  if(!sessao){ atualizarHeaderUsuario(); renderLogin(); return; }
+  atualizarHeaderUsuario();
+  if(!obraAtual){ renderSeletorObra(); return; }
+  if(modoAtual==="salvas"){ renderFichasSalvas(); return; }
+  if(modoAtual==="servico"){
+    if(!servicoAtual){ document.getElementById("main").innerHTML = '<div class="empty">Selecione um serviço acima para abrir a ficha.</div>'; return; }
+    renderFicha();
+  } else {
+    if(!materialAtual){ document.getElementById("main").innerHTML = '<div class="empty">Selecione um material acima para abrir a ficha.</div>'; return; }
+    renderFichaMaterial();
+  }
+}
+
+function renderSeletorObra(){
+  const main = document.getElementById("main");
+  document.getElementById("obraAtualBar").style.display = "none";
+  document.querySelector(".modo-toggle").style.visibility = "hidden";
+  ["imprimirFichaBtn","limparFichaBtn","btnAddLocal","btnRmLocal","btnImportarNF",
+   "lblServico","servicoSelect","lblMaterial","materialSelect"].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.style.display="none";
+  });
+  const todasObras = DB.obras || [];
+  // Filtrar obras por acesso: admin vê todas; demais só vêem as autorizadas
+  const obras = todasObras.filter(function(nome){
+    if(ehAdmin()) return true;
+    const acesso = DB.obraAcessos && DB.obraAcessos[nome];
+    if(!acesso) return true; // sem restrição definida → todos vêem
+    return acesso.indexOf(sessao.id) >= 0;
+  });
+
+  const cardsHtml = obras.map(function(nome){
+    const fichas = (DB.fichas && DB.fichas[nome]) || {};
+    const total = Object.keys(fichas).filter(function(k){
+      const f = fichas[k]; return f && (f.obra||f.data||f.fornecedor||
+        (f.status&&f.status.some(function(r){return r.some(function(v){return v;});})) ||
+        (f.resultados&&f.resultados.some(function(r){return r;})));
+    }).length;
+    const aprovadas = Object.values(fichas).filter(function(f){ return f&&f.aprovacao&&f.aprovacao.status==="aprovado"; }).length;
+    const submetidas = Object.values(fichas).filter(function(f){ return f&&f.aprovacao&&f.aprovacao.status==="submetido"; }).length;
+    const acesso = (DB.obraAcessos && DB.obraAcessos[nome]) || null;
+    const nAcesso = acesso ? acesso.length : null;
+    const obraLogoCard = (DB.obraLogos && DB.obraLogos[nome])
+      ? '<img src="'+DB.obraLogos[nome]+'" class="obra-card-logo-thumb" alt="logo">'
+      : '<div style="font-size:24px;margin-bottom:4px;">🏗️</div>';
+    return '<div class="obra-card" onclick="selecionarObra(\''+nome.replace(/'/g,"\\'")+'\')">'
+      +(ehAdmin()?'<button type="button" class="obra-edit-btn" title="Editar obra" onclick="event.stopPropagation();editarObra(\''+nome.replace(/'/g,"\\'")+'\')">✏️</button>':'')
+      +obraLogoCard
+      +'<div class="obra-nome">'+escapeHtml(nome)+'</div>'
+      +'<div class="obra-info">'+total+' ficha(s)'+(aprovadas?' · '+aprovadas+' aprovada(s)':'')+(submetidas?' · <span style="color:#1565c0;font-weight:bold;">'+submetidas+' aguardando aprovação</span>':'')+'</div>'
+      +(ehAdmin()?'<div class="obra-info" style="margin-top:4px;font-size:11px;">👥 '+(nAcesso!==null?nAcesso+' autorizado(s)':'Acesso livre')+'</div>':'')
+    +'</div>';
+  }).join("")
+  +(obras.length===0 && !ehAdmin() ? '<div class="salvas-vazio">Nenhuma obra disponível para o seu acesso.<br>Contate o administrador.</div>' : '');
+
+  main.innerHTML = '<div class="obra-selector">'
+    +'<h2>Selecione uma Obra</h2>'
+    +(obras.length===0&&ehAdmin()?'<p style="color:#888;font-size:13px;">Nenhuma obra criada ainda.</p>':'')
+    +'<div class="obras-grid">'
+    +cardsHtml
+    +(ehAdmin()?'<div class="obra-card obra-card-nova" onclick="criarNovaObra()"><div style="font-size:28px;font-weight:bold;">+</div><div style="font-weight:bold;font-size:13px;">Nova Obra</div></div>':'')
+    +'</div>'
+    +'</div>';
+}
+
+function selecionarObra(nome){
+  obraAtual = nome;
+  if(!DB.fichas) DB.fichas = {};
+  if(!DB.fichas[obraAtual]) DB.fichas[obraAtual] = {};
+  document.getElementById("obraAtualLabel").textContent = nome;
+  document.getElementById("obraAtualBar").style.display = "";
+  document.querySelector(".modo-toggle").style.visibility = "";
+  // Filtro inicial: se há fichas aguardando aprovação e o usuário aprova, já foca nelas
+  var of = DB.fichas[obraAtual] || {};
+  var temAguardando = Object.keys(of).some(function(k){ var e=of[k]; return e && e.aprovacao && e.aprovacao.status==="submetido"; });
+  _filtroFichas = (temAguardando && podeAprovar()) ? "submetido" : "todos";
+  // Entra direto na lista de fichas da obra (visão geral)
+  trocarModo("salvas");
+}
+
+function mostrarSeletorObra(){
+  fecharObraDropdown();
+  obraAtual = null;
+  renderAtual();
+}
+
+// ===== DROPDOWN DE TROCA RÁPIDA DE OBRA (no topo) =====
+function _obrasDisponiveis(){
+  return (DB.obras||[]).filter(function(nome){
+    if(ehAdmin()) return true;
+    var acesso = DB.obraAcessos && DB.obraAcessos[nome];
+    if(!acesso) return true; // sem restrição → todos veem
+    return acesso.indexOf(sessao && sessao.id) >= 0;
+  });
+}
+function toggleObraDropdown(e){
+  if(e) e.stopPropagation();
+  var menu = document.getElementById("obraDropdownMenu");
+  if(!menu) return;
+  if(menu.style.display==="none" || !menu.style.display) abrirObraDropdown();
+  else fecharObraDropdown();
+}
+function abrirObraDropdown(){
+  var menu = document.getElementById("obraDropdownMenu");
+  if(!menu) return;
+  var obras = _obrasDisponiveis();
+  if(!obras.length){
+    menu.innerHTML = '<div class="obra-dd-vazio">Nenhuma obra disponível</div>';
+  } else {
+    menu.innerHTML = obras.map(function(nome){
+      var atual = nome===obraAtual;
+      var arg = nome.replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+      return '<button type="button" class="obra-dd-item'+(atual?' atual':'')+'" onclick="selecionarObraDropdown(\''+arg+'\')">'
+        +'<span class="obra-dd-ic">🏗️</span><span class="obra-dd-nome">'+escapeHtml(nome)+'</span>'
+        +(atual?'<span class="obra-dd-check">✓</span>':'')+'</button>';
+    }).join("");
+  }
+  menu.style.display="";
+}
+function fecharObraDropdown(){ var m=document.getElementById("obraDropdownMenu"); if(m) m.style.display="none"; }
+function selecionarObraDropdown(nome){ fecharObraDropdown(); selecionarObra(nome); }
+// Fecha o dropdown ao clicar fora dele
+document.addEventListener("click", function(e){
+  var dd = document.querySelector(".obra-dropdown");
+  if(dd && !dd.contains(e.target)) fecharObraDropdown();
+});
+
+function criarNovaObra(){
+  if(!ehAdmin()){ alert("Apenas Administradores podem criar obras."); return; }
+  abrirModal("Nova Obra",
+    '<label style="font-size:13px;">Nome da obra:<br>'
+    +'<input type="text" id="novaObraNome" style="width:100%;margin-top:6px;font-size:13px;" placeholder="Ex: SGT0124 – Syngenta BIR"></label>',
+    '<button type="button" class="secundario" onclick="fecharModalForce()">Cancelar</button>'
+    +'<button type="button" onclick="confirmarNovaObra()">✔ Criar Obra</button>');
+  setTimeout(function(){ var el=document.getElementById("novaObraNome"); if(el) el.focus(); },100);
+}
+
+function confirmarNovaObra(){
+  const nomeT = ((document.getElementById("novaObraNome")||{}).value||"").trim();
+  if(!nomeT){ modalMsg("Digite o nome da obra."); return; }
+  if(!DB.obras) DB.obras = [];
+  if(DB.obras.indexOf(nomeT)>=0){ modalMsg("Já existe uma obra com esse nome."); return; }
+  if(!DB.fichas) DB.fichas = {};
+  if(!DB.obraAcessos) DB.obraAcessos = {};
+  DB.obras.push(nomeT);
+  DB.fichas[nomeT] = {};
+  salvarDB();
+  fecharModalForce();
+  // Abrir gestão de acesso imediatamente após criar a obra
+  gerenciarAcessoObra(nomeT, true);
+}
+
+// ===== ACESSO POR OBRA =====
+function gerenciarAcessoObra(nome, recemCriada){
+  if(!ehAdmin()){ alert("Apenas administradores podem gerenciar acessos."); return; }
+  const usuarios = (DB.usuarios||[]).filter(function(u){ return u.ativo && u.id!==sessao.id; });
+  const acessoAtual = (DB.obraAcessos && DB.obraAcessos[nome]) || null;
+  const checkboxes = usuarios.map(function(u){
+    const marcado = acessoAtual===null || acessoAtual.indexOf(u.id)>=0;
+    const tagTxt = {admin:"Admin",gestor:"Gestor",inspetor:"Inspetor",visualizador:"Visualizador"}[u.perfil]||u.perfil;
+    return '<label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f0f0f0;cursor:pointer;">'
+      +'<input type="checkbox" class="acesso-cb" data-uid="'+u.id+'"'+(marcado?" checked":"")+' style="width:auto;">'
+      +'<span style="flex:1;font-size:13px;">'+escapeHtml(u.nome)+'<span style="font-size:11px;color:#888;margin-left:6px;">'+escapeHtml(u.email)+'</span></span>'
+      +'<span class="tag tag-'+u.perfil+'" style="font-size:10px;">'+tagTxt+'</span>'
+    +'</label>';
+  }).join("")||'<div style="color:#888;font-size:12px;padding:8px 0;">Nenhum outro usuário cadastrado.</div>';
+
+  const intro = recemCriada
+    ? '<p style="font-size:13px;margin:0 0 10px;color:#333;">Obra <b>'+escapeHtml(nome)+'</b> criada. Selecione quem terá acesso a ela:</p>'
+    : '<p style="font-size:13px;margin:0 0 10px;color:#333;">Usuários com acesso à obra <b>'+escapeHtml(nome)+'</b>:</p>';
+
+  abrirModal("👥 Acesso à Obra",
+    intro
+    +'<p style="font-size:11.5px;color:#888;margin:0 0 8px;">O Administrador sempre tem acesso a todas as obras.</p>'
+    +'<div style="max-height:260px;overflow-y:auto;">'+checkboxes+'</div>'
+    +'<label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer;font-size:12.5px;font-weight:normal;">'
+    +'<input type="checkbox" id="cb-acesso-livre" style="width:auto;"'+(acessoAtual===null?" checked":"")+'> Acesso livre (todos os usuários podem ver esta obra)</label>',
+    '<button type="button" class="secundario" onclick="'+(recemCriada?'selecionarObra(\''+nome.replace(/'/g,"\\'")+'\')':'fecharModalForce()')+'">'+( recemCriada?'Pular':'Cancelar')+'</button>'
+    +'<button type="button" onclick="confirmarAcessoObra(\''+nome.replace(/'/g,"\\'")+'\','+(recemCriada?'true':'false')+')">✔ Salvar Acesso</button>'
+  );
+  // Vincular toggle "acesso livre"
+  setTimeout(function(){
+    var cbLivre=document.getElementById("cb-acesso-livre");
+    if(!cbLivre) return;
+    function toggleCbs(livre){
+      document.querySelectorAll(".acesso-cb").forEach(function(cb){ cb.disabled=livre; if(livre) cb.checked=true; });
+    }
+    toggleCbs(cbLivre.checked);
+    cbLivre.addEventListener("change",function(){ toggleCbs(this.checked); });
+  },100);
+}
+
+function confirmarAcessoObra(nome, recemCriada){
+  if(!DB.obraAcessos) DB.obraAcessos={};
+  var cbLivre=document.getElementById("cb-acesso-livre");
+  if(cbLivre && cbLivre.checked){
+    // Acesso livre: remover restrição
+    delete DB.obraAcessos[nome];
+  } else {
+    var ids=[];
+    document.querySelectorAll(".acesso-cb:checked").forEach(function(cb){ ids.push(cb.dataset.uid); });
+    DB.obraAcessos[nome]=ids;
+  }
+  registrarLog("gerenciar-acesso-obra",{obra:nome});
+  salvarDB();
+  fecharModalForce();
+  if(recemCriada){ selecionarObra(nome); } else { renderSeletorObra(); }
+}
+
+// ===== MEU PERFIL =====
+function meuPerfil(){
+  if(!sessao) return;
+  abrirModal("Meu Perfil",
+    '<label>Nome:</label><input type="text" id="mp-nome" value="'+escapeHtml(sessao.nome)+'">'
+    +'<label>E-mail:</label><input type="email" id="mp-email" value="'+escapeHtml(sessao.email)+'">'
+    +'<label>Senha atual (obrigatória para salvar):</label><input type="password" id="mp-senha-atual" placeholder="Senha atual">'
+    +'<label>Nova senha (deixe em branco para manter):</label><input type="password" id="mp-senha-nova" placeholder="Nova senha">'
+    +'<label>Confirmar nova senha:</label><input type="password" id="mp-senha-conf" placeholder="Repita a nova senha">',
+    '<button type="button" class="secundario" onclick="fecharModalForce()">Cancelar</button>'
+    +'<button type="button" onclick="confirmarMeuPerfil()">Salvar Alterações</button>'
+  );
+  setTimeout(function(){ var el=document.getElementById("mp-nome"); if(el) el.focus(); },100);
+}
+
+function confirmarMeuPerfil(){
+  const nome  = ((document.getElementById("mp-nome")||{}).value||"").trim();
+  const email = ((document.getElementById("mp-email")||{}).value||"").trim().toLowerCase();
+  const senhaAtual = (document.getElementById("mp-senha-atual")||{}).value||"";
+  const senhaNova  = (document.getElementById("mp-senha-nova")||{}).value||"";
+  const senhaConf  = (document.getElementById("mp-senha-conf")||{}).value||"";
+  if(!nome||!email){ modalMsg("Nome e e-mail são obrigatórios."); return; }
+  if(!senhaAtual){ modalMsg("Informe a senha atual para confirmar."); return; }
+  const u = (DB.usuarios||[]).find(function(u){ return u.id===sessao.id; });
+  if(!u){ modalMsg("Usuário não encontrado."); return; }
+  if(u.senhaHash !== hashSenha(senhaAtual)){ modalMsg("Senha atual incorreta."); return; }
+  if(senhaNova){
+    if(senhaNova.length<4){ modalMsg("Nova senha deve ter ao menos 4 caracteres."); return; }
+    if(senhaNova!==senhaConf){ modalMsg("As senhas não coincidem."); return; }
+    u.senhaHash = hashSenha(senhaNova);
+  }
+  // Verificar e-mail duplicado
+  if((DB.usuarios||[]).some(function(x){ return x.email===email && x.id!==u.id; })){ modalMsg("E-mail já em uso por outro usuário."); return; }
+  u.nome = nome; u.email = email;
+  sessao.nome = nome; sessao.email = email;
+  salvarSessaoStorage();
+  registrarLog("editar-proprio-perfil");
+  salvarDB();
+  atualizarHeaderUsuario();
+  modalMsg("✅ Perfil atualizado com sucesso!");
+  setTimeout(fecharModalForce, 900);
+}
+
+// ===== EDIÇÃO DE OBRA =====
+var _editObraLogoNovo = null; // null = sem alteração, "" = remover, "data:..." = novo logo
+
+function editarObra(nome){
+  if(!ehAdmin()){ alert("Apenas administradores podem editar obras."); return; }
+  _editObraLogoNovo = null;
+  const usuarios = (DB.usuarios||[]).filter(function(u){ return u.ativo && u.id!==sessao.id; });
+  const acessoAtual = (DB.obraAcessos && DB.obraAcessos[nome]) || null;
+  const logoAtual = (DB.obraLogos && DB.obraLogos[nome]) || null;
+
+  const usuariosHtml = usuarios.length===0
+    ? '<p style="color:#888;font-size:12px;">Nenhum outro usuário cadastrado.</p>'
+    : usuarios.map(function(u){
+        const marcado = acessoAtual===null || acessoAtual.indexOf(u.id)!==-1;
+        return '<label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;">'
+          +'<input type="checkbox" id="ea-usr-'+u.id+'" '+(marcado?'checked':'')+'>'
+          +escapeHtml(u.nome)+' <span style="color:#888;font-size:11px;">('+escapeHtml(u.perfil)+')</span></label>';
+      }).join("");
+
+  const logoHtml = '<div id="ea-logo-preview" style="margin-bottom:8px;">'
+    +(logoAtual
+      ? '<img src="'+logoAtual+'" style="max-height:60px;max-width:180px;object-fit:contain;display:block;margin-bottom:6px;" id="ea-logo-img"><br>'
+        +'<button type="button" class="secundario" style="font-size:11px;padding:2px 8px;" onclick="_editObraRemoverLogo()">✕ Remover logo</button>'
+      : '<span style="font-size:12px;color:#888;">Nenhum logo específico (usa logo global)</span>')
+    +'</div>'
+    +'<label class="secundario" style="font-size:12px;padding:4px 10px;cursor:pointer;">📷 Escolher logo<input type="file" accept="image/*" style="display:none;" onchange="_editObraLogoFileChange(this)"></label>';
+
+  const corpo = '<div style="display:flex;flex-direction:column;gap:14px;">'
+    +'<div><label style="font-size:12px;font-weight:bold;">Nome da Obra</label>'
+    +'<input type="text" id="ea-nome" value="'+escapeHtml(nome)+'" style="width:100%;margin-top:4px;padding:6px 8px;border:1px solid #ccc;border-radius:6px;font-size:14px;box-sizing:border-box;"></div>'
+    +'<div><label style="font-size:12px;font-weight:bold;">Logo da Obra (opcional)</label>'
+    +'<div style="margin-top:6px;">'+logoHtml+'</div></div>'
+    +'<div><label style="font-size:12px;font-weight:bold;">Acesso de Usuários</label>'
+    +'<p style="font-size:11px;color:#888;margin:2px 0 6px;">Desmarque para restringir o acesso à obra.</p>'
+    +'<div style="max-height:160px;overflow-y:auto;border:1px solid #eee;border-radius:6px;padding:6px 10px;">'+usuariosHtml+'</div></div>'
+    +'<div style="border-top:1px solid #eee;padding-top:10px;">'
+    +'<button type="button" class="perigo" style="font-size:12px;padding:4px 10px;" onclick="fecharModalForce();excluirObra(\''+nome.replace(/'/g,"\\'")+'\')">🗑 Excluir Obra</button>'
+    +'</div></div>';
+
+  const rodape = '<button type="button" class="secundario" onclick="fecharModalForce()">Cancelar</button>'
+    +'<button type="button" class="primario" onclick="confirmarEditarObra(\''+nome.replace(/'/g,"\\'")+'\')">💾 Salvar</button>';
+
+  document.getElementById("modal-box").classList.add("modal-wide");
+  abrirModal("✏️ Editar Obra", corpo, rodape);
+}
+
+function _editObraLogoFileChange(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    comprimirImagem(e.target.result, function(compressed){
+      _editObraLogoNovo = compressed;
+      const preview = document.getElementById("ea-logo-preview");
+      if(preview) preview.innerHTML = '<img src="'+compressed+'" style="max-height:60px;max-width:180px;object-fit:contain;display:block;margin-bottom:6px;">'
+        +'<button type="button" class="secundario" style="font-size:11px;padding:2px 8px;" onclick="_editObraRemoverLogo()">✕ Remover logo</button>';
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+function _editObraRemoverLogo(){
+  _editObraLogoNovo = "";
+  const preview = document.getElementById("ea-logo-preview");
+  if(preview) preview.innerHTML = '<span style="font-size:12px;color:#888;">Logo removido</span>';
+}
+
+function confirmarEditarObra(nomeAntigo){
+  if(!ehAdmin()){ fecharModalForce(); return; }
+  const nomeEl = document.getElementById("ea-nome");
+  const nomeNovo = nomeEl ? nomeEl.value.trim() : nomeAntigo;
+  if(!nomeNovo){ alert("O nome da obra não pode estar vazio."); return; }
+
+  // Verificar nome duplicado
+  if(nomeNovo !== nomeAntigo && (DB.obras||[]).indexOf(nomeNovo)!==-1){
+    alert("Já existe uma obra com esse nome."); return;
+  }
+
+  // Salvar logo
+  if(_editObraLogoNovo === ""){
+    if(DB.obraLogos) delete DB.obraLogos[nomeAntigo];
+  } else if(_editObraLogoNovo){
+    if(!DB.obraLogos) DB.obraLogos = {};
+    DB.obraLogos[nomeAntigo] = _editObraLogoNovo;
+  }
+
+  // Salvar acesso
+  const usuarios = (DB.usuarios||[]).filter(function(u){ return u.ativo && u.id!==sessao.id; });
+  if(usuarios.length > 0){
+    const selecionados = usuarios.filter(function(u){
+      const cb = document.getElementById("ea-usr-"+u.id);
+      return cb && cb.checked;
+    }).map(function(u){ return u.id; });
+    if(!DB.obraAcessos) DB.obraAcessos = {};
+    // Se todos marcados, acesso livre (null); senão, lista restrita
+    if(selecionados.length === usuarios.length){
+      delete DB.obraAcessos[nomeAntigo];
+    } else {
+      DB.obraAcessos[nomeAntigo] = selecionados;
+    }
+  }
+
+  // Renomear obra se necessário
+  if(nomeNovo !== nomeAntigo){
+    const idx = (DB.obras||[]).indexOf(nomeAntigo);
+    if(idx!==-1) DB.obras[idx] = nomeNovo;
+    // Mover fichas
+    if(DB.fichas && DB.fichas[nomeAntigo]){
+      DB.fichas[nomeNovo] = DB.fichas[nomeAntigo];
+      delete DB.fichas[nomeAntigo];
+      // Atualizar campo obra dentro de cada ficha
+      Object.values(DB.fichas[nomeNovo]).forEach(function(f){ if(f) f.obra = nomeNovo; });
+    }
+    // Mover acessos e logos
+    if(DB.obraAcessos && DB.obraAcessos[nomeAntigo]!==undefined){
+      DB.obraAcessos[nomeNovo] = DB.obraAcessos[nomeAntigo];
+      delete DB.obraAcessos[nomeAntigo];
+    }
+    if(DB.obraLogos && DB.obraLogos[nomeAntigo]!==undefined){
+      DB.obraLogos[nomeNovo] = DB.obraLogos[nomeAntigo];
+      delete DB.obraLogos[nomeAntigo];
+    }
+    if(obraAtual === nomeAntigo) obraAtual = nomeNovo;
+  }
+
+  registrarLog("editar-obra",{de:nomeAntigo, para:nomeNovo});
+  salvarDB();
+  fecharModalForce();
+  _editObraLogoNovo = null;
+  renderAtual();
+}
+
+// ===== EXCLUIR OBRA =====
+function excluirObra(nome){
+  if(!ehAdmin()){ alert("Apenas administradores podem excluir obras."); return; }
+  const fichas = (DB.fichas && DB.fichas[nome]) || {};
+  const total = Object.keys(fichas).length;
+  const msg = total>0
+    ? 'A obra "<b>'+escapeHtml(nome)+'</b>" tem '+total+' ficha(s). Excluir apagará tudo permanentemente.'
+    : 'Excluir a obra "<b>'+escapeHtml(nome)+'</b>"?';
+  abrirModal("Excluir Obra",
+    '<p style="font-size:13px;margin:0 0 12px;">'+msg+'</p>',
+    '<button type="button" class="secundario" onclick="fecharModalForce()">Cancelar</button>'
+    +'<button type="button" class="perigo" onclick="confirmarExcluirObra(\''+nome.replace(/'/g,"\\'")+'\')">🗑 Excluir Permanentemente</button>');
+}
+
+function confirmarExcluirObra(nome){
+  if(!ehAdmin()){ fecharModalForce(); return; }
+  DB.obras = (DB.obras||[]).filter(function(o){return o!==nome;});
+  if(DB.fichas) delete DB.fichas[nome];
+  if(DB.obraAcessos) delete DB.obraAcessos[nome];
+  if(DB.obraLogos) delete DB.obraLogos[nome];
+  registrarLog("excluir-obra",{obra:nome});
+  salvarDB();
+  fecharModalForce();
+  if(obraAtual===nome){ obraAtual=null; }
+  renderAtual();
+}
+
+function _fichaTemDados(est, tipo){
+  if(!est) return false;
+  if(est.obra || est.data || est.fornecedor) return true;
+  if(tipo==="servico") return est.status && est.status.some(function(row){ return row.some(function(s){ return s!==""; }); });
+  return est.resultados && est.resultados.some(function(r){ return r!==""; });
+}
+
+var _filtroFichas = "todos";
+function setFiltroFichas(f){ _filtroFichas = f; renderFichasSalvas(); }
+
+// Passo 1: escolher o tipo (FVS / FVM)
+function novaFicha(){
+  document.getElementById("modal-box").classList.add("modal-wide");
+  abrirModal("➕ Nova ficha",
+    '<p style="font-size:13px;margin:0 0 14px;color:#555;">Que tipo de ficha você quer criar?</p>'
+    +'<button type="button" class="nova-ficha-opt" onclick="novaFichaSecoes(\'servico\')"><span class="nf-logo fvs">FVS</span><span><span class="nf-tit">Ficha de Verificação de Serviço</span><br><span class="nf-sub">📋 Inspeção de serviços executados na obra</span></span></button>'
+    +'<button type="button" class="nova-ficha-opt" onclick="novaFichaSecoes(\'material\')"><span class="nf-logo fvm">FVM</span><span><span class="nf-tit">Ficha de Verificação de Material</span><br><span class="nf-sub">📦 Conferência de materiais recebidos</span></span></button>',
+    '<button type="button" class="secundario" onclick="fecharModalForce()">Cancelar</button>'
+  );
+}
+
+// Passo 2: escolher a seção (cada uma com ícone representativo)
+function novaFichaSecoes(tipo){
+  var cats = tipo==="servico" ? CATEGORIAS : CATEGORIAS_MAT;
+  var corpo = '<p style="font-size:13px;margin:0 0 14px;color:#555;">Escolha a seção:</p><div class="nf-grid">';
+  cats.forEach(function(cat, idx){
+    corpo += '<button type="button" class="nova-ficha-opt nf-secao" onclick="novaFichaItens(\''+tipo+'\','+idx+')">'
+      +'<span class="nf-emoji">'+(cat.ic||"📂")+'</span><span><span class="nf-tit">'+escapeHtml(cat.nome)+'</span>'
+      +'<br><span class="nf-sub">'+cat.ids.length+' ficha(s)</span></span></button>';
+  });
+  corpo += '</div>';
+  document.getElementById("modal-box").classList.add("modal-wide");
+  abrirModal("➕ Nova ficha — seção", corpo,
+    '<button type="button" class="secundario" onclick="novaFicha()">‹ Voltar</button>'
+    +'<button type="button" class="secundario" onclick="fecharModalForce()">Cancelar</button>'
+  );
+}
+
+// Passo 3: escolher a ficha da seção (herda o ícone da seção)
+function novaFichaItens(tipo, catIdx){
+  var cats = tipo==="servico" ? CATEGORIAS : CATEGORIAS_MAT;
+  var cat = cats[catIdx];
+  var lista = tipo==="servico" ? SERVICOS : MATERIAIS;
+  var of = (DB.fichas && DB.fichas[obraAtual]) || {};
+  var ic = cat.ic||"📝";
+  var corpo = '<p style="font-size:13px;margin:0 0 14px;color:#555;">'+ic+' <b>'+escapeHtml(cat.nome)+'</b> — escolha a ficha:</p>';
+  cat.ids.forEach(function(id){
+    var it = lista.find(function(x){ return x.id===id; });
+    if(!it) return;
+    var label = tipo==="servico" ? ("FVS "+id+" — "+it.titulo) : ("FVM "+id.replace("M","")+" — "+it.material);
+    var jaTem = _fichaTemDados(of[id], tipo) ? '<br><span class="nf-sub" style="color:#e65100;">✓ já iniciada</span>' : '';
+    corpo += '<button type="button" class="nova-ficha-opt" onclick="novaFichaAbrir(\''+tipo+'\',\''+id+'\')">'
+      +'<span class="nf-emoji">'+ic+'</span><span><span class="nf-tit">'+escapeHtml(label)+'</span>'+jaTem+'</span></button>';
+  });
+  document.getElementById("modal-box").classList.add("modal-wide");
+  abrirModal("➕ Nova ficha", corpo,
+    '<button type="button" class="secundario" onclick="novaFichaSecoes(\''+tipo+'\')">‹ Voltar</button>'
+    +'<button type="button" class="secundario" onclick="fecharModalForce()">Cancelar</button>'
+  );
+}
+
+function novaFichaAbrir(tipo, id){
+  fecharModalForce();
+  abrirFichaSalva(tipo, id);
+}
+
+function renderFichasSalvas(){
+  const main = document.getElementById("main");
+  const cards = [];
+
+  const obraFichas = (DB.fichas && DB.fichas[obraAtual]) || {};
+
+  // FVS
+  SERVICOS.forEach(function(s){
+    const est = obraFichas[s.id];
+    if(!_fichaTemDados(est, "servico")) return;
+    if(!_fichaVisivel(est)) return; // rascunho de outro usuário → oculto
+    const totalItens = est.status.reduce(function(acc,row){ return acc+row.length; }, 0);
+    const preenchidos = est.status.reduce(function(acc,row){ return acc+row.filter(function(v){ return v!==""; }).length; }, 0);
+    const pct = totalItens ? Math.round(preenchidos/totalItens*100) : 0;
+    const cls = pct===0?"vazio":pct<100?"parcial":"";
+    const ncCount = est.nc ? est.nc.length : 0;
+    const aprov = est.aprovacao||{status:"pendente"};
+    cards.push({tipo:"servico", id:s.id, badge:"FVS "+s.id, badgeCls:"",
+      titulo: s.titulo, rascunho: !!est.rascunho,
+      obra: est.obra||"—", data: est.data||"—", resp: est.respInsp||"—",
+      pct, cls, ncCount, aprovStatus: aprov.status, aprovPor: aprov.por,
+      info: preenchidos+"/"+totalItens+" status preenchidos"
+    });
+  });
+
+  // FVM
+  MATERIAIS.forEach(function(m){
+    const est = obraFichas[m.id];
+    if(!_fichaTemDados(est, "material")) return;
+    if(!_fichaVisivel(est)) return; // rascunho de outro usuário → oculto
+    const total = 5;
+    const preenchidos = est.resultados ? est.resultados.filter(function(r){ return r!==""; }).length : 0;
+    const pct = Math.round(preenchidos/total*100);
+    const cls = pct===0?"vazio":pct<100?"parcial":"";
+    const ncCount = est.nc ? est.nc.length : 0;
+    const aprovM = est.aprovacao||{status:"pendente"};
+    cards.push({tipo:"material", id:m.id, badge:"FVM "+m.id.replace("M",""), badgeCls:"fvm",
+      titulo: m.material, rascunho: !!est.rascunho,
+      obra: est.obra||"—", data: est.data||"—", resp: est.fornecedor||"—",
+      pct, cls, ncCount, aprovStatus: aprovM.status, aprovPor: aprovM.por,
+      info: preenchidos+"/"+total+" verificações preenchidas"
+    });
+  });
+
+  // Contagens por status de aprovação
+  const cont = {todos:cards.length, submetido:0, pendente:0, aprovado:0, reprovado:0};
+  cards.forEach(function(c){ if(cont[c.aprovStatus]!==undefined) cont[c.aprovStatus]++; });
+
+  // Alertas de ação
+  let alerta = "";
+  // Para quem aprova: o que está aguardando decisão
+  if(podeAprovar() && cont.submetido>0){
+    alerta += '<div class="aprov-alerta">🔔 <b>'+cont.submetido+'</b> ficha(s) aguardando sua aprovação nesta obra. <a href="#" onclick="setFiltroFichas(\'submetido\');return false;">Ver</a></div>';
+  }
+  // Para quem envia: o que foi reprovado e precisa de correção
+  if(cont.reprovado>0){
+    alerta += '<div class="aprov-alerta reprov">❌ <b>'+cont.reprovado+'</b> ficha(s) reprovada(s) — precisam de correção e novo envio. <a href="#" onclick="setFiltroFichas(\'reprovado\');return false;">Ver</a></div>';
+  }
+
+  // Barra de filtros
+  const chips = [
+    {k:"todos",     lbl:"Todos",                  n:cont.todos},
+    {k:"submetido", lbl:"📋 Aguardando aprovação", n:cont.submetido},
+    {k:"pendente",  lbl:"📝 Abertos",             n:cont.pendente},
+    {k:"aprovado",  lbl:"✅ Aprovados",            n:cont.aprovado},
+    {k:"reprovado", lbl:"❌ Reprovados",           n:cont.reprovado}
+  ];
+  const chipsHtml = chips.map(function(ch){
+    const cls = "filtro-chip"+(_filtroFichas===ch.k?" ativo":"")+(ch.k==="submetido"&&ch.n>0?" destaque":"");
+    return '<button type="button" class="'+cls+'" onclick="setFiltroFichas(\''+ch.k+'\')">'+ch.lbl+' <span class="chip-n">'+ch.n+'</span></button>';
+  }).join("");
+
+  // Botão de criar nova ficha (quem pode editar)
+  const btnNova = podeEditar()
+    ? '<button type="button" class="btn-nova-ficha" onclick="novaFicha()">➕ Nova ficha</button>'
+    : '';
+
+  const topo = '<div class="salvas-topo"><div><h2>📋 Fichas da Obra</h2>'
+    +'<div style="font-size:12px;color:#555;">'+cards.length+' ficha(s) no total</div></div>'
+    +btnNova+'</div>'
+    +alerta
+    +'<div class="filtros-bar">'+chipsHtml+'</div>';
+
+  if(cards.length===0){
+    main.innerHTML = topo + '<div class="salvas-vazio">Nenhuma ficha preenchida ainda.<br>Use as abas “Ficha de Serviço” ou “Ficha de Material” acima para começar.</div>';
+    return;
+  }
+
+  // Aplica o filtro selecionado
+  let visiveis = (_filtroFichas==="todos") ? cards.slice() : cards.filter(function(c){ return c.aprovStatus===_filtroFichas; });
+  // Ordena: mais recentes primeiro (por data)
+  visiveis.sort(function(a,b){ return (b.data||"").localeCompare(a.data||""); });
+
+  if(visiveis.length===0){
+    main.innerHTML = topo + '<div class="salvas-vazio">Nenhuma ficha neste filtro.</div>';
+    return;
+  }
+
+  const cardsHtml = visiveis.map(function(c){
+    const aprovLabels={pendente:"📝 Em preenchimento",submetido:"📋 Aguardando Aprovação",aprovado:"✅ Aprovado",reprovado:"❌ Reprovado"};
+    const aprovCores={pendente:"#e65100",submetido:"#1565c0",aprovado:"#2e7d32",reprovado:"#c62828"};
+    return '<div class="ficha-card" onclick="abrirFichaSalva(\''+c.tipo+'\',\''+c.id+'\')" style="position:relative;">'+
+      '<button type="button" onclick="event.stopPropagation();excluirFichaSalva(\''+c.tipo+'\',\''+c.id+'\')" title="Excluir ficha" style="position:absolute;top:10px;right:10px;background:none;border:none;color:#ccc;font-size:16px;cursor:pointer;padding:0;" onmouseover="this.style.color=\'#c62828\'" onmouseout="this.style.color=\'#ccc\'">🗑</button>'+
+      '<span class="card-badge '+c.badgeCls+'">'+escapeHtml(c.badge)+'</span>'+
+      '<div class="card-titulo">'+escapeHtml(c.titulo)+'</div>'+
+      '<div class="card-info">🏗️ Obra: <span>'+escapeHtml(c.obra)+'</span></div>'+
+      '<div class="card-info">📅 Data: <span>'+escapeHtml(c.data)+'</span></div>'+
+      '<div class="card-info">'+(c.tipo==="servico"?"👷 Resp.:":"🏭 Fornecedor:")+' <span>'+escapeHtml(c.resp)+'</span></div>'+
+      (c.ncCount>0?'<div class="card-info" style="color:#b71c1c;">⚠️ '+c.ncCount+' não conformidade(s)</div>':'')+
+      (c.rascunho&&c.aprovStatus==="pendente"
+        ? '<div class="card-info" style="color:#5e35b1;font-weight:bold;">🔒 Rascunho (só você vê)</div>'
+        : '<div class="card-info" style="color:'+aprovCores[c.aprovStatus]+';font-weight:bold;">'+(aprovLabels[c.aprovStatus]||"")+(c.aprovPor?' — '+escapeHtml(c.aprovPor):'')+'</div>')+
+      '<div class="card-progress-txt">'+c.info+' ('+c.pct+'%)</div>'+
+      '<div class="progress-bar"><div class="progress-fill '+c.cls+'" style="width:'+c.pct+'%"></div></div>'+
+    '</div>';
+  }).join("");
+
+  main.innerHTML = topo + '<div class="salvas-grid">'+cardsHtml+'</div>';
+}
+
+function abrirFichaSalva(tipo, id){
+  if(tipo==="servico"){
+    trocarModo("servico");
+    document.getElementById("servicoSelect").value = id;
+    servicoAtual = id;
+    renderFicha();
+  } else {
+    trocarModo("material");
+    document.getElementById("materialSelect").value = id;
+    materialAtual = id;
+    renderFichaMaterial();
+  }
+  atualizarSeletorFicha(); // ficha aberta → esconde o seletor "Serviço:/Material:" da barra
+}
+
+function popularSelectMaterial(){
+  const sel = document.getElementById("materialSelect");
+  sel.innerHTML = '<option value="">— Selecione —</option>';
+  CATEGORIAS_MAT.forEach(cat=>{
+    const og = document.createElement("optgroup");
+    og.label = cat.nome;
+    cat.ids.forEach(id=>{
+      const m = MATERIAIS.find(x=>x.id===id);
+      const op = document.createElement("option");
+      op.value = id;
+      op.textContent = "FVM "+id.replace("M","")+" — "+m.material;
+      og.appendChild(op);
+    });
+    sel.appendChild(og);
+  });
+  sel.addEventListener("change", ()=>{ selecionarMaterial(sel.value); });
+}
+
+function selecionarMaterial(id){
+  materialAtual = id || null;
+  atualizarSeletorFicha();
+  if(!materialAtual){
+    document.getElementById("main").innerHTML = '<div class="empty">Selecione um material acima para abrir a ficha.</div>';
+    return;
+  }
+  renderFichaMaterial();
+}
+
+function resultadoCiclo(s){
+  const ordem = ["","C","NC"];
+  const i = ordem.indexOf(s);
+  return ordem[(i+1)%ordem.length];
+}
+function resultadoLabel(s){
+  return s==="C" ? "CONFORME" : (s==="NC" ? "NÃO CONFORME" : "");
+}
+function calcCubicagemTexto(c){
+  const nums = ["M1","M2","M3","M4","M5"].map(k=>parseFloat(String(c[k]||"").replace(",", ".")));
+  const validos = nums.filter(n=>!isNaN(n));
+  if(validos.length===0) return "Preencha as medidas (M1 a M5) para calcular o volume.";
+  const hMedio = validos.reduce((a,b)=>a+b,0)/validos.length;
+  const cNum = parseFloat(String(c.C||"").replace(",", "."));
+  const lNum = parseFloat(String(c.L||"").replace(",", "."));
+  let txt = "H (médio) = "+hMedio.toFixed(3)+" m";
+  if(!isNaN(cNum) && !isNaN(lNum)){
+    const vol = cNum*lNum*hMedio;
+    txt += " · Volume = C × L × H(médio) = "+vol.toFixed(3)+" m³";
+  } else {
+    txt += " · Informe C e L para calcular o volume.";
+  }
+  return txt;
+}
+function onRecebChange(ri, campo, valor){
+  const est = getEstadoMaterial(materialAtual);
+  const de = est.recebimentos[ri][campo];
+  est.recebimentos[ri][campo] = valor;
+  if(de!==valor) registrarHistorico(materialAtual, "alterou recebimento "+(ri+1)+" «"+campo+"»", (de||"")+" → "+valor);
+  salvarDB();
+}
+function adicionarRecebimento(){
+  const est = getEstadoMaterial(materialAtual);
+  est.recebimentos.push({fornecedor:"", dataEntrega:"", nf:"", descricao:"", qtde:"", pedido:""});
+  registrarHistorico(materialAtual, "adicionou linha de recebimento");
+  salvarDB();
+  renderFichaMaterial();
+}
+function removerRecebimento(ri){
+  const est = getEstadoMaterial(materialAtual);
+  if(ri===0) return; // primeira linha não pode ser removida
+  est.recebimentos.splice(ri,1);
+  registrarHistorico(materialAtual, "removeu linha de recebimento "+(ri+1));
+  salvarDB();
+  renderFichaMaterial();
+}
+function onHeaderMatChange(campo, valor){
+  const est = getEstadoMaterial(materialAtual);
+  const de = est[campo];
+  est[campo] = valor;
+  if(de!==valor) registrarHistorico(materialAtual, "alterou campo «"+campo+"»", (de||"")+" → "+valor);
+  salvarDB();
+}
+function onCubicChange(campo, valor){
+  const est = getEstadoMaterial(materialAtual);
+  est.cubic[campo] = valor;
+  salvarDB();
+  renderFichaMaterial();
+}
+function onResultadoClick(ri){
+  const est = getEstadoMaterial(materialAtual);
+  const de = est.resultados[ri];
+  est.resultados[ri] = resultadoCiclo(est.resultados[ri] || "");
+  const para = est.resultados[ri];
+  if(de!==para) registrarHistorico(materialAtual, "resultado critério "+(ri+1), (de||"—")+" → "+(para||"—"));
+  salvarDB();
+  renderFichaMaterial();
+}
+function onResultadoCustomClick(ci){
+  const est = getEstadoMaterial(materialAtual);
+  const de = est.resultadosCustom[ci];
+  est.resultadosCustom[ci] = resultadoCiclo(est.resultadosCustom[ci] || "");
+  const para = est.resultadosCustom[ci];
+  if(de!==para) registrarHistorico(materialAtual, "resultado critério extra "+(ci+1), (de||"—")+" → "+(para||"—"));
+  salvarDB();
+  renderFichaMaterial();
+}
+function onCriterioCustomChange(ci, campo, valor){
+  const est = getEstadoMaterial(materialAtual);
+  const de = est.criteriosCustom[ci][campo];
+  est.criteriosCustom[ci][campo] = valor;
+  if(de!==valor) registrarHistorico(materialAtual, "alterou critério extra "+(ci+1)+" «"+campo+"»", (de||"")+" → "+valor);
+  salvarDB();
+}
+function adicionarCriterioMat(){
+  const est = getEstadoMaterial(materialAtual);
+  est.criteriosCustom.push({verif:"", criterio:""});
+  est.resultadosCustom.push("");
+  registrarHistorico(materialAtual, "adicionou critério de verificação extra");
+  salvarDB();
+  renderFichaMaterial();
+}
+function removerCriterioMat(ci){
+  const est = getEstadoMaterial(materialAtual);
+  est.criteriosCustom.splice(ci,1);
+  est.resultadosCustom.splice(ci,1);
+  registrarHistorico(materialAtual, "removeu critério de verificação extra "+(ci+1));
+  salvarDB();
+  renderFichaMaterial();
+}
+
+function popularSelect(){
+  const sel = document.getElementById("servicoSelect");
+  sel.innerHTML = '<option value="">— Selecione —</option>';
+  CATEGORIAS.forEach(cat=>{
+    const og = document.createElement("optgroup");
+    og.label = cat.nome;
+    cat.ids.forEach(id=>{
+      const s = SERVICOS.find(x=>x.id===id);
+      const op = document.createElement("option");
+      op.value = id;
+      op.textContent = "FVS "+id+" — "+s.titulo;
+      og.appendChild(op);
+    });
+    sel.appendChild(og);
+  });
+  sel.addEventListener("change", ()=>{ selecionarServico(sel.value); });
+}
+
+function selecionarServico(id){
+  servicoAtual = id || null;
+  atualizarSeletorFicha();
+  if(!servicoAtual){
+    document.getElementById("main").innerHTML = '<div class="empty">Selecione um serviço acima para abrir a ficha.</div>';
+    return;
+  }
+  renderFicha();
+}
+
+function statusCiclo(s){
+  const ordem = ["","A","R","AR","NA"];
+  const i = ordem.indexOf(s);
+  return ordem[(i+1)%ordem.length];
+}
+function statusLabel(s){
+  return s || "";
+}
+
+function renderFicha(){
+  const servico = SERVICOS.find(s=>s.id===servicoAtual);
+  const est = getEstado(servicoAtual);
+  const main = document.getElementById("main");
+
+  let locaisHead = est.locais.map((nome,li)=>
+    `<th class="col-local"><div class="local-head"><input type="text" value="${escapeHtml(nome)}" data-local="${li}" onchange="onLocalNomeChange(this)"></div></th>`
+  ).join("");
+
+  let linhas = servico.itens.map((it, ri)=>{
+    let cels = est.locais.map((_, li)=>{
+      const s = est.status[ri][li] || "";
+      const foto = (est.fotosItens && est.fotosItens[ri] && est.fotosItens[ri][li]) || null;
+      const needsFoto = (s==="A"||s==="AR");
+      const celFoto = needsFoto
+        ? (foto
+            ? `<div class="cel-foto"><img class="foto-cel-thumb" src="${foto}" onclick="verFotoItem(${ri},${li})" title="Ver foto"><button type="button" class="foto-cel-rm" onclick="removerFotoItem(${ri},${li})" title="Remover">×</button></div>`
+            : `<div class="cel-foto"><button type="button" class="foto-cel-btn foto-req" onclick="tirarFotoItem(${ri},${li})" title="Foto obrigatória">📷</button></div>`)
+        : "";
+      return `<td class="col-local"><button type="button" class="status-btn ${s}" onclick="onStatusClick(${ri},${li})">${statusLabel(s)}</button>${celFoto}</td>`;
+    }).join("");
+    return `<tr>
+      <td class="col-n">${ri+1}</td>
+      <td>${escapeHtml(it.item)}</td>
+      <td>${escapeHtml(it.metodo)}</td>
+      <td>${escapeHtml(it.tol)}</td>
+      <td><input type="text" value="${escapeHtml(est.projeto[ri]||"")}" data-row="${ri}" onchange="onProjetoChange(this)" placeholder=""></td>
+      ${cels}
+    </tr>`;
+  }).join("");
+
+  let ncLinhas = est.nc.map((row,ni)=>{
+    const fotoNc = (est.fotosNc && est.fotosNc[ni]) || null;
+    const celFotoNc = fotoNc
+      ? `<td class="nc-foto-cel"><img class="foto-cel-thumb" src="${fotoNc}" onclick="verFotoNc(${ni})" title="Ver foto" style="max-height:46px;"><button type="button" class="foto-cel-rm" onclick="removerFotoNc(${ni})" title="Remover">×</button></td>`
+      : `<td class="nc-foto-cel"><button type="button" class="foto-cel-btn foto-req" onclick="tirarFotoNc(${ni})" title="Foto obrigatória">📷</button></td>`;
+    return `<tr>
+      <td class="col-n">${ni+1}</td>
+      <td><input type="text" value="${escapeHtml(row.problema)}" onchange="onNcChange(${ni},'problema',this.value)"></td>
+      <td><input type="text" value="${escapeHtml(row.solucao)}" onchange="onNcChange(${ni},'solucao',this.value)"></td>
+      <td><input type="date" value="${escapeHtml(row.reinspecao)}" onchange="onNcChange(${ni},'reinspecao',this.value)"></td>
+      ${celFotoNc}
+      <td style="text-align:center;border:none;"><button type="button" class="nc-row-rm" onclick="removerNc(${ni})">remover</button></td>
+    </tr>`;
+  }).join("");
+
+  const _bloqueada = fichaEstaBloqueada(est) || !podeEditar();
+  const _ehVisual = sessao && sessao.perfil==="visualizador";
+  main.innerHTML = `
+  ${_ehVisual?'<div style="background:#e3f2fd;border:1px solid #42a5f5;border-radius:4px;padding:7px 14px;margin-bottom:10px;font-size:12px;color:#1565c0;">👁️ <b>Modo visualização</b> — você tem acesso somente leitura</div>':''}
+  <div class="ficha-doc${_bloqueada?' ficha-bloqueada':''}">
+    ${_bloqueada?'<div class="bloquear-overlay"></div>':''}
+
+    <table class="tbl-cabecalho">
+      <colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"></colgroup>
+      <tr>
+        <td class="logo-cell" rowspan="2"><div class="logo-badge">${getLogo()}</div></td>
+        <td class="titulo-cell" colspan="2">FICHA DE VERIFICAÇÃO DE SERVIÇO</td>
+        <td class="lbl-mini">DATA</td>
+        <td class="val-mini"><input type="date" value="${escapeHtml(est.data)}" onchange="onHeaderChange('data',this.value)"></td>
+      </tr>
+      <tr>
+        <td class="lbl-mini">SERVIÇO</td>
+        <td class="servico-nome">${escapeHtml(servico.titulo)}</td>
+        <td class="ref-cell" colspan="2">REF. INSTRUÇÃO DE EXECUÇÃO: ${escapeHtml(servico.ref)}</td>
+      </tr>
+      <tr>
+        <td class="lbl-mini" colspan="2" rowspan="2">OBJETIVO</td>
+        <td class="objetivo-texto" rowspan="2">${escapeHtml(OBJETIVO_TEXTO)}</td>
+        <td class="lbl-mini">OBRA</td>
+        <td class="val-mini"><input type="text" value="${escapeHtml(est.obra)}" onchange="onHeaderChange('obra',this.value)"></td>
+      </tr>
+      <tr>
+        <td class="lbl-mini">RESP. INSP.</td>
+        <td class="val-mini"><input type="text" value="${escapeHtml(est.respInsp)}" onchange="onHeaderChange('respInsp',this.value)"></td>
+      </tr>
+    </table>
+
+    <div class="locais-actions">Clique nas células de status para alternar: vazio → A (Aprovado) → R (Reprovado) → AR (Aprovado após Reinspeção) → NA (Não se Aplica). Documento: ${servico.codigo}</div>
+
+    <div class="scroll-wrapper" style="overflow-x:auto;">
+    <table class="tbl-verificacao">
+      <tr>
+        <td class="grupo-lbl" colspan="5">Verificação</td>
+        <td class="grupo-lbl" colspan="${est.locais.length}">Local da Verificação</td>
+      </tr>
+      <tr>
+        <th class="col-n">Nº</th>
+        <th>Item de Inspeção</th>
+        <th>Método de Verificação</th>
+        <th>Tolerância</th>
+        <th>Projeto</th>
+        ${locaisHead}
+      </tr>
+      ${linhas}
+    </table>
+    </div>
+
+    <div class="nc-titulo">Ocorrência de Não Conformidade e Tratamento</div>
+    <table class="tbl-nc">
+      <colgroup>
+        <col style="width:36px;">
+        <col style="width:30%;">
+        <col style="width:30%;">
+        <col style="width:115px;">
+        <col style="width:70px;">
+        <col style="width:70px;">
+      </colgroup>
+      <tr><th class="col-n">Nº</th><th>Descrição do problema</th><th>Descrição da solução</th><th>Data Reinspeção</th><th>Foto</th><th style="border:none;"></th></tr>
+      ${ncLinhas || '<tr><td colspan="6" class="nc-vazio">Nenhuma não conformidade registrada</td></tr>'}
+    </table>
+    <div class="nc-actions"><button class="secundario" onclick="adicionarNc()">+ Adicionar Não Conformidade</button></div>
+
+    ${htmlFotosLocais(est, servico)}
+
+    <div class="rodape">
+      ${htmlAprovacao(est)}
+      <div class="rodape-duplo" style="margin-top:12px;">
+        <div class="rodape-metade">
+          <div class="rodape-bloco"><span>*Aprovado / Liberado por:</span><span>Data</span></div>
+          <div class="rodape-linha">
+            <div class="nome"><input type="text" value="${escapeHtml(est.aprovadoPor)}" onchange="onHeaderChange('aprovadoPor',this.value)"></div>
+            <div class="data"><input type="date" value="${escapeHtml(paraISO(est.aprovadoData))}" onchange="onHeaderChange('aprovadoData',paraBR(this.value))"></div>
+          </div>
+        </div>
+        <div class="rodape-metade">
+          <div class="rodape-bloco"><span>Inspecionado por:</span><span>Data de Fechamento da FVS</span></div>
+          <div class="rodape-linha">
+            <div class="nome"><input type="text" value="${escapeHtml(est.inspecionadoPor)}" onchange="onHeaderChange('inspecionadoPor',this.value)"></div>
+            <div class="data"><input type="date" value="${escapeHtml(paraISO(est.dataFechamento))}" onchange="onHeaderChange('dataFechamento',paraBR(this.value))"></div>
+          </div>
+        </div>
+      </div>
+      <div class="consideracoes">${escapeHtml(CONSIDERACOES_TEXTO)}</div>
+      <div class="norma-tec">Norma Técnica nº ${escapeHtml(servico.norma)}</div>
+      <div class="legenda-final">
+        <div class="itens">
+          <span><b>Legenda:</b> em branco - Não Inspecionado</span>
+          <span>A - Aprovado</span>
+          <span>R - Reprovado</span>
+          <span>AR - Aprovado após Reinspeção</span>
+          <span>NA - Não se Aplica</span>
+        </div>
+        <div class="codigo-doc">${servico.codigo}</div>
+      </div>
+    </div>
+
+    ${htmlHistorico(est)}
+
+  </div>
+  `;
+  atualizarToolbarBloqueio();
+}
+
+function renderFichaMaterial(){
+  const mat = MATERIAIS.find(m=>m.id===materialAtual);
+  const est = getEstadoMaterial(materialAtual);
+  const main = document.getElementById("main");
+
+  let linhas = mat.criterios.map((crit, ri)=>{
+    const r = est.resultados[ri] || "";
+    return `<tr>
+      <td>${escapeHtml(LABELS_VERIF_MAT[ri])}</td>
+      <td>${escapeHtml(crit)}</td>
+      <td class="col-resultado"><button type="button" class="resultado-btn ${r}" onclick="onResultadoClick(${ri})">${resultadoLabel(r)}</button></td>
+    </tr>`;
+  }).join("");
+
+  const linhasCustom = (est.criteriosCustom||[]).map((c,ci)=>{
+    const r = est.resultadosCustom[ci] || "";
+    return `<tr>
+      <td><input type="text" value="${escapeHtml(c.verif)}" placeholder="Verificação" onchange="onCriterioCustomChange(${ci},'verif',this.value)" style="width:100%;"></td>
+      <td><input type="text" value="${escapeHtml(c.criterio)}" placeholder="Critério de Aceitação / Método" onchange="onCriterioCustomChange(${ci},'criterio',this.value)" style="width:100%;"></td>
+      <td class="col-resultado" style="display:flex;align-items:center;gap:6px;">
+        <button type="button" class="resultado-btn ${r}" onclick="onResultadoCustomClick(${ci})">${resultadoLabel(r)}</button>
+        <button type="button" class="nc-row-rm" onclick="removerCriterioMat(${ci})" title="Remover">remover</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  let ncLinhas = est.nc.map((row,ni)=>`
+    <tr>
+      <td class="col-n">${ni+1}</td>
+      <td><input type="text" value="${escapeHtml(row.problema)}" onchange="onNcChange(${ni},'problema',this.value)"></td>
+      <td><input type="text" value="${escapeHtml(row.solucao)}" onchange="onNcChange(${ni},'solucao',this.value)"></td>
+      <td><input type="date" value="${escapeHtml(row.reinspecao)}" onchange="onNcChange(${ni},'reinspecao',this.value)"></td>
+      <td style="text-align:center;border:none;"><button type="button" class="nc-row-rm" onclick="removerNc(${ni})">remover</button></td>
+    </tr>
+  `).join("");
+
+  let cubicHtml = "";
+  if(mat.cubicagem){
+    const c = est.cubic;
+    cubicHtml = `
+    <div class="cubic-box">
+      <span class="grupo-lbl2">CUBICAGEM</span>
+      <label>C (m): <input type="text" value="${escapeHtml(c.C)}" onchange="onCubicChange('C',this.value)"></label>
+      <label>L (m): <input type="text" value="${escapeHtml(c.L)}" onchange="onCubicChange('L',this.value)"></label>
+      <label>M1: <input type="text" value="${escapeHtml(c.M1)}" onchange="onCubicChange('M1',this.value)"></label>
+      <label>M2: <input type="text" value="${escapeHtml(c.M2)}" onchange="onCubicChange('M2',this.value)"></label>
+      <label>M3: <input type="text" value="${escapeHtml(c.M3)}" onchange="onCubicChange('M3',this.value)"></label>
+      <label>M4: <input type="text" value="${escapeHtml(c.M4)}" onchange="onCubicChange('M4',this.value)"></label>
+      <label>M5: <input type="text" value="${escapeHtml(c.M5)}" onchange="onCubicChange('M5',this.value)"></label>
+      <div class="cubic-result">${calcCubicagemTexto(c)}</div>
+    </div>`;
+  }
+
+  const _bloqueadaM = fichaEstaBloqueada(est) || !podeEditar();
+  const _ehVisualM = sessao && sessao.perfil==="visualizador";
+  main.innerHTML = `
+  ${_ehVisualM?'<div style="background:#e3f2fd;border:1px solid #42a5f5;border-radius:4px;padding:7px 14px;margin-bottom:10px;font-size:12px;color:#1565c0;">👁️ <b>Modo visualização</b> — você tem acesso somente leitura</div>':''}
+  <div class="ficha-doc${_bloqueadaM?' ficha-bloqueada':''}">
+    ${_bloqueadaM?'<div class="bloquear-overlay"></div>':''}
+
+    <table class="tbl-cabecalho">
+      <colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"></colgroup>
+      <tr>
+        <td class="logo-cell" rowspan="2"><div class="logo-badge">${getLogo()}</div></td>
+        <td class="titulo-cell" colspan="2">FICHA DE VERIFICAÇÃO DE MATERIAL</td>
+        <td class="lbl-mini">DATA</td>
+        <td class="val-mini"><input type="date" value="${escapeHtml(est.data)}" onchange="onHeaderMatChange('data',this.value)"></td>
+      </tr>
+      <tr>
+        <td class="lbl-mini">MATERIAL</td>
+        <td class="servico-nome">${escapeHtml(mat.material)}</td>
+        <td class="ref-cell" colspan="2">REF. INSTRUÇÃO DE RECEBIMENTO: ${escapeHtml(mat.ref)}</td>
+      </tr>
+      <tr>
+        <td class="lbl-mini" colspan="2" rowspan="2">OBJETIVO</td>
+        <td class="objetivo-texto" rowspan="2">${escapeHtml(OBJETIVO_TEXTO_MAT)}</td>
+        <td class="lbl-mini">OBRA</td>
+        <td class="val-mini"><input type="text" value="${escapeHtml(est.obra)}" onchange="onHeaderMatChange('obra',this.value)"></td>
+      </tr>
+      <tr>
+        <td class="lbl-mini">RESP. RECEB.</td>
+        <td class="val-mini"><input type="text" value="${escapeHtml(est.respReceb)}" onchange="onHeaderMatChange('respReceb',this.value)"></td>
+      </tr>
+    </table>
+
+    <table class="tbl-receb">
+      <colgroup><col style="width:21%;"><col style="width:13%;"><col style="width:11%;"><col style="width:24%;"><col style="width:11%;"><col style="width:13%;"><col style="width:36px;"></colgroup>
+      <tr>
+        <td class="lbl-receb">FORNECEDOR</td>
+        <td class="lbl-receb">DATA DE ENTREGA</td>
+        <td class="lbl-receb">NF Nº</td>
+        <td class="lbl-receb">DESCRIÇÃO / CARACTERÍSTICAS</td>
+        <td class="lbl-receb">QTDE / UN.</td>
+        <td class="lbl-receb">PEDIDO / REQU.</td>
+        <td style="border:none;background:transparent;"></td>
+      </tr>
+      ${(est.recebimentos||[]).map((r,ri)=>`<tr>
+        <td><input type="text" value="${escapeHtml(r.fornecedor)}" onchange="onRecebChange(${ri},'fornecedor',this.value)"></td>
+        <td><input type="date" value="${escapeHtml(paraISO(r.dataEntrega))}" onchange="onRecebChange(${ri},'dataEntrega',paraBR(this.value))"></td>
+        <td><input type="text" value="${escapeHtml(r.nf)}" onchange="onRecebChange(${ri},'nf',this.value)"></td>
+        <td><input type="text" value="${escapeHtml(r.descricao)}" onchange="onRecebChange(${ri},'descricao',this.value)"></td>
+        <td><input type="text" value="${escapeHtml(r.qtde)}" onchange="onRecebChange(${ri},'qtde',this.value)"></td>
+        <td><input type="text" value="${escapeHtml(r.pedido)}" onchange="onRecebChange(${ri},'pedido',this.value)"></td>
+        <td style="border:none;text-align:center;">${ri>0?`<button type="button" class="nc-row-rm" onclick="removerRecebimento(${ri})" title="Remover linha">✕</button>`:""}</td>
+      </tr>`).join("")}
+    </table>
+    <div class="nc-actions"><button class="secundario" onclick="adicionarRecebimento()">+ Adicionar Linha de Recebimento</button></div>
+
+    <div class="scroll-wrapper" style="overflow-x:auto;">
+    <table class="tbl-mat">
+      <colgroup><col style="width:220px;"><col><col style="width:190px;"></colgroup>
+      <tr>
+        <th>Verificações e Ensaios</th>
+        <th>Critérios de Aceitação / Método</th>
+        <th>Resultado</th>
+      </tr>
+      ${linhas}
+      ${linhasCustom}
+    </table>
+    </div>
+    <div class="nc-actions"><button class="secundario" onclick="adicionarCriterioMat()">+ Adicionar Critério de Verificação</button></div>
+
+    ${cubicHtml}
+
+    <table class="tbl-lotes">
+      <tr>
+        <td class="lbl-lotes">FORMAÇÃO DE LOTES (AMOSTRAGEM)</td>
+        <td class="lbl-lotes">PRESERVAÇÃO E ARMAZENAGEM</td>
+        ${mat.ensaios ? '<td class="lbl-lotes">*ENSAIOS / TESTES</td>' : ""}
+      </tr>
+      <tr>
+        <td>${escapeHtml(mat.lotes)}</td>
+        <td>${escapeHtml(mat.preservacao)}</td>
+        ${mat.ensaios ? `<td>${escapeHtml(mat.ensaios)}</td>` : ""}
+      </tr>
+    </table>
+
+    <div class="nc-titulo">Ocorrência de Não Conformidade de Recebimento e Tratamento</div>
+    <table class="tbl-nc">
+      <colgroup>
+        <col style="width:36px;">
+        <col style="width:32%;">
+        <col style="width:32%;">
+        <col style="width:140px;">
+        <col style="width:80px;">
+      </colgroup>
+      <tr><th class="col-n">Nº</th><th>Descrição do problema</th><th>Descrição da solução</th><th>Data Reinspeção</th><th style="border:none;"></th></tr>
+      ${ncLinhas || '<tr><td colspan="5" class="nc-vazio">Nenhuma não conformidade registrada</td></tr>'}
+    </table>
+    <div class="nc-actions"><button class="secundario" onclick="adicionarNc()">+ Adicionar Não Conformidade</button></div>
+
+    ${htmlFotos(est,"removerFotoMaterial","legendaFotoMaterial")}
+
+    <div class="rodape">
+      ${htmlAprovacao(est)}
+      <div class="rodape-duplo" style="margin-top:12px;">
+        <div class="rodape-metade">
+          <div class="rodape-bloco"><span>*Aprovado / Liberado por:</span><span>Data</span></div>
+          <div class="rodape-linha">
+            <div class="nome"><input type="text" value="${escapeHtml(est.aprovadoPor)}" onchange="onHeaderMatChange('aprovadoPor',this.value)"></div>
+            <div class="data"><input type="date" value="${escapeHtml(paraISO(est.aprovadoData))}" onchange="onHeaderMatChange('aprovadoData',paraBR(this.value))"></div>
+          </div>
+        </div>
+        <div class="rodape-metade">
+          <div class="rodape-bloco"><span>Inspecionado por:</span><span>Data de Fechamento da FVM</span></div>
+          <div class="rodape-linha">
+            <div class="nome"><input type="text" value="${escapeHtml(est.inspecionadoPor)}" onchange="onHeaderMatChange('inspecionadoPor',this.value)"></div>
+            <div class="data"><input type="date" value="${escapeHtml(paraISO(est.dataFechamento))}" onchange="onHeaderMatChange('dataFechamento',paraBR(this.value))"></div>
+          </div>
+        </div>
+      </div>
+      <div class="consideracoes">${escapeHtml(CONSIDERACOES_TEXTO_MAT)}</div>
+      <div class="norma-tec">Norma Técnica n° ${escapeHtml(mat.norma)}</div>
+      <div class="legenda-final">
+        <div class="itens">
+          <span><b>Legenda:</b> em branco - Não Inspecionado</span>
+          <span>CONFORME</span>
+          <span>NÃO CONFORME</span>
+        </div>
+        <div class="codigo-doc">${mat.codigo}</div>
+      </div>
+    </div>
+
+    ${htmlHistorico(est)}
+
+  </div>
+  `;
+  atualizarToolbarBloqueio();
+}
+
+function escapeHtml(v){
+  return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+// Converte DD/MM/YYYY → YYYY-MM-DD (para input type=date)
+function paraISO(dataBR){
+  if(!dataBR) return "";
+  var p = dataBR.split("/");
+  if(p.length===3) return p[2]+"-"+p[1]+"-"+p[0];
+  return dataBR;
+}
+// Converte YYYY-MM-DD → DD/MM/YYYY (para exibição)
+function paraBR(dataISO){
+  if(!dataISO) return "";
+  var p = dataISO.split("-");
+  if(p.length===3) return p[2]+"/"+p[1]+"/"+p[0];
+  return dataISO;
+}
+
+function onHeaderChange(campo, valor){
+  const est = getEstado(servicoAtual);
+  const de = est[campo];
+  est[campo] = valor;
+  if(de!==valor) registrarHistorico(servicoAtual, "alterou campo «"+campo+"»", (de||"")+" → "+valor);
+  salvarDB();
+}
+function onProjetoChange(input){
+  const ri = parseInt(input.dataset.row,10);
+  const est = getEstado(servicoAtual);
+  est.projeto[ri] = input.value;
+  salvarDB();
+}
+function onLocalNomeChange(input){
+  const li = parseInt(input.dataset.local,10);
+  const est = getEstado(servicoAtual);
+  est.locais[li] = input.value || ("Local "+(li+1));
+  salvarDB();
+}
+function onStatusClick(ri, li){
+  const est = getEstado(servicoAtual);
+  const de = est.status[ri][li];
+  est.status[ri][li] = statusCiclo(de || "");
+  const para = est.status[ri][li];
+  if(de!==para) registrarHistorico(servicoAtual, "status item "+(ri+1)+" local "+(li+1), (de||"—")+" → "+(para||"—"));
+  salvarDB();
+  renderFicha();
+}
+function adicionarLocal(){
+  if(!servicoAtual) return;
+  const est = getEstado(servicoAtual);
+  est.locais.push("Local "+(est.locais.length+1));
+  est.status.forEach(row=>row.push(""));
+  if(est.fotosItens) est.fotosItens.forEach(row=>row.push(null));
+  salvarDB();
+  renderFicha();
+}
+function removerLocal(){
+  if(!servicoAtual) return;
+  const est = getEstado(servicoAtual);
+  if(est.locais.length<=1) return;
+  est.locais.pop();
+  est.status.forEach(row=>row.pop());
+  if(est.fotosItens) est.fotosItens.forEach(row=>row.pop());
+  salvarDB();
+  renderFicha();
+}
+function adicionarNc(){
+  const est = estadoAtual();
+  if(!est) return;
+  est.nc.push({problema:"",solucao:"",reinspecao:""});
+  if(modoAtual==="servico"){ if(!est.fotosNc) est.fotosNc=[]; est.fotosNc.push(null); }
+  const fichaId = modoAtual==="servico"?servicoAtual:materialAtual;
+  registrarHistorico(fichaId, "adicionou NC #"+est.nc.length);
+  salvarDB();
+  renderAtual();
+}
+function removerNc(i){
+  const est = estadoAtual();
+  if(!est) return;
+  est.nc.splice(i,1);
+  if(modoAtual==="servico" && est.fotosNc) est.fotosNc.splice(i,1);
+  salvarDB();
+  renderAtual();
+}
+function onNcChange(i, campo, valor){
+  const est = estadoAtual();
+  if(!est) return;
+  est.nc[i][campo] = valor;
+  salvarDB();
+}
+function limparFicha(){
+  if(!DB.fichas[obraAtual]) DB.fichas[obraAtual] = {};
+  if(modoAtual==="servico"){
+    if(!servicoAtual) return;
+    if(!confirm("Limpar todos os dados preenchidos desta ficha?")) return;
+    const servico = SERVICOS.find(s=>s.id===servicoAtual);
+    DB.fichas[obraAtual][servicoAtual] = novoEstado(servico);
+  } else {
+    if(!materialAtual) return;
+    if(!confirm("Limpar todos os dados preenchidos desta ficha?")) return;
+    const mat = MATERIAIS.find(m=>m.id===materialAtual);
+    DB.fichas[obraAtual][materialAtual] = novoEstadoMaterial(mat);
+  }
+  salvarDB();
+  renderAtual();
+}
+// ===== MODAL =====
+function abrirModal(titulo, corpo, botoes){
+  document.getElementById("modal-titulo").textContent = titulo;
+  document.getElementById("modal-corpo").innerHTML = corpo;
+  document.getElementById("modal-msg").textContent = "";
+  document.getElementById("modal-footer").innerHTML = botoes;
+  document.getElementById("modal-overlay").classList.add("ativo");
+}
+function fecharModal(e){
+  if(e && e.target !== document.getElementById("modal-overlay")) return;
+  document.getElementById("modal-overlay").classList.remove("ativo");
+}
+function fecharModalForce(){ document.getElementById("modal-overlay").classList.remove("ativo"); document.getElementById("modal-box").classList.remove("modal-wide"); }
+function modalMsg(txt){ document.getElementById("modal-msg").textContent = txt; }
+
+// ===== APROVAÇÃO =====
+function fichaEstaBloqueada(est){
+  const s = est && est.aprovacao && est.aprovacao.status;
+  if(s==="aprovado" || s==="reprovado") return true;
+  if(s==="submetido" && !podeAprovar()) return true; // bloqueia inspetor quando submetido
+  return false;
+}
+
+function validarItensPreenchidos(pularFotos){
+  const est = estadoAtual();
+  if(!est) return "Nenhuma ficha selecionada.";
+  if(!est.obra || !est.obra.trim()) return "Preencha o campo OBRA.";
+  if(modoAtual==="servico"){
+    if(!est.respInsp || !est.respInsp.trim()) return "Preencha o campo RESP. INSP.";
+    if(!est.data) return "Preencha a DATA da ficha.";
+    if(!est.inspecionadoPor || !est.inspecionadoPor.trim()) return "Preencha o campo INSPECIONADO POR.";
+    if(!est.dataFechamento) return "Preencha a DATA DE FECHAMENTO da FVS.";
+    let vazios = 0;
+    (est.status||[]).forEach(function(row){ row.forEach(function(s){ if(!s) vazios++; }); });
+    if(vazios>0) return "Preencha todos os "+vazios+" status de inspeção antes de aprovar.";
+    if(!pularFotos){
+      // Fotos obrigatórias para itens aprovados
+      let semFotoItem = 0;
+      (est.status||[]).forEach(function(row, ri){ row.forEach(function(s, li){ if((s==="A"||s==="AR") && !(est.fotosItens&&est.fotosItens[ri]&&est.fotosItens[ri][li])) semFotoItem++; }); });
+      if(semFotoItem>0) return "Adicione foto para todos os itens aprovados ("+semFotoItem+" pendente(s)).";
+      // Fotos obrigatórias para NCs
+      let semFotoNc = (est.nc||[]).filter(function(_,ni){ return !(est.fotosNc&&est.fotosNc[ni]); }).length;
+      if(semFotoNc>0) return "Adicione foto para todas as não conformidades ("+semFotoNc+" pendente(s)).";
+    }
+  } else {
+    if(!est.respReceb || !est.respReceb.trim()) return "Preencha o campo RESP. RECEB.";
+    if(!est.data) return "Preencha a DATA da ficha.";
+    const r0 = (est.recebimentos||[{}])[0]||{};
+    if(!r0.fornecedor || !r0.fornecedor.trim()) return "Preencha o campo FORNECEDOR.";
+    if(!r0.dataEntrega) return "Preencha a DATA DE ENTREGA.";
+    if(!r0.nf || !r0.nf.trim()) return "Preencha o campo NF Nº.";
+    if(!r0.descricao || !r0.descricao.trim()) return "Preencha o campo DESCRIÇÃO / CARACTERÍSTICAS.";
+    if(!r0.qtde || !r0.qtde.trim()) return "Preencha o campo QTDE / UN.";
+    if(!est.inspecionadoPor || !est.inspecionadoPor.trim()) return "Preencha o campo INSPECIONADO POR.";
+    if(!est.dataFechamento) return "Preencha a DATA DE FECHAMENTO da FVM.";
+    const vaziosF = (est.resultados||[]).filter(function(r){ return !r; }).length;
+    const vaziosC = (est.resultadosCustom||[]).filter(function(r){ return !r; }).length;
+    const vazios = vaziosF + vaziosC;
+    if(vazios>0) return "Preencha todos os "+vazios+" resultado(s) de verificação antes de aprovar.";
+  }
+  return null; // OK
+}
+
+function htmlAprovacao(est){
+  const aprov = est.aprovacao || {status:"pendente",por:"",data:"",obs:""};
+  const badges = {
+    pendente:"📝 Em preenchimento",
+    submetido:"📋 Aguardando Aprovação",
+    aprovado:"✅ Aprovado",
+    reprovado:"❌ Reprovado"
+  };
+  const ehRascunho = !!est.rascunho && aprov.status==="pendente";
+  const badge = ehRascunho
+    ? '<span class="aprov-badge rascunho">🔒 Rascunho</span>'
+    : '<span class="aprov-badge '+aprov.status+'">'+(badges[aprov.status]||"")+'</span>';
+  let corpo = '';
+  if(aprov.status==="pendente"){
+    // Só libera Submeter/Aprovar quando a ficha está 100% preenchida (campos, status e fotos)
+    const erroCompleto = validarItensPreenchidos();
+    const completo = !erroCompleto;
+    const aviso = completo ? '' : '<div class="aprov-aviso">⚠️ Para submeter/aprovar, complete a ficha: '+escapeHtml(erroCompleto)+'</div>';
+    if(podeAprovar()){
+      // Gestor/Admin pode aprovar diretamente (aprovar exige 100%; reprovar sempre liberado)
+      corpo = aviso + '<div class="aprov-acoes">'
+        +(completo
+            ? '<button type="button" class="btn-aprovar" onclick="iniciarAprovacao(\'aprovar\')">✅ Aprovar ficha</button>'
+            : '<button type="button" class="btn-aprovar" disabled title="Complete 100% da ficha para aprovar">✅ Aprovar ficha</button>')
+        +'<button type="button" class="btn-reprovar" onclick="iniciarAprovacao(\'reprovar\')">❌ Reprovar ficha</button>'
+        +'</div>';
+    } else if(podeEditar()){
+      // Opção de rascunho: enquanto marcado, a ficha fica visível só para o criador
+      const draftBox = '<label class="rascunho-toggle"><input type="checkbox" '+(ehRascunho?'checked':'')+' onclick="toggleRascunho()"> 🔒 Manter como rascunho (não exibir para o gestor)</label>'
+        +(ehRascunho ? '<div class="aprov-aviso rascunho">🔒 Esta ficha é um <b>rascunho</b> — somente você a vê. Desmarque acima (ou submeta) para enviá-la ao gestor.</div>' : '');
+      corpo = aviso + draftBox + '<div class="aprov-acoes">'
+        +(completo
+            ? '<button type="button" class="btn-submeter" onclick="iniciarSubmissao()">📋 Submeter para Aprovação</button>'
+            : '<button type="button" class="btn-submeter" disabled title="Complete 100% da ficha para submeter">📋 Submeter para Aprovação</button>')
+        +'</div>';
+    }
+  } else if(aprov.status==="submetido"){
+    const bannerSub = '<div class="banner-bloqueado" style="background:#e3f2fd;color:#1565c0;border-color:#1976d2;">📋 Submetido por '
+      +escapeHtml(aprov.por||"")+(aprov.data?' em '+escapeHtml(aprov.data):'')
+      +(podeAprovar()?'' : ' — aguardando aprovação do gestor')+'</div>';
+    if(podeAprovar()){
+      corpo = bannerSub
+        +'<div class="aprov-acoes">'
+        +'<button type="button" class="btn-aprovar" onclick="iniciarAprovacao(\'aprovar\')">✅ Aprovar ficha</button>'
+        +'<button type="button" class="btn-reprovar" onclick="iniciarAprovacao(\'reprovar\')">❌ Reprovar ficha</button>'
+        +'<button type="button" class="secundario" onclick="devolverEdicao()">↩ Devolver para edição</button>'
+        +'</div>';
+    } else {
+      corpo = bannerSub;
+    }
+  } else {
+    const bannerCls = aprov.status==="aprovado"?"banner-bloqueado":"banner-bloqueado banner-reprovado";
+    const bannerTxt = aprov.status==="aprovado"
+      ? "🔒 Ficha aprovada e bloqueada para edição"
+      : "🔒 Ficha reprovada e bloqueada para edição";
+    corpo = '<div class="'+bannerCls+'">'+bannerTxt+'</div>'
+      +'<div class="aprov-registro">'
+      +'<b>'+(aprov.status==="aprovado"?"Aprovado":"Reprovado")+' por:</b> '+escapeHtml(aprov.por)
+      +' &nbsp;|&nbsp; <b>Data:</b> '+escapeHtml(aprov.data)
+      +(aprov.obs?'<br><b>Obs.:</b> '+escapeHtml(aprov.obs):'')
+      +'</div>'
+      +(podeAprovar()?'<div class="aprov-acoes"><button type="button" class="secundario" onclick="reabrirAprovacao()">↩ Reabrir aprovação (requer senha admin)</button></div>':'');
+  }
+  return '<div class="aprov-section">'
+    +'<div class="aprov-header"><strong>Status de Aprovação</strong>'+badge+'</div>'
+    +'<div class="aprov-body">'+corpo+'</div>'
+    +'</div>';
+}
+
+function iniciarAprovacao(acao){
+  if(!podeAprovar()){ alert("⚠️ Apenas Administradores e Gestores podem aprovar/reprovar fichas."); return; }
+  // Ao reprovar, não exige fotos (a ficha está sendo rejeitada)
+  const erro = validarItensPreenchidos(acao==="reprovar");
+  if(erro){ alert("⚠️ "+erro); return; }
+  const label = acao==="aprovar" ? "Aprovar" : "Reprovar";
+  abrirModal(
+    label+" ficha",
+    '<p style="font-size:13px;margin:0 0 12px;">Confirma a '+(acao==="aprovar"?"aprovação":"reprovação")+' desta ficha como <b>'+escapeHtml(sessao.nome)+'</b>?</p>'
+    +'<label>Observação (opcional):</label><input type="text" id="aprov-obs" placeholder="">',
+    '<button type="button" class="secundario" onclick="fecharModalForce()">Cancelar</button>'
+    +'<button type="button" class="'+(acao==="aprovar"?"btn-aprovar":"btn-reprovar")+'" onclick="confirmarAprovacao(\''+acao+'\')">'
+    +(acao==="aprovar"?"✅ Confirmar Aprovação":"❌ Confirmar Reprovação")+'</button>'
+  );
+  setTimeout(function(){ var el=document.getElementById("aprov-obs"); if(el) el.focus(); },100);
+}
+
+function confirmarAprovacao(acao){
+  if(!podeAprovar()){ fecharModalForce(); alert("Acesso negado."); return; }
+  const obs = (document.getElementById("aprov-obs")||{}).value||"";
+  const est = estadoAtual(); if(!est) return;
+  if(!est.aprovacao) est.aprovacao = {};
+  est.aprovacao.status = acao==="aprovar" ? "aprovado" : "reprovado";
+  est.aprovacao.por = sessao.nome;
+  const _hoje = new Date(); est.aprovacao.data = _hoje.toLocaleDateString("pt-BR");
+  const _hojeISO = _hoje.toISOString().slice(0,10);
+  est.aprovacao.obs = obs.trim();
+  if(acao==="aprovar"){ est.aprovadoPor = sessao.nome; est.aprovadoData = paraBR(_hojeISO); }
+  const fichaId = modoAtual==="servico"?servicoAtual:materialAtual;
+  registrarHistorico(fichaId, acao==="aprovar"?"aprovação":"reprovação", obs.trim()||"");
+  registrarLog(acao==="aprovar"?"aprovacao":"reprovacao", {fichaId:fichaId, obra:obraAtual});
+  salvarDB();
+  fecharModalForce();
+  renderAtual();
+}
+
+function reabrirAprovacao(){
+  if(!podeAprovar()){ alert("Apenas Administradores e Gestores podem reabrir aprovações."); return; }
+  abrirModal(
+    "Reabrir aprovação",
+    '<p style="font-size:13px;margin:0 0 12px;">Esta ação remove a aprovação atual e desbloqueia a ficha para edição.<br>Confirma como <b>'+escapeHtml(sessao.nome)+'</b>?</p>',
+    '<button type="button" class="secundario" onclick="fecharModalForce()">Cancelar</button>'
+    +'<button type="button" class="perigo" onclick="confirmarReabertura()">↩ Reabrir</button>'
+  );
+}
+function confirmarReabertura(){
+  if(!podeAprovar()){ fecharModalForce(); return; }
+  const est=estadoAtual(); if(!est) return;
+  const fichaId=modoAtual==="servico"?servicoAtual:materialAtual;
+  registrarHistorico(fichaId, "reabriu aprovação");
+  registrarLog("reabrir-aprovacao",{fichaId:fichaId,obra:obraAtual});
+  est.aprovacao={status:"pendente",por:"",data:"",obs:""};
+  est.aprovadoPor=""; est.aprovadoData="";
+  salvarDB(); fecharModalForce(); renderAtual();
+}
+
+function iniciarSubmissao(){
+  if(!podeEditar()){ alert("⚠️ Sem permissão para submeter fichas."); return; }
+  const erro = validarItensPreenchidos();
+  if(erro){ alert("⚠️ "+erro); return; }
+  abrirModal(
+    "Submeter para aprovação",
+    '<p style="font-size:13px;margin:0 0 12px;">Submeter esta ficha para aprovação como <b>'+escapeHtml(sessao.nome)+'</b>?</p>'
+    +'<p style="font-size:12px;color:#666;margin:0;">A ficha ficará bloqueada para edição até que o gestor tome uma decisão.</p>',
+    '<button type="button" class="secundario" onclick="fecharModalForce()">Cancelar</button>'
+    +'<button type="button" class="btn-submeter" onclick="confirmarSubmissao()">📋 Confirmar Submissão</button>'
+  );
+}
+// Rascunho: ficha visível só para quem criou (oculta do gestor/admin)
+function _fichaVisivel(est){
+  if(!est) return true;
+  if(est.rascunho && est.criadoPor && sessao && est.criadoPor !== sessao.id) return false;
+  return true;
+}
+function toggleRascunho(){
+  var est = estadoAtual(); if(!est) return;
+  est.rascunho = !est.rascunho;
+  if(est.rascunho && !est.criadoPor) est.criadoPor = (sessao && sessao.id) || "";
+  var fichaId = modoAtual==="servico" ? servicoAtual : materialAtual;
+  registrarHistorico(fichaId, est.rascunho ? "marcou como rascunho" : "removeu rascunho");
+  salvarDB();
+  renderAtual();
+}
+
+function confirmarSubmissao(){
+  const est=estadoAtual(); if(!est) return;
+  est.rascunho = false; // submeter torna a ficha visível ao gestor
+  if(!est.aprovacao) est.aprovacao = {};
+  est.aprovacao.status = "submetido";
+  est.aprovacao.por = sessao.nome;
+  const _hoje = new Date();
+  est.aprovacao.data = _hoje.toLocaleDateString("pt-BR");
+  est.aprovacao.obs = "";
+  const fichaId = modoAtual==="servico"?servicoAtual:materialAtual;
+  registrarHistorico(fichaId, "submeteu para aprovação");
+  registrarLog("submissao",{fichaId:fichaId,obra:obraAtual});
+  salvarDB(); fecharModalForce(); renderAtual();
+}
+
+function devolverEdicao(){
+  if(!podeAprovar()){ alert("⚠️ Apenas Administradores e Gestores podem devolver fichas."); return; }
+  abrirModal(
+    "Devolver para edição",
+    '<p style="font-size:13px;margin:0 0 12px;">Devolver esta ficha ao inspetor para edição?<br>A submissão será cancelada.</p>',
+    '<button type="button" class="secundario" onclick="fecharModalForce()">Cancelar</button>'
+    +'<button type="button" class="perigo" onclick="confirmarDevolucao()">↩ Devolver</button>'
+  );
+}
+function confirmarDevolucao(){
+  if(!podeAprovar()){ fecharModalForce(); return; }
+  const est=estadoAtual(); if(!est) return;
+  est.aprovacao={status:"pendente",por:"",data:"",obs:""};
+  const fichaId=modoAtual==="servico"?servicoAtual:materialAtual;
+  registrarHistorico(fichaId, "devolveu para edição");
+  registrarLog("devolucao",{fichaId:fichaId,obra:obraAtual});
+  salvarDB(); fecharModalForce(); renderAtual();
+}
+
+// ===== FOTOS POR ITEM DE INSPEÇÃO =====
+var _fotoItemTarget = null;
+
+function tirarFotoItem(ri, li){
+  _fotoItemTarget = {tipo:"item", ri:ri, li:li};
+  document.getElementById("fotoItemInput").click();
+}
+function removerFotoItem(ri, li){
+  const est = getEstado(servicoAtual);
+  if(!est.fotosItens || !est.fotosItens[ri]) return;
+  est.fotosItens[ri][li] = null;
+  salvarDB(); renderFicha();
+}
+function tirarFotoNc(ni){
+  _fotoItemTarget = {tipo:"nc", ni:ni};
+  document.getElementById("fotoItemInput").click();
+}
+function removerFotoNc(ni){
+  const est = getEstado(servicoAtual);
+  if(!est.fotosNc) return;
+  est.fotosNc[ni] = null;
+  salvarDB(); renderFicha();
+}
+function verFotoItem(ri, li){
+  const est = getEstado(servicoAtual);
+  const foto = est.fotosItens && est.fotosItens[ri] && est.fotosItens[ri][li];
+  if(!foto) return;
+  const serv = SERVICOS.find(s=>s.id===servicoAtual);
+  const label = (ri+1)+'. '+serv.itens[ri].item+' — '+est.locais[li];
+  document.getElementById("modal-box").classList.add("modal-wide");
+  abrirModal(label,
+    '<img src="'+foto+'" style="max-width:100%;border-radius:6px;display:block;">',
+    '<button type="button" class="secundario" onclick="fecharModalForce()">Fechar</button>'
+    +'<button type="button" class="perigo" onclick="removerFotoItem('+ri+','+li+');fecharModalForce()">🗑 Remover foto</button>');
+}
+function verFotoNc(ni){
+  const est = getEstado(servicoAtual);
+  const foto = est.fotosNc && est.fotosNc[ni];
+  if(!foto) return;
+  const label = 'NC '+(ni+1)+' — '+(est.nc[ni].problema||'Não Conformidade');
+  document.getElementById("modal-box").classList.add("modal-wide");
+  abrirModal(label,
+    '<img src="'+foto+'" style="max-width:100%;border-radius:6px;display:block;">',
+    '<button type="button" class="secundario" onclick="fecharModalForce()">Fechar</button>'
+    +'<button type="button" class="perigo" onclick="removerFotoNc('+ni+');fecharModalForce()">🗑 Remover foto</button>');
+}
+
+document.getElementById("fotoItemInput").addEventListener("change", function(e){
+  const file = e.target.files[0];
+  e.target.value = "";
+  if(!file || !_fotoItemTarget) return;
+  const t = _fotoItemTarget;
+  _fotoItemTarget = null;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    comprimirImagem(ev.target.result, function(base64){
+      processarFotoNova(base64, function(val){
+        const est = getEstado(servicoAtual);
+        if(t.tipo==="item"){
+          if(!est.fotosItens) est.fotosItens = [];
+          if(!est.fotosItens[t.ri]) est.fotosItens[t.ri] = [];
+          est.fotosItens[t.ri][t.li] = val;
+        } else {
+          if(!est.fotosNc) est.fotosNc = [];
+          est.fotosNc[t.ni] = val;
+        }
+        salvarDB(); renderFicha();
+      });
+    });
+  };
+  reader.readAsDataURL(file);
+});
+
+function htmlFotosLocais(est, servico){
+  const localGroups = est.locais.map(function(nomLocal, li){
+    const items = servico.itens.map(function(it, ri){
+      const foto = est.fotosItens && est.fotosItens[ri] && est.fotosItens[ri][li];
+      if(!foto) return null;
+      return {label:(ri+1)+'. '+it.item, foto:foto};
+    }).filter(Boolean);
+    if(!items.length) return null;
+    return {nome:nomLocal, items:items};
+  }).filter(Boolean);
+
+  const ncGroup = (est.nc||[]).map(function(nc, ni){
+    const foto = est.fotosNc && est.fotosNc[ni];
+    if(!foto) return null;
+    return {label:(ni+1)+'. '+(nc.problema||'NC '+(ni+1)), foto:foto};
+  }).filter(Boolean);
+
+  if(!localGroups.length && !ncGroup.length) return '';
+
+  let html = '<div class="fotos-locais-section"><div class="fotos-titulo">Registro Fotográfico por Local</div>';
+  localGroups.forEach(function(g){
+    html += '<div class="fotos-local-group"><div class="fotos-local-nome">'+escapeHtml(g.nome)+'</div><div class="fotos-grid-local">';
+    g.items.forEach(function(item){
+      html += '<div class="foto-local-item"><div class="foto-label">'+escapeHtml(item.label)+'</div><img src="'+item.foto+'" alt="'+escapeHtml(item.label)+'"></div>';
+    });
+    html += '</div></div>';
+  });
+  if(ncGroup.length){
+    html += '<div class="fotos-local-group"><div class="fotos-local-nome">Não Conformidades</div><div class="fotos-grid-local">';
+    ncGroup.forEach(function(item){
+      html += '<div class="foto-local-item"><div class="foto-label">'+escapeHtml(item.label)+'</div><img src="'+item.foto+'" alt="'+escapeHtml(item.label)+'"></div>';
+    });
+    html += '</div></div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+// ===== FOTOS =====
+function htmlFotos(est, fnRm, fnLeg){
+  const fotos = est.fotos || [];
+  const items = fotos.map(function(f,i){
+    return '<div class="foto-item">'
+      +'<button type="button" class="foto-rm" onclick="'+fnRm+'('+i+')" title="Remover">×</button>'
+      +'<img src="'+f.base64+'" alt="foto '+(i+1)+'">'
+      +'<input type="text" placeholder="Legenda..." value="'+escapeHtml(f.legenda||'')+'" onchange="'+fnLeg+'('+i+',this.value)">'
+      +'</div>';
+  }).join("");
+  return '<div class="fotos-section">'
+    +'<div class="fotos-titulo">Registro Fotográfico</div>'
+    +'<div class="fotos-grid">'+items+'</div>'
+    +'<div class="fotos-add nc-actions"><button class="secundario" onclick="abrirSeletorFotos()">📷 Adicionar Fotos</button></div>'
+    +'</div>';
+}
+
+function abrirSeletorFotos(){ document.getElementById("fotoInput").click(); }
+
+document.getElementById("fotoInput").addEventListener("change", function(e){
+  const files = Array.from(e.target.files);
+  e.target.value = "";
+  files.forEach(function(file){
+    const reader = new FileReader();
+    reader.onload = function(ev){
+      comprimirImagem(ev.target.result, function(base64){
+        processarFotoNova(base64, function(val){
+          const est = estadoAtual();
+          if(!est) return;
+          if(!est.fotos) est.fotos = [];
+          est.fotos.push({base64:val, legenda:""});
+          salvarDB(); renderAtual();
+        });
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+});
+
+function comprimirImagem(src, cb){
+  const img = new Image();
+  img.onload = function(){
+    const MAX = 900;
+    let w = img.width, h = img.height;
+    if(w > MAX || h > MAX){ if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;} }
+    const c = document.createElement("canvas");
+    c.width=w; c.height=h;
+    c.getContext("2d").drawImage(img,0,0,w,h);
+    cb(c.toDataURL("image/jpeg", 0.72));
+  };
+  img.src = src;
+}
+
+function removerFotoServico(i){
+  const est = getEstado(servicoAtual);
+  est.fotos.splice(i,1); salvarDB(); renderFicha();
+}
+function legendaFotoServico(i,v){
+  const est = getEstado(servicoAtual);
+  est.fotos[i].legenda=v; salvarDB();
+}
+function removerFotoMaterial(i){
+  const est = getEstadoMaterial(materialAtual);
+  est.fotos.splice(i,1); salvarDB(); renderFichaMaterial();
+}
+function legendaFotoMaterial(i,v){
+  const est = getEstadoMaterial(materialAtual);
+  est.fotos[i].legenda=v; salvarDB();
+}
+
+// ===== EXCLUIR FICHA (com senha admin) =====
+function excluirFichaSalva(tipo, id){
+  if(!ehAdmin()){ alert("Apenas administradores podem excluir fichas."); return; }
+  abrirModal(
+    "Excluir ficha",
+    '<p style="font-size:13px;margin:0 0 12px;">Esta ação é irreversível. Confirma a exclusão desta ficha?</p>',
+    '<button type="button" class="secundario" onclick="fecharModalForce()">Cancelar</button>'
+    +'<button type="button" class="perigo" onclick="confirmarExclusao(\''+tipo+'\',\''+id+'\')">🗑 Excluir</button>'
+  );
+}
+
+function confirmarExclusao(tipo, id){
+  if(!ehAdmin()){ fecharModalForce(); return; }
+  if(DB.fichas && DB.fichas[obraAtual]) delete DB.fichas[obraAtual][id];
+  registrarLog("excluir-ficha",{fichaId:id,tipo:tipo,obra:obraAtual});
+  salvarDB();
+  fecharModalForce();
+  renderFichasSalvas();
+}
+
+// ===== IMPORTAÇÃO DE NF (PDF) =====
+function importarNF(){
+  if(!materialAtual){ alert("Selecione um material antes de importar a NF."); return; }
+  document.getElementById("nfFileInput").click();
+}
+
+document.getElementById("nfFileInput").addEventListener("change", function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  e.target.value = "";
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    const typedarray = new Uint8Array(ev.target.result);
+    // Configurar worker do PDF.js
+    if(typeof pdfjsLib !== "undefined"){
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    }
+    pdfjsLib.getDocument({data: typedarray}).promise.then(function(pdf){
+      const promises = [];
+      for(let i = 1; i <= pdf.numPages; i++){
+        promises.push(
+          pdf.getPage(i).then(function(pg){
+            return pg.getTextContent();
+          }).then(function(tc){
+            return tc.items.map(function(it){ return it.str; }).join(" ");
+          })
+        );
+      }
+      return Promise.all(promises);
+    }).then(function(pages){
+      preencherCamposNF(pages.join("\n"));
+    }).catch(function(err){
+      alert("Erro ao ler o PDF: " + err.message);
+    });
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+function preencherCamposNF(txt){
+  const est = getEstadoMaterial(materialAtual);
+  const preenchidos = [];
+
+  // NF Número
+  const nfM = txt.match(/N[ÚU]MERO\s+([\d\.]+)/i) ||
+               txt.match(/NF[- ]?[Ee]?\s*[Nn][°º]?\.?\s*([\d\.]+)/i) ||
+               txt.match(/NOTA\s+FISCAL\s*[Nn][°º]?\.?\s*([\d\.]+)/i);
+  if(nfM){ est.nf = nfM[1].replace(/\./g,""); preenchidos.push("NF Nº"); }
+
+  // Fornecedor (Razão Social do emitente)
+  const fornM = txt.match(/RAZ[ÃA]O\s*SOCIAL\s+([A-ZÀ-Ü][A-ZÀ-Ü0-9\s\.\,\-&\/]+?)(?:\s{3,}|CNPJ|ENDERE)/i) ||
+                txt.match(/^([A-ZÀ-Ü][A-ZÀ-Ü0-9\s\.\,\-&]{6,70}?)\s{2,}/m);
+  if(fornM){ est.fornecedor = fornM[1].trim(); preenchidos.push("Fornecedor"); }
+
+  // Data de Emissão / Entrega
+  const dataM = txt.match(/(?:DATA\s+DE\s+EMISS[ÃA]O|EMISS[ÃA]O)\s+(\d{2}\/\d{2}\/\d{4})/i) ||
+                txt.match(/(\d{2}\/\d{2}\/\d{4})/);
+  if(dataM){ est.dataEntrega = dataM[1]; preenchidos.push("Data de Entrega"); }
+
+  // Pedido de Compra
+  const pedM = txt.match(/PEDIDO\s+(?:DE\s+COMPRA\s+)?[Nn°º]?\.?\s*([\d\-]+)/i) ||
+               txt.match(/(?:O\.?\s*C\.?|P\.?\s*O\.?)\s*[Nn°º]?\.?\s*([\d\-]+)/i);
+  if(pedM){ est.pedido = pedM[1]; preenchidos.push("Pedido"); }
+
+  // Descrição do produto (primeira ocorrência após cabeçalho dos itens)
+  const descM = txt.match(/DESCRI[ÇC][ÃA]O\s+(?:DO\s+PRODUTO[^\n]*\n?\s*)([A-Za-zÀ-ü][^\n]{4,100}?)(?:\s{3,}|\n)/i);
+  if(descM){ est.descricao = descM[1].trim(); preenchidos.push("Descrição"); }
+
+  // Quantidade
+  const qtdeM = txt.match(/QUANTIDADE\s+([\d\.,]+)/i) ||
+                txt.match(/QTDE?\.\s*([\d\.,]+)/i);
+  if(qtdeM){ est.qtde = qtdeM[1]; preenchidos.push("Qtde"); }
+
+  salvarDB();
+  renderFichaMaterial();
+
+  if(preenchidos.length > 0){
+    alert("✅ Campos preenchidos: " + preenchidos.join(", ") + ".\n\nRevise os dados e ajuste se necessário.");
+  } else {
+    alert("⚠️ Não foi possível extrair dados desta NF. O layout pode diferir do padrão DANFE.\nPreencha os campos manualmente.");
+  }
+}
+
+function imprimirFicha(){
+  if(modoAtual==="servico" && !servicoAtual){ alert("Selecione um serviço antes de imprimir."); return; }
+  if(modoAtual==="material" && !materialAtual){ alert("Selecione um material antes de imprimir."); return; }
+  window.print();
+}
+
+window.addEventListener("beforeprint", function(){
+  // Converter inputs em spans para exibir texto completo
+  document.querySelectorAll("#main input[type=text], #main input[type=date]").forEach(function(inp){
+    var span = document.createElement("span");
+    span.className = "print-val";
+    span.textContent = inp.type==="date" ? paraBR(inp.value) : inp.value;
+    inp.parentNode.insertBefore(span, inp.nextSibling);
+    inp.classList.add("print-hidden");
+  });
+  // Zerar coluna do botão "remover" nas tabelas NC e recebimento
+  document.querySelectorAll(".tbl-nc, .tbl-receb").forEach(function(tbl){
+    var lastCol = tbl.querySelector("colgroup col:last-child");
+    if(lastCol){ lastCol._pw = lastCol.style.width; lastCol.style.width = "0"; }
+    tbl.querySelectorAll("tr > td:last-child, tr > th:last-child").forEach(function(el){
+      el._pd = el.style.display; el._pp = el.style.padding; el._pb = el.style.border;
+      el.style.display = "none"; el.style.padding = "0"; el.style.border = "none";
+    });
+  });
+  // Escalar largura para caber na página (sem limitar altura — doc pode ter múltiplas páginas)
+  var ficha = document.querySelector("#main .ficha-doc");
+  if(ficha){
+    ficha.style.zoom = "";
+    var fw = ficha.scrollWidth;
+    var maxW = 1060; // A4 landscape ~285mm a 96dpi
+    var scaleW = fw > maxW ? maxW / fw : 1;
+    if(scaleW < 0.99){
+      ficha.style.zoom = scaleW;
+      ficha._printZoom = true;
+    }
+  }
+});
+window.addEventListener("afterprint", function(){
+  document.querySelectorAll(".print-val").forEach(function(el){ el.remove(); });
+  document.querySelectorAll(".print-hidden").forEach(function(el){ el.classList.remove("print-hidden"); });
+  // Restaurar coluna do remover
+  document.querySelectorAll(".tbl-nc, .tbl-receb").forEach(function(tbl){
+    var lastCol = tbl.querySelector("colgroup col:last-child");
+    if(lastCol && lastCol._pw !== undefined){ lastCol.style.width = lastCol._pw; delete lastCol._pw; }
+    tbl.querySelectorAll("tr > td:last-child, tr > th:last-child").forEach(function(el){
+      if(el._pd !== undefined){ el.style.display = el._pd; el.style.padding = el._pp; el.style.border = el._pb; delete el._pd; delete el._pp; delete el._pb; }
+    });
+  });
+  // Restaurar zoom
+  var ficha = document.querySelector("#main .ficha-doc");
+  if(ficha && ficha._printZoom){ ficha.style.zoom = ""; ficha._printZoom = false; }
+});
+
+// ===== CONFIGURAÇÃO DO LOGO =====
+function configurarLogo(){
+  if(!ehAdmin()){ return; }
+  abrirModal("Configurar Logo",
+    '<p style="font-size:13px;margin:0 0 12px;">Escolha o arquivo de imagem do logo (PNG, JPG). Ele será salvo na nuvem e aparecerá em todas as fichas independente da pasta do arquivo.</p>'
+    +'<label style="display:flex;align-items:center;justify-content:center;width:100%;height:80px;border:2px dashed #ccc;border-radius:6px;cursor:pointer;color:#888;font-size:13px;gap:8px;" for="logoFileInput">📁 Clique para escolher o arquivo</label>'
+    +(DB.logoBase64?'<div style="margin-top:10px;text-align:center;"><img src="'+DB.logoBase64+'" style="max-height:60px;max-width:200px;border:1px solid #eee;border-radius:4px;"><br><button type="button" class="perigo" style="font-size:11px;margin-top:6px;" onclick="removerLogo()">🗑 Remover logo atual</button></div>':''),
+    '<button type="button" class="secundario" onclick="fecharModalForce()">Fechar</button>'
+  );
+  // Abrir seletor de arquivo
+  setTimeout(function(){ document.getElementById("logoFileInput").click(); }, 200);
+}
+
+function removerLogo(){
+  delete DB.logoBase64;
+  salvarDB();
+  fecharModalForce();
+  renderAtual();
+}
+
+document.getElementById("logoFileInput").addEventListener("change", function(e){
+  var file = e.target.files[0]; if(!file) return;
+  e.target.value = "";
+  var reader = new FileReader();
+  reader.onload = function(ev){
+    // Comprimir via canvas para manter tamanho razoável no JSONBin
+    var img = new Image();
+    img.onload = function(){
+      var canvas = document.createElement("canvas");
+      var maxW = 300, maxH = 150;
+      var ratio = Math.min(maxW/img.width, maxH/img.height, 1);
+      canvas.width  = Math.round(img.width  * ratio);
+      canvas.height = Math.round(img.height * ratio);
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      DB.logoBase64 = canvas.toDataURL("image/png");
+      salvarDB();
+      fecharModalForce();
+      renderAtual();
+      alert("✅ Logo salvo! Ele aparecerá em todas as fichas a partir de agora.");
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById("dataHoje").textContent = new Date().toLocaleDateString("pt-BR");
+carregarDB();
+iniciarAutoSync();
+popularSelect();
+popularSelectMaterial();
+// Quando a internet voltar, sobe fotos que ficaram presas no aparelho
+window.addEventListener("online", function(){ reenviarFotosPendentes(); });
+
+// Registrar Service Worker (PWA)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js').catch(function() {
+      // Service worker não disponível (ex: aberto como arquivo local) — ok
+    });
+  });
+}
+</script>
+</body>
+</html>

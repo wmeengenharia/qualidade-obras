@@ -1,0 +1,26 @@
+{
+  "name": "Fichas de Verificação - WME Engenharia",
+  "short_name": "FV WME",
+  "description": "Sistema de Fichas de Verificação Digital - WME Engenharia",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef0ee",
+  "theme_color": "#3f7d3a",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
