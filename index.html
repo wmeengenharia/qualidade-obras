@@ -454,7 +454,17 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
   /* Tabelas largas rolam dentro de si (nao quebram a pagina) */
   .ficha-doc{font-size:12px;}
   .scroll-wrapper{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-  .tbl-cabecalho,.tbl-nc,.tbl-receb,.tbl-lotes{display:block;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .tbl-nc,.tbl-receb,.tbl-lotes{display:block;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  /* Cabecalho da ficha: empilha em coluna unica (legivel no celular) */
+  .tbl-cabecalho,.tbl-cabecalho tbody,.tbl-cabecalho tr,.tbl-cabecalho td{display:block;width:100% !important;}
+  .tbl-cabecalho colgroup{display:none;}
+  .tbl-cabecalho{border:1px solid #ccc;border-radius:6px;overflow:hidden;}
+  .tbl-cabecalho td{border:none !important;border-bottom:1px solid #eee !important;padding:7px 10px !important;text-align:left !important;height:auto !important;box-sizing:border-box;}
+  .tbl-cabecalho .lbl-mini{font-weight:bold;background:#f3f5f3;font-size:11px;color:#555;text-transform:uppercase;}
+  .tbl-cabecalho .titulo-cell{font-weight:bold;font-size:13px;background:var(--verde-escuro);color:#fff;text-align:center !important;}
+  .tbl-cabecalho .logo-cell{text-align:center !important;}
+  .tbl-cabecalho .objetivo-texto{font-size:11px;color:#444;}
+  .tbl-cabecalho input{width:100% !important;box-sizing:border-box;}
   /* Botoes de acao ocupam a largura (mais faceis de tocar) */
   .btn-nova-ficha,.btn-teste{width:100%;text-align:center;padding:11px 12px;font-size:13px;}
   /* Listas: 1 coluna */
