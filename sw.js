@@ -1,5 +1,5 @@
 // Service Worker - FV WME Engenharia
-const CACHE = 'wme-fv-v18';
+const CACHE = 'wme-fv-v19';
 
 // Arquivos do app shell para cache offline
 const SHELL = ['./', './index.html', './icon.svg', './manifest.json'];
@@ -8,7 +8,7 @@ self.addEventListener('install', function(e) {
   e.waitUntil(
     caches.open(CACHE).then(function(cache) {
       return cache.addAll(SHELL).catch(function() {
-        // Se algum arquivo não existir ainda, continua sem erro
+        // Se algum arquivo nÃ£o existir ainda, continua sem erro
         return Promise.resolve();
       });
     })
@@ -30,11 +30,11 @@ self.addEventListener('activate', function(e) {
 self.addEventListener('fetch', function(e) {
   // Nunca interceptar chamadas para o JSONBin (dados da nuvem)
   if (e.request.url.includes('api.jsonbin.io')) return;
-  // Para o app shell: tenta cache primeiro, senão busca na rede
+  // Para o app shell: tenta cache primeiro, senÃ£o busca na rede
   e.respondWith(
     caches.match(e.request).then(function(cached) {
       return cached || fetch(e.request).then(function(response) {
-        // Atualiza o cache com a versão mais recente
+        // Atualiza o cache com a versÃ£o mais recente
         if (response && response.status === 200 && e.request.method === 'GET') {
           var clone = response.clone();
           caches.open(CACHE).then(function(cache) { cache.put(e.request, clone); });
@@ -42,7 +42,7 @@ self.addEventListener('fetch', function(e) {
         return response;
       });
     }).catch(function() {
-      // Offline e não tem cache: retorna página principal
+      // Offline e nÃ£o tem cache: retorna pÃ¡gina principal
       return caches.match('./') || caches.match('./index.html');
     })
   );

@@ -954,6 +954,31 @@ const FOTO_PLACEHOLDER = "__FOTO_LOCAL__"; // marca foto ainda não enviada (no 
 function _supabaseOk(){ return SUPABASE.URL && SUPABASE.KEY && SUPABASE.URL.indexOf("http")===0; }
 function _ehBase64(v){ return typeof v==="string" && v.indexOf("data:image")===0; }
 
+// Backup automático (best-effort) dos dados de texto no Supabase.
+// Grava 2 linhas via upsert: "current" (último estado) e a data de hoje (histórico diário).
+function backupSupabase(){
+  if(!_supabaseOk()) return;
+  try{
+    var payload = _dbParaNuvem();           // sem base64 (fotos já são URLs)
+    var ts = new Date().toISOString();
+    var hoje = ts.slice(0,10);              // YYYY-MM-DD
+    var corpo = JSON.stringify([
+      {id:"current", dados:payload, criado_em:ts},
+      {id:hoje,      dados:payload, criado_em:ts}
+    ]);
+    fetch(SUPABASE.URL+"/rest/v1/app_backup?on_conflict=id", {
+      method:"POST",
+      headers:{
+        "apikey":SUPABASE.KEY,
+        "Authorization":"Bearer "+SUPABASE.KEY,
+        "Content-Type":"application/json",
+        "Prefer":"resolution=merge-duplicates"
+      },
+      body: corpo
+    }).catch(function(){});                 // falha de backup nunca atrapalha o app
+  }catch(e){}
+}
+
 // Converte dataURL (base64) em Blob para upload
 function _dataURLparaBlob(dataURL){
   var arr=dataURL.split(","), mime=((arr[0].match(/:(.*?);/))||[])[1]||"image/jpeg";
@@ -1512,6 +1537,7 @@ function salvarDB(){
       _localDirty = false; // confirmado na nuvem
       _ultimoHash = _calcHash(DB); // atualiza hash para sync não sobrescrever
       mostrarStatus("🟢 Online — salvo na nuvem");
+      backupSupabase(); // espelha cópia de segurança no Supabase (best-effort)
     }).catch(function(){
       // Mantém _localDirty = true para não perder dados na próxima sync
       mostrarStatus("⚠️ Salvo localmente (erro na nuvem)");
