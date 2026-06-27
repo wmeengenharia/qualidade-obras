@@ -321,8 +321,11 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .filtro-chip .chip-n{font-size:11px;font-weight:bold;background:rgba(0,0,0,.08);border-radius:10px;padding:0 7px;min-width:18px;text-align:center;}
 .filtro-chip.ativo .chip-n{background:rgba(255,255,255,.25);}
 .aprov-alerta.reprov{background:#ffebee;border-color:#e57373;color:#b71c1c;}
-.agrupar-toggle{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:#444;cursor:pointer;margin:0 0 14px;user-select:none;}
+.agrupar-toggle{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:#444;cursor:pointer;user-select:none;}
 .agrupar-toggle input{width:auto;cursor:pointer;}
+.filtros-linha2{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px;}
+.filtro-serv-lbl{font-size:12.5px;font-weight:bold;color:#444;}
+.filtro-serv-sel{font-size:12.5px;padding:6px 8px;border:1px solid #ccc;border-radius:6px;background:#fff;max-width:330px;}
 .grupo-serv{margin-bottom:18px;}
 .grupo-serv-h{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:bold;color:var(--verde-escuro);border-bottom:2px solid #e0e0e0;padding-bottom:5px;margin-bottom:10px;}
 .grupo-serv-h .grupo-serv-n{font-size:11px;font-weight:bold;background:var(--verde);color:#fff;border-radius:11px;min-width:20px;text-align:center;padding:1px 7px;}
@@ -2447,6 +2450,34 @@ var _filtroFichas = "todos";
 function setFiltroFichas(f){ _filtroFichas = f; renderFichasSalvas(); }
 var _agruparServico = false;
 function setAgruparServico(v){ _agruparServico = !!v; renderFichasSalvas(); }
+var _filtroServico = ""; // "" = todos | "srv:<id>" = um serviço | "sec:<nome>" = uma seção inteira
+function setFiltroServico(v){ _filtroServico = v||""; renderFichasSalvas(); }
+function _secDe(nome){ return (CATEGORIAS.find(function(c){return c.nome===nome;}) || CATEGORIAS_MAT.find(function(c){return c.nome===nome;})) || null; }
+function _cardNoFiltroServico(c){
+  if(!_filtroServico) return true;
+  if(_filtroServico.indexOf("srv:")===0) return c.servicoId === _filtroServico.slice(4);
+  if(_filtroServico.indexOf("sec:")===0){ var cat=_secDe(_filtroServico.slice(4)); return !!(cat && cat.ids.indexOf(c.servicoId)>=0); }
+  return true;
+}
+// Monta o <select> de filtro por serviço/seção (seções + serviços individuais)
+function _selectFiltroServicoHtml(){
+  function bloco(catLista, lista, tipoLbl){
+    return catLista.map(function(cat){
+      var ops = '<option value="sec:'+escapeHtml(cat.nome)+'"'+(_filtroServico==="sec:"+cat.nome?" selected":"")+'>'+(cat.ic||"📂")+' '+escapeHtml(cat.nome)+' (toda a seção)</option>';
+      cat.ids.forEach(function(id){
+        var it=lista.find(function(x){return x.id===id;}); if(!it) return;
+        var nome = (lista===SERVICOS) ? ("FVS "+id+" — "+it.titulo) : ("FVM "+id.replace("M","")+" — "+it.material);
+        ops += '<option value="srv:'+escapeHtml(id)+'"'+(_filtroServico==="srv:"+id?" selected":"")+'> '+escapeHtml(nome)+'</option>';
+      });
+      return '<optgroup label="'+escapeHtml(cat.nome)+'">'+ops+'</optgroup>';
+    }).join("");
+  }
+  return '<select class="filtro-serv-sel" onchange="setFiltroServico(this.value)">'
+    +'<option value=""'+(_filtroServico===""?" selected":"")+'>🔎 Todos os serviços</option>'
+    +'<optgroup label="— Fichas de Serviço (FVS) —"></optgroup>'+bloco(CATEGORIAS, SERVICOS)
+    +'<optgroup label="— Fichas de Material (FVM) —"></optgroup>'+bloco(CATEGORIAS_MAT, MATERIAIS)
+    +'</select>';
+}
 
 // Passo 1: escolher o tipo (FVS / FVM)
 function novaFicha(){
@@ -2766,20 +2797,30 @@ function renderFichasSalvas(){
     +btnNova+'</div>'
     +alerta
     +'<div class="filtros-bar">'+chipsHtml+'</div>'
-    +'<label class="agrupar-toggle"><input type="checkbox" '+(_agruparServico?'checked':'')+' onclick="setAgruparServico(this.checked)"> 🗂️ Agrupar por serviço</label>';
+    +'<div class="filtros-linha2">'
+      +'<label class="filtro-serv-lbl">🔎 Serviço:</label>'+_selectFiltroServicoHtml()
+      +'<label class="agrupar-toggle"><input type="checkbox" '+(_agruparServico?'checked':'')+' onclick="setAgruparServico(this.checked)"> 🗂️ Agrupar por serviço</label>'
+    +'</div>';
 
   if(cards.length===0){
-    main.innerHTML = topo + '<div class="salvas-vazio">Nenhuma ficha preenchida ainda.<br>Use as abas “Ficha de Serviço” ou “Ficha de Material” acima para começar.</div>';
+    main.innerHTML = topo + '<div class="salvas-vazio">Nenhuma ficha preenchida ainda.<br>Crie a primeira em <b>➕ Nova ficha</b>.</div>';
     return;
   }
 
-  // Aplica o filtro selecionado
-  let visiveis = (_filtroFichas==="todos") ? cards.slice() : cards.filter(function(c){ return c.aprovStatus===_filtroFichas; });
+  // Aplica filtros: status + serviço/seção selecionado
+  let visiveis = cards.filter(function(c){
+    if(_filtroFichas!=="todos" && c.aprovStatus!==_filtroFichas) return false;
+    if(!_cardNoFiltroServico(c)) return false;
+    return true;
+  });
   // Ordena: mais recentes primeiro (por data)
   visiveis.sort(function(a,b){ return (b.data||"").localeCompare(a.data||""); });
 
   if(visiveis.length===0){
-    main.innerHTML = topo + '<div class="salvas-vazio">Nenhuma ficha neste filtro.</div>';
+    var msgVazio = _filtroServico
+      ? 'Nenhuma ficha encontrada para este serviço.'
+      : 'Nenhuma ficha neste filtro.';
+    main.innerHTML = topo + '<div class="salvas-vazio">'+msgVazio+'</div>';
     return;
   }
 
