@@ -326,6 +326,55 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .grupo-serv{margin-bottom:18px;}
 .grupo-serv-h{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:bold;color:var(--verde-escuro);border-bottom:2px solid #e0e0e0;padding-bottom:5px;margin-bottom:10px;}
 .grupo-serv-h .grupo-serv-n{font-size:11px;font-weight:bold;background:var(--verde);color:#fff;border-radius:11px;min-width:20px;text-align:center;padding:1px 7px;}
+/* ===== Cronograma / Gantt ===== */
+.salvas-acoes{display:flex;gap:8px;flex-wrap:wrap;}
+.btn-cronograma{font-size:13px;font-weight:bold;padding:9px 14px;background:#37474f;color:#fff;border:none;border-radius:6px;cursor:pointer;}
+.btn-cronograma:hover{background:#263238;}
+.crono-topo{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:6px;}
+.crono-topo h2{margin:0;font-size:16px;color:var(--verde-escuro);}
+.crono-dash{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0;}
+.cd-card{flex:1;min-width:120px;background:#fff;border:1px solid #e6e6e6;border-radius:8px;padding:12px;text-align:center;}
+.cd-card.cd-geral{flex:1.5;min-width:170px;background:#f1f8e9;border-color:#c5e1a5;}
+.cd-num{font-size:24px;font-weight:bold;color:#333;line-height:1.1;}
+.cd-lbl{font-size:11.5px;color:#666;margin-top:3px;}
+.cd-bar{height:8px;background:#e0e0e0;border-radius:5px;margin-top:9px;overflow:hidden;}
+.cd-bar-fill{height:100%;background:#43a047;}
+.crono-prox{font-size:12.5px;color:#444;background:#f5f7f5;border-radius:6px;padding:8px 12px;margin-bottom:6px;}
+.crono-aviso{font-size:12px;color:#b26a00;background:#fff8e1;border:1px solid #ffcc80;border-radius:6px;padding:7px 11px;margin-bottom:8px;}
+.crono-legenda{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:#555;margin:6px 0 10px;}
+.crono-legenda i.lg{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:middle;}
+.crono-legenda i.lg-marco{color:#5e35b1;background:none;width:auto;font-style:normal;}
+.gantt{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid #e0e0e0;border-radius:8px;background:#fff;}
+.g-row{display:flex;min-width:max-content;border-bottom:1px solid #f2f2f2;}
+.g-row.g-head{background:#fafafa;position:sticky;top:0;z-index:3;}
+.g-name{flex:0 0 240px;width:240px;position:sticky;left:0;background:#fff;z-index:2;padding:7px 8px;font-size:12.5px;display:flex;align-items:center;gap:6px;border-right:1px solid #e8e8e8;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.g-row.g-head .g-name{background:#fafafa;font-weight:bold;}
+.g-name-head{color:#333;}
+.gn-caret{width:14px;flex:0 0 auto;text-align:center;color:#888;}
+.gn-caret.gn-vazio{color:transparent;}
+.gn-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;}
+.gn-fase{font-weight:bold;color:var(--verde-escuro);}
+.gn-grupo{font-weight:bold;color:#444;}
+.gn-tarefa{color:#333;}
+.g-time{position:relative;height:30px;flex:0 0 auto;background:repeating-linear-gradient(90deg,transparent 0,transparent 97px,#f4f4f4 97px,#f4f4f4 98px);}
+.g-time-head{height:34px;}
+.gc-mes{position:absolute;top:8px;font-size:11px;font-weight:bold;color:#555;border-left:1px solid #d0d0d0;padding-left:4px;height:24px;}
+.gbar{position:absolute;top:6px;height:18px;border-radius:4px;cursor:pointer;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.12);}
+.gbar-fill{position:absolute;left:0;top:0;height:100%;}
+.gbar-pct{position:absolute;right:5px;top:0;line-height:18px;font-size:10px;font-weight:bold;color:#1b1b1b;}
+.gbar-resumo{background:#455a64;height:9px;top:10px;border-radius:3px;box-shadow:none;}
+.gmarco{position:absolute;top:2px;color:#5e35b1;font-size:17px;line-height:1;cursor:pointer;}
+.gbar.st-concluida{background:#c8e6c9;} .gbar.st-concluida .gbar-fill{background:#43a047;}
+.gbar.st-andamento{background:#bbdefb;} .gbar.st-andamento .gbar-fill{background:#1e88e5;}
+.gbar.st-atrasada{background:#ffcdd2;}  .gbar.st-atrasada .gbar-fill{background:#e53935;}
+.gbar.st-futura{background:#e0e0e0;}    .gbar.st-futura .gbar-fill{background:#9e9e9e;}
+.gn-dot.st-concluida,.lg.st-concluida{background:#43a047;}
+.gn-dot.st-andamento,.lg.st-andamento{background:#1e88e5;}
+.gn-dot.st-atrasada,.lg.st-atrasada{background:#e53935;}
+.gn-dot.st-futura,.lg.st-futura{background:#bdbdbd;}
+.g-hoje{position:absolute;top:0;bottom:0;width:2px;background:#e53935;opacity:.85;z-index:1;}
+.g-hoje-top{z-index:4;}
+.g-hoje-lbl{position:absolute;top:1px;left:-16px;font-size:10px;font-weight:bold;color:#e53935;background:#fff;padding:0 3px;border-radius:3px;}
 .aprov-alerta a{color:inherit;font-weight:bold;}
 .btn-nova-ficha{font-size:13px;font-weight:bold;padding:9px 16px;background:var(--verde);color:#fff;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.15);}
 .btn-nova-ficha:hover{background:var(--verde-escuro);}
@@ -1001,6 +1050,96 @@ const CATEGORIAS_MAT = [
 
 const LABELS_VERIF_MAT = ["PEDIDO x NF","PRAZO DE ENTREGA","QUANTIDADE / DIMENSÕES","TIPO / FABRICANTE / MODELO / CARACTERISTICAS","QUALIDADE / INTEGRIDADE"];
 
+// =================================================================
+// CRONOGRAMA (extraído do PDF "SGT1325 - PLANEJAMENTO LONGO PRAZO_R00")
+// Campos: [id, nivel, nome, duracaoDias, inicioISO, fimISO, predecessoras]
+// As barras usam início/fim (calendário); duração é exibida como no MS Project.
+// (Linhas "<Nova Tarefa>" do MS Project foram omitidas por serem vazias.)
+// =================================================================
+const CRONOGRAMA_PROJETO = "SGT1325 — Facilities Building / Drenagem";
+const CRONOGRAMA = [
+  [1,0,"FACILITIES BUILDING - DRENAGEM",58,"2025-10-28","2026-01-29",""],
+  [2,1,"FASE- 01",58,"2025-10-28","2026-01-29",""],
+  [3,2,"SERVIÇOS PRELIMINARES",12,"2025-10-28","2025-11-12",""],
+  [4,3,"Reunião de Kick Off",0,"2025-10-28","2025-10-28",""],
+  [5,3,"Mobilização",8,"2025-11-03","2025-11-12","4FS+4 dias"],
+  [6,2,"PROJETOS",30,"2025-10-28","2025-12-08",""],
+  [7,3,"Projeto da Cisterna",25,"2025-10-28","2025-12-01","4"],
+  [8,3,"Projeto da Caixa de Gordura",25,"2025-10-28","2025-12-01","4"],
+  [9,3,"Aprovação Syngenta",5,"2025-12-02","2025-12-08","7;8"],
+  [10,2,"IMPERMEABILIZAÇÃO DE MUROS",23,"2025-11-05","2025-12-05",""],
+  [11,3,"MURO 05",15,"2025-11-05","2025-11-25",""],
+  [12,4,"Escavação manual bases de muros",2,"2025-11-05","2025-11-06","4SS+6 dias"],
+  [13,4,"Aplicação de chapisco",3,"2025-11-07","2025-11-11","12"],
+  [14,4,"Aplicação reboco impermeabilizante",6,"2025-11-12","2025-11-19","13"],
+  [15,4,"Posicionamento de manta mcdrain",2,"2025-11-20","2025-11-21","14"],
+  [16,4,"Reaterro dos muros",2,"2025-11-24","2025-11-25","15"],
+  [17,3,"MURO 04",15,"2025-11-07","2025-11-27",""],
+  [18,4,"Escavação manual bases de muros",2,"2025-11-07","2025-11-10","12"],
+  [19,4,"Aplicação de chapisco",3,"2025-11-11","2025-11-13","18"],
+  [20,4,"Aplicação reboco impermeabilizante",6,"2025-11-14","2025-11-21","19"],
+  [21,4,"Posicionamento de manta geotextil",2,"2025-11-24","2025-11-25","20"],
+  [22,4,"Reaterro dos muros",2,"2025-11-26","2025-11-27","21"],
+  [23,3,"MURO 03",15,"2025-11-11","2025-12-01",""],
+  [24,4,"Escavação manual bases de muros",2,"2025-11-11","2025-11-12","18"],
+  [25,4,"Aplicação de chapisco",3,"2025-11-13","2025-11-17","24"],
+  [26,4,"Aplicação reboco impermeabilizante",6,"2025-11-18","2025-11-25","25"],
+  [27,4,"Posicionamento de manta geotextil",2,"2025-11-26","2025-11-27","26"],
+  [28,4,"Reaterro dos muros",2,"2025-11-28","2025-12-01","27"],
+  [29,3,"MURO 02",11,"2025-11-13","2025-11-27",""],
+  [30,4,"Escavação manual bases de muros",2,"2025-11-13","2025-11-14","24"],
+  [31,4,"Aplicação de chapisco",3,"2025-11-17","2025-11-19","30"],
+  [32,4,"Aplicação reboco impermeabilizante",4,"2025-11-20","2025-11-25","31"],
+  [33,4,"Posicionamento de manta geotextil",1,"2025-11-26","2025-11-26","32"],
+  [34,4,"Reaterro dos muros",1,"2025-11-27","2025-11-27","33"],
+  [35,3,"MURO 06",15,"2025-11-17","2025-12-05",""],
+  [36,4,"Escavação manual bases de muros",2,"2025-11-17","2025-11-18","30"],
+  [37,4,"Aplicação de chapisco",3,"2025-11-19","2025-11-21","36"],
+  [38,4,"Aplicação reboco impermeabilizante",6,"2025-11-24","2025-12-01","37"],
+  [39,4,"Posicionamento de manta geotextil",2,"2025-12-02","2025-12-03","38"],
+  [40,4,"Reaterro dos muros",2,"2025-12-04","2025-12-05","39"],
+  [41,2,"INSTALAÇÃO CAIXAS ESGOTO",4,"2025-11-13","2025-11-18",""],
+  [42,3,"Escavação mecanizada",2,"2025-11-13","2025-11-14","5"],
+  [43,3,"Nivelamento de fundo de caixas",1,"2025-11-17","2025-11-17","42"],
+  [44,3,"Instalação de caixas pré moldadas",1,"2025-11-18","2025-11-18","43"],
+  [45,2,"INSTALAÇÃO CAIXAS ELÉTRICAS",4,"2025-11-19","2025-11-24",""],
+  [46,3,"Escavação mecanizada",2,"2025-11-19","2025-11-20","44"],
+  [47,3,"Nivelamento de fundo de caixas",1,"2025-11-21","2025-11-21","46"],
+  [48,3,"Instalação de caixas pré moldadas",1,"2025-11-24","2025-11-24","47"],
+  [49,2,"INSTALAÇÕES DE DRENAGEM",47,"2025-11-12","2026-01-29",""],
+  [50,3,"ÁREA 02",11,"2025-11-12","2025-11-26",""],
+  [51,4,"Retirada de Escada",0,"2025-11-12","2025-11-12",""],
+  [52,4,"Acerto de talude",0,"2025-11-12","2025-11-12",""],
+  [53,4,"Escavação mecanizada",2,"2025-11-12","2025-11-13","51;52"],
+  [54,4,"Nivelamento de fundo de caixas",2,"2025-11-14","2025-11-17","53"],
+  [55,4,"Instalação de caixas pré moldadas",3,"2025-11-18","2025-11-20","54"],
+  [56,4,"Instalação de tubulações PEAD",2,"2025-11-21","2025-11-24","55"],
+  [57,4,"Reaterro de valas",2,"2025-11-25","2025-11-26","56"],
+  [58,3,"ÁREA 03",25,"2025-11-26","2026-01-14",""],
+  [59,4,"Acerto de talude",0,"2025-11-26","2025-11-26","57"],
+  [60,4,"Finalização de terraplenagem",0,"2025-11-26","2025-11-26","57"],
+  [61,4,"Escavação mecanizada",5,"2025-11-27","2025-12-03","59;60"],
+  [62,4,"Nivelamento de fundo de caixas",5,"2025-12-04","2025-12-10","61"],
+  [63,4,"Instalação de caixas pré moldadas",5,"2025-12-11","2025-12-17","62"],
+  [64,4,"Instalação de tubulações PEAD",5,"2025-12-18","2026-01-07","63"],
+  [65,4,"Reaterro de valas",5,"2026-01-08","2026-01-14","64"],
+  [66,3,"ÁREA 04",16,"2026-01-07","2026-01-29",""],
+  [67,4,"Retirada de central de Gás",0,"2026-01-07","2026-01-07","64"],
+  [68,4,"Retirada de ferragens",0,"2026-01-07","2026-01-07","64"],
+  [69,4,"Escavação mecanizada",2,"2026-01-15","2026-01-16","65"],
+  [70,4,"Nivelamento de fundo de caixas",2,"2026-01-19","2026-01-20","69"],
+  [71,4,"Instalação de caixas pré moldadas",3,"2026-01-21","2026-01-23","70"],
+  [72,4,"Instalação de tubulações PEAD",2,"2026-01-26","2026-01-27","71"],
+  [73,4,"Reaterro de valas",2,"2026-01-28","2026-01-29","72"],
+  [74,2,"CISTERNA",55,"2025-10-28","2026-01-26",""],
+  [75,3,"Civil",25,"2025-12-02","2026-01-19","7"],
+  [78,3,"Instalações elétricas",8,"2026-01-13","2026-01-22","75SS+20 dias"],
+  [79,3,"Instalações hidráulicas",5,"2026-01-20","2026-01-26","75"],
+  [80,3,"Automação",5,"2026-01-20","2026-01-26","78FF+2 dias"],
+  [81,2,"CAIXA DE GORDURA",25,"2025-12-09","2026-01-26","8FS+5 dias;75SS+5 dias"],
+  [83,1,"FASE- 02",1,"2025-10-28","2025-10-28",""]
+];
+
 function getLogo(){
   const obraLogo = obraAtual && DB.obraLogos && DB.obraLogos[obraAtual];
   if(obraLogo) return '<img src="'+obraLogo+'" alt="Logo" class="logo-img">';
@@ -1502,6 +1641,7 @@ function migrarDB(){
   if(!DB.obraAcessos) DB.obraAcessos = {};
   if(!DB.obraLogos)   DB.obraLogos   = {};
   if(!DB.obraServicos) DB.obraServicos = {}; // {obra:{servicos:[ids],materiais:[ids]}} — ausente = todos (retrocompat)
+  if(!DB.cronogramaPct) DB.cronogramaPct = {}; // {obra:{taskId:pct}} — progresso manual das atividades do cronograma
   // Carimba servicoId/tipo nas fichas (suporta várias fichas por serviço via chave de instância "servicoId#xxxx")
   Object.keys(DB.fichas).forEach(function(obra){
     var of = DB.fichas[obra]; if(!of || typeof of!=="object") return;
@@ -1775,7 +1915,7 @@ function trocarModo(modo){
   var _bSa=document.getElementById("btnModoSalvas"); if(_bSa) _bSa.classList.toggle("ativo", modo==="salvas");
   const ehSalvas = modo==="salvas";
   // Na lista (salvas) a barra branca de ferramentas é redundante → esconde; aparece só dentro de uma ficha
-  var _tb=document.querySelector(".toolbar"); if(_tb) _tb.style.display = ehSalvas ? "none" : "";
+  var _tb=document.querySelector(".toolbar"); if(_tb) _tb.style.display = (ehSalvas||modo==="cronograma") ? "none" : "";
   atualizarSeletorFicha(); // seletor "Serviço:/Material:" só aparece ao escolher (some quando a ficha abre)
   document.getElementById("btnAddLocal").style.display = modo==="servico" ? "" : "none";
   document.getElementById("btnRmLocal").style.display = modo==="servico" ? "" : "none";
@@ -1804,6 +1944,7 @@ function renderAtual(){
   if(!sessao){ atualizarHeaderUsuario(); renderLogin(); return; }
   atualizarHeaderUsuario();
   if(!obraAtual){ renderSeletorObra(); return; }
+  if(modoAtual==="cronograma"){ renderCronograma(); return; }
   if(modoAtual==="salvas"){ renderFichasSalvas(); return; }
   if(modoAtual==="servico"){
     if(!servicoAtual){ document.getElementById("main").innerHTML = '<div class="empty">Selecione um serviço acima para abrir a ficha.</div>'; return; }
@@ -2383,6 +2524,164 @@ function novaFichaAbrir(tipo, servicoId){
   abrirFichaSalva(tipo, key);
 }
 
+// ===================== CRONOGRAMA / GANTT =====================
+var _cronoColapsado = {};   // {taskId:true} grupos recolhidos
+const _MESES_PT = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+function _cdISO(iso){ var p=String(iso).split("-"); return new Date(+p[0],+p[1]-1,+p[2]); }
+function _cDias(a,b){ return Math.round((b-a)/86400000); }
+function _fmtBR(iso){ var p=String(iso).split("-"); return p[2]+"/"+p[1]+"/"+p[0]; }
+function _hojeISO(){ var d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+
+function _cronoPct(id){ var o=(DB.cronogramaPct&&DB.cronogramaPct[obraAtual])||{}; var v=o[id]; return (typeof v==="number")?v:0; }
+function setCronoPct(id,val){
+  val=Math.max(0,Math.min(100,parseInt(val,10)||0));
+  if(!DB.cronogramaPct) DB.cronogramaPct={};
+  if(!DB.cronogramaPct[obraAtual]) DB.cronogramaPct[obraAtual]={};
+  DB.cronogramaPct[obraAtual][id]=val;
+  registrarLog("crono-progresso",{obra:obraAtual,tarefa:id,pct:val});
+  salvarDB();
+  renderCronograma();
+}
+
+function _cronoTarefas(){
+  var t = CRONOGRAMA.map(function(a){ return {id:a[0],lv:a[1],nome:a[2],dur:a[3],ini:a[4],fim:a[5],pred:a[6]}; });
+  t.forEach(function(x,i){
+    x.temFilhos = (i+1<t.length) && t[i+1].lv > x.lv;
+    x.parent = null;
+    for(var j=i-1;j>=0;j--){ if(t[j].lv < x.lv){ x.parent=t[j].id; break; } }
+  });
+  return t;
+}
+function _cronoStatus(tar, pct){
+  var hoje=_hojeISO();
+  if(pct>=100) return "concluida";
+  if(hoje < tar.ini) return "futura";
+  if(hoje > tar.fim) return "atrasada";
+  return "andamento";
+}
+function _cronoCalc(t){
+  var pctById={}, stById={};
+  t.forEach(function(x){ if(!x.temFilhos) pctById[x.id]=_cronoPct(x.id); });
+  function folhasDesc(idx){ var r=[],bl=t[idx].lv; for(var j=idx+1;j<t.length;j++){ if(t[j].lv<=bl) break; if(!t[j].temFilhos) r.push(t[j]); } return r; }
+  t.forEach(function(x,i){
+    if(x.temFilhos){ var fs=folhasDesc(i),tot=0,acc=0; fs.forEach(function(f){ var d=Math.max(f.dur,0.5); tot+=d; acc+=d*(pctById[f.id]||0); }); pctById[x.id]=tot?Math.round(acc/tot):0; }
+  });
+  var tot=0,acc=0,cont={concluida:0,andamento:0,atrasada:0,futura:0};
+  t.forEach(function(x){ stById[x.id]=_cronoStatus(x,pctById[x.id]||0); if(!x.temFilhos){ var d=Math.max(x.dur,0.5); tot+=d; acc+=d*(pctById[x.id]||0); cont[stById[x.id]]++; } });
+  return {pct:pctById, st:stById, geral:(tot?Math.round(acc/tot):0), cont:cont};
+}
+function _cronoVisiveis(t){
+  function ancestralColapsado(x){
+    var pid=x.parent;
+    while(pid!=null){ if(_cronoColapsado[pid]) return true; var pt=null; for(var k=0;k<t.length;k++){ if(t[k].id===pid){pt=t[k];break;} } pid=pt?pt.parent:null; }
+    return false;
+  }
+  return t.filter(function(x){ return !ancestralColapsado(x); });
+}
+function toggleCronoGrupo(id){ _cronoColapsado[id]=!_cronoColapsado[id]; renderCronograma(); }
+function abrirCronograma(){ trocarModo("cronograma"); }
+
+function cronoDetalhe(id){
+  var t=_cronoTarefas(); var x=null; for(var k=0;k<t.length;k++){ if(t[k].id===id){x=t[k];break;} }
+  if(!x) return;
+  var calc=_cronoCalc(t); var pct=calc.pct[id]||0; var st=calc.st[id];
+  var stLbl={concluida:"✅ Concluída",andamento:"🔵 Em andamento",atrasada:"🔴 Atrasada",futura:"⚪ Futura"}[st];
+  // fase = ancestral de nível 1
+  var fase=""; var pid=x.parent; while(pid!=null){ var pt=null; for(var k=0;k<t.length;k++){ if(t[k].id===pid){pt=t[k];break;} } if(pt){ if(pt.lv===1) fase=pt.nome; pid=pt.parent; } else pid=null; }
+  var corpo='<div style="font-size:13px;line-height:1.9;">'
+    +'<div><b>Status:</b> '+stLbl+'</div>'
+    +(fase?'<div><b>Fase:</b> '+escapeHtml(fase)+'</div>':'')
+    +'<div><b>Início:</b> '+_fmtBR(x.ini)+'</div>'
+    +'<div><b>Término:</b> '+_fmtBR(x.fim)+'</div>'
+    +'<div><b>Duração:</b> '+x.dur+' dia(s)</div>'
+    +(x.pred?'<div><b>Predecessoras:</b> '+escapeHtml(x.pred)+'</div>':'')
+    +'<div><b>Concluído:</b> '+pct+'%</div>';
+  if(!x.temFilhos && podeEditar()){
+    corpo+='<div style="margin-top:12px;border-top:1px solid #eee;padding-top:10px;">'
+      +'<label style="font-size:12px;font-weight:bold;">Atualizar % concluído</label><br>'
+      +'<input type="range" id="crono-pct" min="0" max="100" step="5" value="'+pct+'" style="width:70%;vertical-align:middle;" oninput="document.getElementById(\'crono-pct-v\').textContent=this.value+\'%\'">'
+      +' <b id="crono-pct-v">'+pct+'%</b></div>';
+  } else if(x.temFilhos){
+    corpo+='<div style="margin-top:8px;font-size:11.5px;color:#888;">% calculado automaticamente pela média das atividades do grupo.</div>';
+  }
+  corpo+='</div>';
+  var rodape='<button type="button" class="secundario" onclick="fecharModalForce()">Fechar</button>';
+  if(!x.temFilhos && podeEditar()) rodape+='<button type="button" onclick="setCronoPct('+id+',document.getElementById(\'crono-pct\').value);fecharModalForce()">💾 Salvar %</button>';
+  abrirModal("📌 "+escapeHtml(x.nome), corpo, rodape);
+}
+
+function renderCronograma(){
+  const main=document.getElementById("main");
+  const t=_cronoTarefas();
+  const calc=_cronoCalc(t);
+  // janela de datas (span do projeto)
+  var minISO=t[0].ini, maxISO=t[0].fim;
+  t.forEach(function(x){ if(x.ini<minISO)minISO=x.ini; if(x.fim>maxISO)maxISO=x.fim; });
+  var min=_cdISO(minISO), max=_cdISO(maxISO);
+  var totalDays=_cDias(min,max)+1;
+  var pxDay=14, W=totalDays*pxDay;
+  var hoje=_cdISO(_hojeISO()); var tx=_cDias(min,hoje)*pxDay; var foraPrazo=false;
+  if(tx<0) tx=0; if(tx>W){ tx=W; foraPrazo=true; }
+
+  // Dashboard
+  var c=calc.cont;
+  var futuras = t.filter(function(x){ return !x.temFilhos && calc.st[x.id]==="futura"; }).sort(function(a,b){ return a.ini.localeCompare(b.ini); });
+  var prox = (futuras.length? futuras : t.filter(function(x){ return !x.temFilhos && calc.st[x.id]==="atrasada"; }).sort(function(a,b){ return a.ini.localeCompare(b.ini); })).slice(0,4);
+  var proxTit = futuras.length ? "Próximos serviços" : "Pendentes (atrasados)";
+  var dash='<div class="crono-dash">'
+    +'<div class="cd-card cd-geral"><div class="cd-num">'+calc.geral+'%</div><div class="cd-lbl">Conclusão geral</div>'
+      +'<div class="cd-bar"><div class="cd-bar-fill" style="width:'+calc.geral+'%"></div></div></div>'
+    +'<div class="cd-card"><div class="cd-num" style="color:#2e7d32;">'+c.concluida+'</div><div class="cd-lbl">✅ Concluídas</div></div>'
+    +'<div class="cd-card"><div class="cd-num" style="color:#1565c0;">'+c.andamento+'</div><div class="cd-lbl">🔵 Em andamento</div></div>'
+    +'<div class="cd-card"><div class="cd-num" style="color:#c62828;">'+c.atrasada+'</div><div class="cd-lbl">🔴 Atrasadas</div></div>'
+    +'<div class="cd-card"><div class="cd-num" style="color:#777;">'+c.futura+'</div><div class="cd-lbl">⚪ Futuras</div></div>'
+    +'<div class="cd-card"><div class="cd-num" style="font-size:16px;">'+_fmtBR(maxISO)+'</div><div class="cd-lbl">📅 Previsão de término</div></div>'
+    +'</div>';
+  var proxHtml='<div class="crono-prox"><b>'+proxTit+':</b> '+(prox.length? prox.map(function(p){ return escapeHtml(p.nome)+' <span style="color:#888;">('+_fmtBR(p.ini)+')</span>'; }).join(' &nbsp;·&nbsp; ') : 'cronograma encerrado.')+'</div>';
+  if(foraPrazo) proxHtml+='<div class="crono-aviso">⚠️ Hoje ('+_fmtBR(_hojeISO())+') é posterior ao término planejado ('+_fmtBR(maxISO)+').</div>';
+
+  // Cabeçalho de meses
+  var meses=''; var dm=new Date(min.getFullYear(),min.getMonth(),1);
+  while(dm<=max){ var mx=_cDias(min,dm)*pxDay; if(mx<0)mx=0; meses+='<div class="gc-mes" style="left:'+mx+'px;">'+_MESES_PT[dm.getMonth()]+'/'+String(dm.getFullYear()).slice(2)+'</div>'; dm=new Date(dm.getFullYear(),dm.getMonth()+1,1); }
+
+  // Linhas
+  var vis=_cronoVisiveis(t);
+  var linhas='';
+  vis.forEach(function(x){
+    var pct=calc.pct[x.id]||0, st=calc.st[x.id];
+    var L=_cDias(min,_cdISO(x.ini))*pxDay;
+    var wb=Math.max((_cDias(_cdISO(x.ini),_cdISO(x.fim))+1)*pxDay,8);
+    var indent=(x.lv)*16;
+    var caret = x.temFilhos ? '<span class="gn-caret" onclick="event.stopPropagation();toggleCronoGrupo('+x.id+')">'+(_cronoColapsado[x.id]?'▸':'▾')+'</span>' : '<span class="gn-caret gn-vazio"></span>';
+    var nomeCls = x.temFilhos ? (x.lv<=1?"gn-fase":"gn-grupo") : "gn-tarefa";
+    var marco = (x.dur===0 || x.ini===x.fim);
+    var barra;
+    if(x.temFilhos){
+      barra='<div class="gbar gbar-resumo" style="left:'+L+'px;width:'+wb+'px;" title="'+escapeHtml(x.nome)+'"></div>';
+    } else if(marco){
+      barra='<div class="gbar gmarco" style="left:'+(L-6)+'px;" onclick="cronoDetalhe('+x.id+')" title="'+escapeHtml(x.nome)+' — '+_fmtBR(x.ini)+'">◆</div>';
+    } else {
+      barra='<div class="gbar st-'+st+'" style="left:'+L+'px;width:'+wb+'px;" onclick="cronoDetalhe('+x.id+')" title="'+escapeHtml(x.nome)+' ('+_fmtBR(x.ini)+' → '+_fmtBR(x.fim)+') — '+pct+'%">'
+        +'<div class="gbar-fill" style="width:'+pct+'%;"></div><span class="gbar-pct">'+(wb>34?pct+'%':'')+'</span></div>';
+    }
+    linhas+='<div class="g-row">'
+      +'<div class="g-name '+nomeCls+'" style="padding-left:'+indent+'px;" onclick="cronoDetalhe('+x.id+')">'+caret+'<span class="gn-dot st-'+st+'"></span>'+escapeHtml(x.nome)+'</div>'
+      +'<div class="g-time" style="width:'+W+'px;">'+barra+'<div class="g-hoje" style="left:'+tx+'px;"></div></div>'
+      +'</div>';
+  });
+
+  var headHoje='<div class="g-hoje g-hoje-top" style="left:'+tx+'px;"><span class="g-hoje-lbl">Hoje</span></div>';
+  main.innerHTML=
+    '<div class="crono-topo"><div><h2>📅 Cronograma da Obra</h2><div style="font-size:12px;color:#555;">'+escapeHtml(CRONOGRAMA_PROJETO)+'</div></div>'
+      +'<button type="button" class="secundario" onclick="trocarModo(\'salvas\')">‹ Voltar às fichas</button></div>'
+    + dash + proxHtml
+    + '<div class="crono-legenda"><span><i class="lg st-concluida"></i>Concluída</span><span><i class="lg st-andamento"></i>Em andamento</span><span><i class="lg st-atrasada"></i>Atrasada</span><span><i class="lg st-futura"></i>Futura</span><span><i class="lg lg-marco">◆</i>Marco</span></div>'
+    + '<div class="gantt">'
+      + '<div class="g-row g-head"><div class="g-name g-name-head">Serviço / Atividade</div><div class="g-time g-time-head" style="width:'+W+'px;">'+meses+headHoje+'</div></div>'
+      + linhas
+    + '</div>';
+}
+
 function renderFichasSalvas(){
   const main = document.getElementById("main");
   const cards = [];
@@ -2456,10 +2755,11 @@ function renderFichasSalvas(){
     return '<button type="button" class="'+cls+'" onclick="setFiltroFichas(\''+ch.k+'\')">'+ch.lbl+' <span class="chip-n">'+ch.n+'</span></button>';
   }).join("");
 
-  // Botão de criar nova ficha (quem pode editar)
-  const btnNova = podeEditar()
-    ? '<button type="button" class="btn-nova-ficha" onclick="novaFicha()">➕ Nova ficha</button>'
-    : '';
+  // Botões de ação (cronograma + nova ficha)
+  const btnNova = '<div class="salvas-acoes">'
+    + '<button type="button" class="btn-cronograma" onclick="abrirCronograma()">📅 Cronograma</button>'
+    + (podeEditar() ? '<button type="button" class="btn-nova-ficha" onclick="novaFicha()">➕ Nova ficha</button>' : '')
+    + '</div>';
 
   const topo = '<div class="salvas-topo"><div><h2>📋 Fichas da Obra</h2>'
     +'<div style="font-size:12px;color:#555;">'+cards.length+' ficha(s) no total</div></div>'
