@@ -2894,8 +2894,8 @@ function _cronoTarefas(){
   if(_obraTemCronograma()){
     // Fonte de verdade: cronograma importado DESTA obra (só linhas com datas válidas para o Gantt)
     t = DB.obraCronograma[obraAtual].tarefas
-      .filter(function(o){ return o.ini && o.fim; })
-      .map(function(o){ return {id:o.id, lv:(o.nivel||0), nome:o.nome, dur:(o.dur||0), ini:o.ini, fim:o.fim, pred:(o.pred||"")}; });
+      .filter(function(o){ return o.ini; }) // precisa ter início para posicionar; Finish pode estar vazio
+      .map(function(o){ return {id:o.id, lv:(o.nivel||0), nome:o.nome, dur:(o.dur||0), ini:o.ini, fim:o.fim||"", pred:(o.pred||"")}; });
     if(!t.length){ t = CRONOGRAMA.map(function(a){ return {id:a[0],lv:a[1],nome:a[2],dur:a[3],ini:a[4],fim:a[5],pred:a[6]}; }); }
   } else {
     t = CRONOGRAMA.map(function(a){ return {id:a[0],lv:a[1],nome:a[2],dur:a[3],ini:a[4],fim:a[5],pred:a[6]}; });
@@ -2907,23 +2907,36 @@ function _cronoTarefas(){
   });
   return t;
 }
-function _cronoStatus(tar, pct){
+// REGRA (fonte de verdade = cronograma importado):
+// Finish preenchido  => Concluída / 100% / verde.
+// Finish vazio       => Não iniciada (futura) / Em andamento / Atrasada conforme as datas.
+function _cronoStatus(tar){
+  if(tar.fim) return "concluida";
   var hoje=_hojeISO();
-  if(pct>=100) return "concluida";
-  if(hoje < tar.ini) return "futura";
-  if(hoje > tar.fim) return "atrasada";
+  if(!tar.ini || hoje < tar.ini) return "futura";
+  // fim previsto estimado = início + duração (para detectar atraso quando não há Finish)
+  var fimPrev = tar.ini;
+  if(tar.dur>0){ var d=_cdISO(tar.ini); d.setDate(d.getDate()+tar.dur); fimPrev=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+  if(hoje > fimPrev) return "atrasada";
   return "andamento";
 }
+function _cronoPctTarefa(tar){ return tar.fim ? 100 : (_cronoPct(tar.id)||0); }
 function _cronoCalc(t){
   var pctById={}, stById={};
-  t.forEach(function(x){ if(!x.temFilhos) pctById[x.id]=_cronoPct(x.id); });
+  // Folhas: 100% se tem Finish; senão % manual (0 por padrão)
+  t.forEach(function(x){ if(!x.temFilhos) pctById[x.id]=_cronoPctTarefa(x); });
   function folhasDesc(idx){ var r=[],bl=t[idx].lv; for(var j=idx+1;j<t.length;j++){ if(t[j].lv<=bl) break; if(!t[j].temFilhos) r.push(t[j]); } return r; }
   t.forEach(function(x,i){
     if(x.temFilhos){ var fs=folhasDesc(i),tot=0,acc=0; fs.forEach(function(f){ var d=Math.max(f.dur,0.5); tot+=d; acc+=d*(pctById[f.id]||0); }); pctById[x.id]=tot?Math.round(acc/tot):0; }
   });
   var tot=0,acc=0,cont={concluida:0,andamento:0,atrasada:0,futura:0};
-  t.forEach(function(x){ stById[x.id]=_cronoStatus(x,pctById[x.id]||0); if(!x.temFilhos){ var d=Math.max(x.dur,0.5); tot+=d; acc+=d*(pctById[x.id]||0); cont[stById[x.id]]++; } });
+  t.forEach(function(x){ stById[x.id]=_cronoStatus(x); if(!x.temFilhos){ var d=Math.max(x.dur,0.5); tot+=d; acc+=d*(pctById[x.id]||0); cont[stById[x.id]]++; } });
   return {pct:pctById, st:stById, geral:(tot?Math.round(acc/tot):0), cont:cont};
+}
+// % por fase (nível 1 com filhos) — usa o rollup do _cronoCalc
+function _cronoFasesPct(t, calc){
+  return t.filter(function(x){ return x.nivel===1 && x.temFilhos; })
+          .map(function(x){ return {nome:x.nome, pct:calc.pct[x.id]||0}; });
 }
 function _cronoVisiveis(t){
   function ancestralColapsado(x){
@@ -2946,14 +2959,17 @@ function cronoDetalhe(id){
   var corpo='<div style="font-size:13px;line-height:1.9;">'
     +'<div><b>Status:</b> '+stLbl+'</div>'
     +(fase?'<div><b>Fase:</b> '+escapeHtml(fase)+'</div>':'')
-    +'<div><b>Início:</b> '+_fmtBR(x.ini)+'</div>'
-    +'<div><b>Término:</b> '+_fmtBR(x.fim)+'</div>'
+    +'<div><b>Início:</b> '+(x.ini?_fmtBR(x.ini):'—')+'</div>'
+    +'<div><b>Término (Finish):</b> '+(x.fim?_fmtBR(x.fim):'<span style="color:#c62828;">vazio (não concluída)</span>')+'</div>'
     +'<div><b>Duração:</b> '+x.dur+' dia(s)</div>'
     +(x.pred?'<div><b>Predecessoras:</b> '+escapeHtml(x.pred)+'</div>':'')
     +'<div><b>Concluído:</b> '+pct+'%</div>';
-  if(!x.temFilhos && podeEditar()){
+  var editavel = !x.temFilhos && !x.fim && podeEditar(); // só edita % quando NÃO tem Finish
+  if(x.fim && !x.temFilhos){
+    corpo+='<div style="margin-top:10px;font-size:11.5px;color:#2e7d32;">✅ Concluída automaticamente — possui data de término (Finish) no cronograma.</div>';
+  } else if(editavel){
     corpo+='<div style="margin-top:12px;border-top:1px solid #eee;padding-top:10px;">'
-      +'<label style="font-size:12px;font-weight:bold;">Atualizar % concluído</label><br>'
+      +'<label style="font-size:12px;font-weight:bold;">Atualizar % concluído (atividade sem Finish)</label><br>'
       +'<input type="range" id="crono-pct" min="0" max="100" step="5" value="'+pct+'" style="width:70%;vertical-align:middle;" oninput="document.getElementById(\'crono-pct-v\').textContent=this.value+\'%\'">'
       +' <b id="crono-pct-v">'+pct+'%</b></div>';
   } else if(x.temFilhos){
@@ -2961,7 +2977,7 @@ function cronoDetalhe(id){
   }
   corpo+='</div>';
   var rodape='<button type="button" class="secundario" onclick="fecharModalForce()">Fechar</button>';
-  if(!x.temFilhos && podeEditar()) rodape+='<button type="button" onclick="setCronoPct('+id+',document.getElementById(\'crono-pct\').value);fecharModalForce()">💾 Salvar %</button>';
+  if(editavel) rodape+='<button type="button" onclick="setCronoPct('+id+',document.getElementById(\'crono-pct\').value);fecharModalForce()">💾 Salvar %</button>';
   abrirModal("📌 "+escapeHtml(x.nome), corpo, rodape);
 }
 
@@ -2969,9 +2985,15 @@ function renderCronograma(){
   const main=document.getElementById("main");
   const t=_cronoTarefas();
   const calc=_cronoCalc(t);
+  // fim efetivo p/ geometria: Finish, ou estimativa início+duração quando vazio
+  function _fimEf(x){
+    if(x.fim) return x.fim;
+    if(x.ini && x.dur>0){ var d=_cdISO(x.ini); d.setDate(d.getDate()+x.dur); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+    return x.ini;
+  }
   // janela de datas (span do projeto)
-  var minISO=t[0].ini, maxISO=t[0].fim;
-  t.forEach(function(x){ if(x.ini<minISO)minISO=x.ini; if(x.fim>maxISO)maxISO=x.fim; });
+  var minISO=t[0].ini, maxISO=_fimEf(t[0]);
+  t.forEach(function(x){ var fe=_fimEf(x); if(x.ini && x.ini<minISO)minISO=x.ini; if(fe>maxISO)maxISO=fe; });
   var min=_cdISO(minISO), max=_cdISO(maxISO);
   var totalDays=_cDias(min,max)+1;
   var pxDay=14, W=totalDays*pxDay;
@@ -3004,19 +3026,20 @@ function renderCronograma(){
   var linhas='';
   vis.forEach(function(x){
     var pct=calc.pct[x.id]||0, st=calc.st[x.id];
+    var _fe=_fimEf(x);
     var L=_cDias(min,_cdISO(x.ini))*pxDay;
-    var wb=Math.max((_cDias(_cdISO(x.ini),_cdISO(x.fim))+1)*pxDay,8);
+    var wb=Math.max((_cDias(_cdISO(x.ini),_cdISO(_fe))+1)*pxDay,8);
     var indent=(x.lv)*16;
     var caret = x.temFilhos ? '<span class="gn-caret" onclick="event.stopPropagation();toggleCronoGrupo('+x.id+')">'+(_cronoColapsado[x.id]?'▸':'▾')+'</span>' : '<span class="gn-caret gn-vazio"></span>';
     var nomeCls = x.temFilhos ? (x.lv<=1?"gn-fase":"gn-grupo") : "gn-tarefa";
-    var marco = (x.dur===0 || x.ini===x.fim);
+    var marco = (x.dur===0 || x.ini===_fe);
     var barra;
     if(x.temFilhos){
       barra='<div class="gbar gbar-resumo" style="left:'+L+'px;width:'+wb+'px;" title="'+escapeHtml(x.nome)+'"></div>';
     } else if(marco){
       barra='<div class="gbar gmarco" style="left:'+(L-6)+'px;" onclick="cronoDetalhe('+x.id+')" title="'+escapeHtml(x.nome)+' — '+_fmtBR(x.ini)+'">◆</div>';
     } else {
-      barra='<div class="gbar st-'+st+'" style="left:'+L+'px;width:'+wb+'px;" onclick="cronoDetalhe('+x.id+')" title="'+escapeHtml(x.nome)+' ('+_fmtBR(x.ini)+' → '+_fmtBR(x.fim)+') — '+pct+'%">'
+      barra='<div class="gbar st-'+st+(x.fim?'':' gbar-aberta')+'" style="left:'+L+'px;width:'+wb+'px;" onclick="cronoDetalhe('+x.id+')" title="'+escapeHtml(x.nome)+' ('+_fmtBR(x.ini)+' → '+(x.fim?_fmtBR(x.fim):'sem Finish')+') — '+pct+'%">'
         +'<div class="gbar-fill" style="width:'+pct+'%;"></div><span class="gbar-pct">'+(wb>34?pct+'%':'')+'</span></div>';
     }
     linhas+='<div class="g-row">'
@@ -3026,10 +3049,16 @@ function renderCronograma(){
   });
 
   var headHoje='<div class="g-hoje g-hoje-top" style="left:'+tx+'px;"><span class="g-hoje-lbl">Hoje</span></div>';
+  // % por fase
+  var fases=_cronoFasesPct(t,calc);
+  var fasesHtml = fases.length ? ('<div class="crono-fases"><div class="cf-tit">Progresso por fase</div>'
+    + fases.map(function(f){ return '<div class="cf-fase"><span class="cf-fase-n">'+escapeHtml(f.nome)+'</span><span class="cf-fase-bar"><span style="width:'+f.pct+'%"></span></span><b>'+f.pct+'%</b></div>'; }).join('')
+    + '</div>') : '';
+  var nomeProj = _obraTemCronograma() ? (DB.obraCronograma[obraAtual].projeto||obraAtual) : CRONOGRAMA_PROJETO;
   main.innerHTML=
-    '<div class="crono-topo"><div><h2>📅 Cronograma da Obra</h2><div style="font-size:12px;color:#555;">'+escapeHtml(CRONOGRAMA_PROJETO)+'</div></div>'
+    '<div class="crono-topo"><div><h2>📅 Cronograma da Obra</h2><div style="font-size:12px;color:#555;">'+escapeHtml(nomeProj)+'</div></div>'
       +'<button type="button" class="secundario" onclick="trocarModo(\'salvas\')">‹ Voltar às fichas</button></div>'
-    + dash + proxHtml
+    + dash + proxHtml + fasesHtml
     + '<div class="crono-legenda"><span><i class="lg st-concluida"></i>Concluída</span><span><i class="lg st-andamento"></i>Em andamento</span><span><i class="lg st-atrasada"></i>Atrasada</span><span><i class="lg st-futura"></i>Futura</span><span><i class="lg lg-marco">◆</i>Marco</span></div>'
     + '<div class="gantt">'
       + '<div class="g-row g-head"><div class="g-name g-name-head">Serviço / Atividade</div><div class="g-time g-time-head" style="width:'+W+'px;">'+meses+headHoje+'</div></div>'

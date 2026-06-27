@@ -1,5 +1,5 @@
 // Service Worker - FV WME Engenharia
-const CACHE = 'wme-fv-v32';
+const CACHE = 'wme-fv-v33';
 
 // Arquivos do app shell para cache offline
 const SHELL = ['./', './index.html', './icon.svg', './manifest.json'];
