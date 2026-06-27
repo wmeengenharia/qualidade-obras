@@ -344,6 +344,9 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .wiz-corpo{min-height:120px;}
 .wiz-campo-lbl{font-size:12px;font-weight:bold;color:#444;display:block;margin-bottom:5px;}
 .wiz-input{width:100%;padding:9px 11px;border:1px solid #ccc;border-radius:6px;font-size:15px;box-sizing:border-box;}
+/* Contraste: garante texto escuro legível nos campos (wizard, modal e ficha de cronograma) */
+.wiz-input,#modal-box input,#modal-box select,#modal-box textarea,.cf-grid input,.cf-grid select,.cf-nc input,.ficha-doc textarea{color:#1b1b1b !important;background:#fff;}
+.wiz-input::placeholder{color:#9e9e9e;}
 .wiz-txt{font-size:13px;color:#555;line-height:1.5;margin:0 0 14px;}
 .wiz-upload{width:100%;padding:18px;border:2px dashed #bdbdbd;border-radius:10px;background:#fafafa;font-size:14px;font-weight:bold;color:#555;cursor:pointer;}
 .wiz-upload:hover{border-color:var(--verde);background:#f1f8e9;color:var(--verde-escuro);}
@@ -352,6 +355,22 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .wiz-spin{width:38px;height:38px;border:4px solid #e0e0e0;border-top-color:var(--verde-escuro);border-radius:50%;animation:appSpin .9s linear infinite;}
 .wiz-ok{font-size:14px;font-weight:bold;color:#2e7d32;margin-bottom:10px;}
 .wiz-resumo{list-style:none;padding:0;margin:0;font-size:13px;color:#333;line-height:2;}
+.wiz-usr{display:flex;align-items:center;gap:8px;font-size:13px;color:#333;padding:5px 2px;cursor:pointer;}
+.wiz-usr input{width:auto;}
+.wiz-livre{background:#f1f8e9;border:1px solid #c5e1a5;border-radius:6px;padding:8px 10px;margin-bottom:8px;}
+.wiz-usr-lista{max-height:200px;overflow-y:auto;border:1px solid #eee;border-radius:6px;padding:6px 10px;}
+.wiz-rev{font-size:13px;color:#333;}
+.wiz-rev>div{display:flex;justify-content:space-between;gap:12px;padding:9px 2px;border-bottom:1px solid #f0f0f0;}
+.wiz-rev>div span{color:#777;}
+/* % por fase (dashboard cronograma) */
+.crono-fases{margin:4px 0 12px;background:#fff;border:1px solid #e6e6e6;border-radius:8px;padding:12px;}
+.crono-fases .cf-tit{font-size:12px;font-weight:bold;color:#444;margin-bottom:8px;}
+.cf-fase{display:flex;align-items:center;gap:10px;font-size:12.5px;margin-bottom:6px;}
+.cf-fase .cf-fase-n{flex:0 0 200px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#333;}
+.cf-fase .cf-fase-bar{flex:1;height:9px;background:#e8e8e8;border-radius:5px;overflow:hidden;}
+.cf-fase .cf-fase-bar span{display:block;height:100%;background:#43a047;}
+.gbar.gbar-aberta{outline:1px dashed rgba(0,0,0,.25);outline-offset:-1px;}
+@media(max-width:700px){ .cf-fase .cf-fase-n{flex-basis:120px;max-width:120px;} }
 /* Seletor de atividade do cronograma (Nova ficha) */
 .crono-pick{max-height:50vh;overflow-y:auto;border:1px solid #eee;border-radius:8px;padding:6px;}
 .cp-grupo{font-size:11px;font-weight:bold;text-transform:uppercase;color:#607d8b;background:#f3f5f6;border-radius:4px;padding:5px 8px;margin:6px 0 3px;}
@@ -2220,12 +2239,12 @@ function parseCronogramaPDF(typedarray){
 var _wiz=null;
 function criarNovaObra(){
   if(!ehAdmin()){ alert("Apenas Administradores podem criar obras."); return; }
-  _wiz={step:1, nome:"", parsed:null, erro:"", processando:false};
+  _wiz={step:1, nome:"", parsed:null, erro:"", processando:false, acessoLivre:true, usuariosSel:[]};
   document.getElementById("modal-box").classList.add("modal-wide");
   renderWizard();
 }
 function _wizStepper(){
-  var passos=["Nome da Obra","Cronograma (PDF)","Processamento","Concluir"];
+  var passos=["Nome","Cronograma","Processamento","Usuários","Revisão"];
   return '<div class="wiz-stepper">'+passos.map(function(p,i){
     var n=i+1, cls=_wiz.step===n?"atual":(_wiz.step>n?"feito":"");
     return '<div class="wiz-step '+cls+'"><span class="wiz-bola">'+(_wiz.step>n?"✓":n)+'</span><span class="wiz-lbl">'+p+'</span></div>';
@@ -2259,8 +2278,30 @@ function renderWizard(){
         +'<li>✓ <b>'+r.total+'</b> linha(s) no total</li>'
         +'</ul>';
       rodape='<button type="button" class="secundario" onclick="wizIr(2)">‹ Trocar PDF</button>'
-        +'<button type="button" onclick="wizFinalizar()">✔ Criar Obra</button>';
+        +'<button type="button" onclick="wizIr(4)">Avançar ›</button>';
     }
+  } else if(_wiz.step===4){
+    var usuarios=(DB.usuarios||[]).filter(function(u){ return u.ativo && u.id!==(sessao&&sessao.id); });
+    var lista = usuarios.length ? usuarios.map(function(u){
+      var marcado = _wiz.acessoLivre || _wiz.usuariosSel.indexOf(u.id)>=0;
+      return '<label class="wiz-usr"><input type="checkbox" class="wiz-usr-cb" data-uid="'+u.id+'"'+(marcado?' checked':'')+'> '+escapeHtml(u.nome)+' <span style="color:#888;font-size:11px;">('+escapeHtml(u.perfil)+')</span></label>';
+    }).join('') : '<div style="color:#888;font-size:12px;">Nenhum outro usuário cadastrado.</div>';
+    corpo+='<p class="wiz-txt">Quem terá acesso a esta obra? (O administrador sempre vê todas.)</p>'
+      +'<label class="wiz-usr wiz-livre"><input type="checkbox" id="wiz-acesso-livre"'+(_wiz.acessoLivre?' checked':'')+'> <b>Acesso livre</b> — todos os usuários veem esta obra</label>'
+      +'<div class="wiz-usr-lista">'+lista+'</div>';
+    rodape='<button type="button" class="secundario" onclick="wizVoltar4()">‹ Voltar</button>'
+      +'<button type="button" onclick="wizPasso4()">Avançar ›</button>';
+  } else if(_wiz.step===5){
+    var r2=_wiz.parsed?_wiz.parsed.resumo:{fases:0,servicos:0,atividades:0};
+    var acessoTxt = _wiz.acessoLivre ? "Acesso livre (todos)" : (_wiz.usuariosSel.length+" usuário(s) selecionado(s)");
+    corpo+='<p class="wiz-txt">Confira e confirme a criação da obra:</p>'
+      +'<div class="wiz-rev">'
+      +'<div><span>🏗️ Obra</span><b>'+escapeHtml(_wiz.nome)+'</b></div>'
+      +'<div><span>📄 Cronograma</span><b>'+r2.fases+' fases · '+r2.servicos+' serviços · '+r2.atividades+' atividades</b></div>'
+      +'<div><span>👥 Acesso</span><b>'+acessoTxt+'</b></div>'
+      +'</div>';
+    rodape='<button type="button" class="secundario" onclick="wizIr(4)">‹ Voltar</button>'
+      +'<button type="button" onclick="wizFinalizar()">✔ Criar Obra</button>';
   }
   corpo+='</div>';
   abrirModal("🏗️ Nova Obra", corpo, rodape);
@@ -2273,18 +2314,28 @@ function wizPasso1(){
   if((DB.obras||[]).indexOf(nome)>=0){ _wiz.erro="Já existe uma obra com esse nome."; renderWizard(); return; }
   _wiz.nome=nome; _wiz.erro=""; _wiz.step=2; renderWizard();
 }
+function _wizColetarUsuarios(){
+  var livreEl=document.getElementById("wiz-acesso-livre");
+  if(livreEl) _wiz.acessoLivre=livreEl.checked;
+  var sel=[]; document.querySelectorAll(".wiz-usr-cb:checked").forEach(function(cb){ sel.push(cb.dataset.uid); });
+  _wiz.usuariosSel=sel;
+}
+function wizVoltar4(){ _wizColetarUsuarios(); _wiz.step=3; renderWizard(); }
+function wizPasso4(){ _wizColetarUsuarios(); _wiz.step=5; renderWizard(); }
 function wizFinalizar(){
   if(!_wiz||!_wiz.parsed) return;
   var nome=_wiz.nome;
-  if(!DB.obras) DB.obras=[]; if(!DB.fichas) DB.fichas={}; if(!DB.obraCronograma) DB.obraCronograma={};
+  if(!DB.obras) DB.obras=[]; if(!DB.fichas) DB.fichas={}; if(!DB.obraCronograma) DB.obraCronograma={}; if(!DB.obraAcessos) DB.obraAcessos={};
   if(DB.obras.indexOf(nome)<0) DB.obras.push(nome);
   if(!DB.fichas[nome]) DB.fichas[nome]={};
   DB.obraCronograma[nome]={ projeto:nome, tarefas:_wiz.parsed.tarefas, importadoEm:Date.now() };
+  // Acesso definido no passo 4 (sem etapa de seleção de serviços/fichas — ocultada nesta fase)
+  if(_wiz.acessoLivre){ delete DB.obraAcessos[nome]; } else { DB.obraAcessos[nome]=_wiz.usuariosSel.slice(); }
   registrarLog("criar-obra-cronograma",{obra:nome, tarefas:_wiz.parsed.tarefas.length});
   salvarDB();
   _wiz=null;
   fecharModalForce();
-  gerenciarAcessoObra(nome, true);
+  selecionarObra(nome);
 }
 
 document.getElementById("cronoFileInput").addEventListener("change", function(e){
@@ -2528,9 +2579,8 @@ function editarObra(nome){
     +'<div><label style="font-size:12px;font-weight:bold;">Acesso de Usuários</label>'
     +'<p style="font-size:11px;color:#888;margin:2px 0 6px;">Desmarque para restringir o acesso à obra.</p>'
     +'<div style="max-height:160px;overflow-y:auto;border:1px solid #eee;border-radius:6px;padding:6px 10px;">'+usuariosHtml+'</div></div>'
-    +'<div><label style="font-size:12px;font-weight:bold;">Serviços/Materiais disponíveis</label>'
-    +'<p style="font-size:11px;color:#888;margin:2px 0 6px;">Define quais fichas podem ser criadas nesta obra.</p>'
-    +'<button type="button" class="secundario" style="font-size:12px;padding:6px 12px;" onclick="fecharModalForce();gerenciarServicosObra(\''+nome.replace(/'/g,"\\'")+'\')">🧰 Gerenciar serviços/materiais</button></div>'
+    /* Seleção de serviços/fichas ocultada temporariamente (fichas vêm do cronograma) */
+    +''
     +'<div style="border-top:1px solid #eee;padding-top:10px;">'
     +'<button type="button" class="perigo" style="font-size:12px;padding:4px 10px;" onclick="fecharModalForce();excluirObra(\''+nome.replace(/'/g,"\\'")+'\')">🗑 Excluir Obra</button>'
     +'</div></div>';
