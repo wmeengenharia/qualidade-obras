@@ -321,6 +321,11 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .filtro-chip .chip-n{font-size:11px;font-weight:bold;background:rgba(0,0,0,.08);border-radius:10px;padding:0 7px;min-width:18px;text-align:center;}
 .filtro-chip.ativo .chip-n{background:rgba(255,255,255,.25);}
 .aprov-alerta.reprov{background:#ffebee;border-color:#e57373;color:#b71c1c;}
+.agrupar-toggle{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:#444;cursor:pointer;margin:0 0 14px;user-select:none;}
+.agrupar-toggle input{width:auto;cursor:pointer;}
+.grupo-serv{margin-bottom:18px;}
+.grupo-serv-h{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:bold;color:var(--verde-escuro);border-bottom:2px solid #e0e0e0;padding-bottom:5px;margin-bottom:10px;}
+.grupo-serv-h .grupo-serv-n{font-size:11px;font-weight:bold;background:var(--verde);color:#fff;border-radius:11px;min-width:20px;text-align:center;padding:1px 7px;}
 .aprov-alerta a{color:inherit;font-weight:bold;}
 .btn-nova-ficha{font-size:13px;font-weight:bold;padding:9px 16px;background:var(--verde);color:#fff;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.15);}
 .btn-nova-ficha:hover{background:var(--verde-escuro);}
@@ -2299,6 +2304,8 @@ function _fichaTemDados(est, tipo){
 
 var _filtroFichas = "todos";
 function setFiltroFichas(f){ _filtroFichas = f; renderFichasSalvas(); }
+var _agruparServico = false;
+function setAgruparServico(v){ _agruparServico = !!v; renderFichasSalvas(); }
 
 // Passo 1: escolher o tipo (FVS / FVM)
 function novaFicha(){
@@ -2398,7 +2405,7 @@ function renderFichasSalvas(){
       const totalItens = status.reduce(function(acc,row){ return acc+(row?row.length:0); }, 0);
       const preenchidos = status.reduce(function(acc,row){ return acc+(row?row.filter(function(v){ return v!==""; }).length:0); }, 0);
       const pct = totalItens ? Math.round(preenchidos/totalItens*100) : 0;
-      cards.push({tipo:"servico", id:key, badge:"FVS "+servicoId, badgeCls:"",
+      cards.push({tipo:"servico", id:key, servicoId:servicoId, grupo:"FVS "+servicoId+" — "+s.titulo, badge:"FVS "+servicoId, badgeCls:"",
         titulo: s.titulo, rascunho: !!est.rascunho,
         obra: est.obra||"—", data: est.data||"—", resp: est.respInsp||"—",
         pct, cls:(pct===0?"vazio":pct<100?"parcial":""), ncCount:(est.nc?est.nc.length:0),
@@ -2411,7 +2418,7 @@ function renderFichasSalvas(){
       const total = 5;
       const preenchidos = est.resultados ? est.resultados.filter(function(r){ return r!==""; }).length : 0;
       const pct = Math.round(preenchidos/total*100);
-      cards.push({tipo:"material", id:key, badge:"FVM "+String(servicoId).replace("M",""), badgeCls:"fvm",
+      cards.push({tipo:"material", id:key, servicoId:servicoId, grupo:"FVM "+String(servicoId).replace("M","")+" — "+m.material, badge:"FVM "+String(servicoId).replace("M",""), badgeCls:"fvm",
         titulo: m.material, rascunho: !!est.rascunho,
         obra: est.obra||"—", data: est.data||"—", resp: (est.recebimentos&&est.recebimentos[0]&&est.recebimentos[0].fornecedor)||est.fornecedor||"—",
         pct, cls:(pct===0?"vazio":pct<100?"parcial":""), ncCount:(est.nc?est.nc.length:0),
@@ -2458,7 +2465,8 @@ function renderFichasSalvas(){
     +'<div style="font-size:12px;color:#555;">'+cards.length+' ficha(s) no total</div></div>'
     +btnNova+'</div>'
     +alerta
-    +'<div class="filtros-bar">'+chipsHtml+'</div>';
+    +'<div class="filtros-bar">'+chipsHtml+'</div>'
+    +'<label class="agrupar-toggle"><input type="checkbox" '+(_agruparServico?'checked':'')+' onclick="setAgruparServico(this.checked)"> 🗂️ Agrupar por serviço</label>';
 
   if(cards.length===0){
     main.innerHTML = topo + '<div class="salvas-vazio">Nenhuma ficha preenchida ainda.<br>Use as abas “Ficha de Serviço” ou “Ficha de Material” acima para começar.</div>';
@@ -2475,7 +2483,7 @@ function renderFichasSalvas(){
     return;
   }
 
-  const cardsHtml = visiveis.map(function(c){
+  function cardHtml(c){
     const aprovLabels={pendente:"📝 Em preenchimento",submetido:"📋 Aguardando Aprovação",aprovado:"✅ Aprovado",reprovado:"❌ Reprovado"};
     const aprovCores={pendente:"#e65100",submetido:"#1565c0",aprovado:"#2e7d32",reprovado:"#c62828"};
     return '<div class="ficha-card" onclick="abrirFichaSalva(\''+c.tipo+'\',\''+c.id+'\')" style="position:relative;">'+
@@ -2492,9 +2500,23 @@ function renderFichasSalvas(){
       '<div class="card-progress-txt">'+c.info+' ('+c.pct+'%)</div>'+
       '<div class="progress-bar"><div class="progress-fill '+c.cls+'" style="width:'+c.pct+'%"></div></div>'+
     '</div>';
-  }).join("");
+  }
 
-  main.innerHTML = topo + '<div class="salvas-grid">'+cardsHtml+'</div>';
+  let corpoFichas;
+  if(_agruparServico){
+    // Agrupa por serviço: todas as fichas do mesmo serviço juntas, com cabeçalho e contagem
+    var grupos={}, ordem=[];
+    visiveis.forEach(function(c){ if(!grupos[c.grupo]){ grupos[c.grupo]=[]; ordem.push(c.grupo); } grupos[c.grupo].push(c); });
+    ordem.sort(function(a,b){ return a.localeCompare(b); });
+    corpoFichas = ordem.map(function(g){
+      return '<div class="grupo-serv"><div class="grupo-serv-h">'+escapeHtml(g)+' <span class="grupo-serv-n">'+grupos[g].length+'</span></div>'
+        +'<div class="salvas-grid">'+grupos[g].map(cardHtml).join("")+'</div></div>';
+    }).join("");
+  } else {
+    corpoFichas = '<div class="salvas-grid">'+visiveis.map(cardHtml).join("")+'</div>';
+  }
+
+  main.innerHTML = topo + corpoFichas;
 }
 
 function abrirFichaSalva(tipo, id){
