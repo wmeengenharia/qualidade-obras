@@ -326,6 +326,12 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .btn-nova-ficha:hover{background:var(--verde-escuro);}
 .btn-teste{background:#7e57c2;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:bold;padding:7px 12px;margin-bottom:10px;cursor:pointer;}
 .btn-teste:hover{background:#673ab7;}
+/* Seletor de serviços/materiais por obra */
+.srv-grupo-tit{display:flex;align-items:center;gap:8px;font-weight:bold;font-size:13px;color:var(--verde-escuro);margin:4px 0 6px;}
+.srv-cat{margin:0 0 10px;}
+.srv-cat-h{font-size:11px;font-weight:bold;text-transform:uppercase;color:#777;border-bottom:1px solid #eee;padding-bottom:3px;margin-bottom:4px;}
+.srv-item{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:4px 2px;cursor:pointer;}
+.srv-item input{width:auto;}
 /* Tela de carregamento (evita o flash da casca do app antes do JS renderizar) */
 #appLoading{position:fixed;inset:0;z-index:99999;background:var(--verde-escuro);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:#fff;}
 #appLoading .spin{width:42px;height:42px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:appSpin .9s linear infinite;}
@@ -1489,6 +1495,7 @@ function migrarDB(){
   if(!DB.obras)       DB.obras       = [];
   if(!DB.obraAcessos) DB.obraAcessos = {};
   if(!DB.obraLogos)   DB.obraLogos   = {};
+  if(!DB.obraServicos) DB.obraServicos = {}; // {obra:{servicos:[ids],materiais:[ids]}} — ausente = todos (retrocompat)
   // Migrar estrutura antiga: chaves diretas (ex: "1", "M01") para dentro de fichas
   var TODOS_IDS = SERVICOS.map(function(s){return s.id;}).concat(MATERIAIS.map(function(m){return m.id;}));
   var antigas = {};
@@ -1975,7 +1982,82 @@ function confirmarAcessoObra(nome, recemCriada){
   registrarLog("gerenciar-acesso-obra",{obra:nome});
   salvarDB();
   fecharModalForce();
-  if(recemCriada){ selecionarObra(nome); } else { renderSeletorObra(); }
+  // Na criação, segue para a seleção de serviços/materiais da obra
+  if(recemCriada){ gerenciarServicosObra(nome, true); } else { renderSeletorObra(); }
+}
+
+// ===== SERVIÇOS/MATERIAIS DISPONÍVEIS POR OBRA =====
+// Retrocompat: obra sem entrada em DB.obraServicos OU sem a lista do tipo => TODOS disponíveis.
+function _idPermitidoObra(tipo, id, obra){
+  obra = obra || obraAtual;
+  var conf = DB.obraServicos && DB.obraServicos[obra];
+  if(!conf) return true;                       // obra não configurada → tudo (como antes)
+  var lista = tipo==="servico" ? conf.servicos : conf.materiais;
+  if(!Array.isArray(lista)) return true;       // tipo sem restrição definida → tudo
+  return lista.indexOf(id) >= 0;
+}
+function _idsPermitidosCat(tipo, cat, obra){
+  return (cat.ids||[]).filter(function(id){ return _idPermitidoObra(tipo, id, obra); });
+}
+
+function gerenciarServicosObra(nome, recemCriada){
+  if(!ehAdmin()){ alert("Apenas administradores podem configurar serviços da obra."); return; }
+  var conf = (DB.obraServicos && DB.obraServicos[nome]) || null;
+  var servSel = conf && Array.isArray(conf.servicos) ? conf.servicos : null; // null = todos marcados
+  var matSel  = conf && Array.isArray(conf.materiais) ? conf.materiais : null;
+
+  function bloco(tipo, cats, lista, sel){
+    var html = '';
+    cats.forEach(function(cat){
+      var itensHtml = '';
+      (cat.ids||[]).forEach(function(id){
+        var it = lista.find(function(x){ return x.id===id; });
+        if(!it) return;
+        var marcado = (sel===null) || sel.indexOf(id)>=0;
+        var lbl = tipo==="servico" ? ("FVS "+id+" — "+it.titulo) : ("FVM "+id.replace("M","")+" — "+it.material);
+        itensHtml += '<label class="srv-item"><input type="checkbox" class="srv-cb" data-tipo="'+tipo+'" data-id="'+escapeHtml(id)+'"'+(marcado?' checked':'')+'> '+escapeHtml(lbl)+'</label>';
+      });
+      if(!itensHtml) return;
+      html += '<div class="srv-cat"><div class="srv-cat-h">'+(cat.ic||"📂")+' '+escapeHtml(cat.nome)+'</div>'+itensHtml+'</div>';
+    });
+    return html;
+  }
+
+  var corpo = '<p style="font-size:13px;margin:0 0 6px;color:#333;">Marque quais fichas ficam disponíveis para criar na obra <b>'+escapeHtml(nome)+'</b>.</p>'
+    +'<p style="font-size:11.5px;color:#888;margin:0 0 8px;">Só os itens marcados aparecem no “➕ Nova ficha”. (Fichas já criadas continuam visíveis.)</p>'
+    +'<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">'
+    +'<button type="button" class="secundario" style="font-size:11px;padding:4px 10px;" onclick="_marcarTodosSrv(true)">Marcar todos</button>'
+    +'<button type="button" class="secundario" style="font-size:11px;padding:4px 10px;" onclick="_marcarTodosSrv(false)">Desmarcar todos</button></div>'
+    +'<div style="max-height:340px;overflow-y:auto;border:1px solid #eee;border-radius:6px;padding:8px 10px;">'
+    +'<div class="srv-grupo-tit">📋 Fichas de Serviço (FVS)</div>'
+    + bloco("servico", CATEGORIAS, SERVICOS, servSel)
+    +'<div class="srv-grupo-tit" style="margin-top:12px;">📦 Fichas de Material (FVM)</div>'
+    + bloco("material", CATEGORIAS_MAT, MATERIAIS, matSel)
+    +'</div>';
+
+  document.getElementById("modal-box").classList.add("modal-wide");
+  abrirModal("🧰 Serviços/Materiais da Obra", corpo,
+    '<button type="button" class="secundario" onclick="'+(recemCriada?'gerenciarServicosObra_pular(\''+nome.replace(/'/g,"\\'")+'\')':'fecharModalForce()')+'">'+(recemCriada?'Pular (deixar todos)':'Cancelar')+'</button>'
+    +'<button type="button" onclick="confirmarServicosObra(\''+nome.replace(/'/g,"\\'")+'\','+(recemCriada?'true':'false')+')">✔ Salvar</button>'
+  );
+}
+function _marcarTodosSrv(v){ document.querySelectorAll('.srv-cb').forEach(function(cb){ cb.checked=v; }); }
+function gerenciarServicosObra_pular(nome){ // recém-criada: pular = sem restrição (todos)
+  if(DB.obraServicos) delete DB.obraServicos[nome];
+  fecharModalForce();
+  selecionarObra(nome);
+}
+function confirmarServicosObra(nome, recemCriada){
+  if(!ehAdmin()){ fecharModalForce(); return; }
+  var servicos=[], materiais=[];
+  document.querySelectorAll('.srv-cb[data-tipo="servico"]:checked').forEach(function(cb){ servicos.push(cb.dataset.id); });
+  document.querySelectorAll('.srv-cb[data-tipo="material"]:checked').forEach(function(cb){ materiais.push(cb.dataset.id); });
+  if(!DB.obraServicos) DB.obraServicos = {};
+  DB.obraServicos[nome] = { servicos:servicos, materiais:materiais };
+  registrarLog("servicos-obra",{obra:nome, servicos:servicos.length, materiais:materiais.length});
+  salvarDB();
+  fecharModalForce();
+  if(recemCriada){ selecionarObra(nome); } else { renderAtual(); }
 }
 
 // ===== MEU PERFIL =====
@@ -2056,6 +2138,9 @@ function editarObra(nome){
     +'<div><label style="font-size:12px;font-weight:bold;">Acesso de Usuários</label>'
     +'<p style="font-size:11px;color:#888;margin:2px 0 6px;">Desmarque para restringir o acesso à obra.</p>'
     +'<div style="max-height:160px;overflow-y:auto;border:1px solid #eee;border-radius:6px;padding:6px 10px;">'+usuariosHtml+'</div></div>'
+    +'<div><label style="font-size:12px;font-weight:bold;">Serviços/Materiais disponíveis</label>'
+    +'<p style="font-size:11px;color:#888;margin:2px 0 6px;">Define quais fichas podem ser criadas nesta obra.</p>'
+    +'<button type="button" class="secundario" style="font-size:12px;padding:6px 12px;" onclick="fecharModalForce();gerenciarServicosObra(\''+nome.replace(/'/g,"\\'")+'\')">🧰 Gerenciar serviços/materiais</button></div>'
     +'<div style="border-top:1px solid #eee;padding-top:10px;">'
     +'<button type="button" class="perigo" style="font-size:12px;padding:4px 10px;" onclick="fecharModalForce();excluirObra(\''+nome.replace(/'/g,"\\'")+'\')">🗑 Excluir Obra</button>'
     +'</div></div>';
@@ -2143,6 +2228,10 @@ function confirmarEditarObra(nomeAntigo){
       DB.obraLogos[nomeNovo] = DB.obraLogos[nomeAntigo];
       delete DB.obraLogos[nomeAntigo];
     }
+    if(DB.obraServicos && DB.obraServicos[nomeAntigo]!==undefined){
+      DB.obraServicos[nomeNovo] = DB.obraServicos[nomeAntigo];
+      delete DB.obraServicos[nomeAntigo];
+    }
     if(obraAtual === nomeAntigo) obraAtual = nomeNovo;
   }
 
@@ -2173,6 +2262,7 @@ function confirmarExcluirObra(nome){
   if(DB.fichas) delete DB.fichas[nome];
   if(DB.obraAcessos) delete DB.obraAcessos[nome];
   if(DB.obraLogos) delete DB.obraLogos[nome];
+  if(DB.obraServicos) delete DB.obraServicos[nome];
   registrarLog("excluir-obra",{obra:nome});
   salvarDB();
   fecharModalForce();
@@ -2205,12 +2295,17 @@ function novaFicha(){
 function novaFichaSecoes(tipo){
   var cats = tipo==="servico" ? CATEGORIAS : CATEGORIAS_MAT;
   var corpo = '<p style="font-size:13px;margin:0 0 14px;color:#555;">Escolha a seção:</p><div class="nf-grid">';
+  var algum = false;
   cats.forEach(function(cat, idx){
+    var nPerm = _idsPermitidosCat(tipo, cat).length; // só os habilitados para esta obra
+    if(nPerm===0) return; // seção sem itens disponíveis nesta obra → não exibe
+    algum = true;
     corpo += '<button type="button" class="nova-ficha-opt nf-secao" onclick="novaFichaItens(\''+tipo+'\','+idx+')">'
       +'<span class="nf-emoji">'+(cat.ic||"📂")+'</span><span><span class="nf-tit">'+escapeHtml(cat.nome)+'</span>'
-      +'<br><span class="nf-sub">'+cat.ids.length+' ficha(s)</span></span></button>';
+      +'<br><span class="nf-sub">'+nPerm+' ficha(s)</span></span></button>';
   });
   corpo += '</div>';
+  if(!algum) corpo = '<p style="font-size:13px;color:#888;">Nenhuma ficha de '+(tipo==="servico"?"serviço":"material")+' está habilitada para esta obra.<br>Um administrador pode habilitar em <b>Editar Obra → Serviços/Materiais</b>.</p>';
   document.getElementById("modal-box").classList.add("modal-wide");
   abrirModal("➕ Nova ficha — seção", corpo,
     '<button type="button" class="secundario" onclick="novaFicha()">‹ Voltar</button>'
@@ -2227,6 +2322,7 @@ function novaFichaItens(tipo, catIdx){
   var ic = cat.ic||"📝";
   var corpo = '<p style="font-size:13px;margin:0 0 14px;color:#555;">'+ic+' <b>'+escapeHtml(cat.nome)+'</b> — escolha a ficha:</p>';
   cat.ids.forEach(function(id){
+    if(!_idPermitidoObra(tipo, id)) return; // só os habilitados para esta obra
     var it = lista.find(function(x){ return x.id===id; });
     if(!it) return;
     var label = tipo==="servico" ? ("FVS "+id+" — "+it.titulo) : ("FVM "+id.replace("M","")+" — "+it.material);
