@@ -542,6 +542,16 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .cp-rel-l .cp-i-txt{flex:1 1 auto;}
 .cp-rel-act{flex:0 0 auto;}
 .cp-indisp{display:inline-block;font-size:11px;font-weight:700;color:#8a6d00;background:#fff8e1;border:1px solid #ffe082;border-radius:14px;padding:2px 9px;}
+.cp-count{display:inline-block;min-width:18px;text-align:center;font-size:11px;font-weight:700;color:#1565c0;background:#e3f2fd;border-radius:10px;padding:1px 7px;margin-left:4px;}
+.cp-addficha{margin-bottom:10px;width:100%;}
+.cp-fichas{display:flex;flex-direction:column;gap:9px;max-height:300px;overflow-y:auto;}
+.cp-ficha{border:1px solid #e6eaf1;border-radius:10px;padding:10px 11px;background:#fbfcfe;}
+.cp-ficha-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;}
+.cp-ficha-cod{font-size:12.5px;font-weight:700;color:#1565c0;}
+.cp-ficha-badge{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:12px;white-space:nowrap;}
+.cp-ficha-nome{font-size:12.5px;font-weight:600;color:#1f2a3d;line-height:1.35;}
+.cp-ficha-meta{font-size:11px;color:#8b94a7;margin-top:3px;}
+.cp-ficha-abrir{margin-top:8px;width:100%;}
 .cp-timeline{display:flex;flex-direction:column;gap:0;position:relative;padding-left:6px;}
 .cp-tl-item{display:flex;gap:11px;position:relative;padding:0 0 14px 0;}
 .cp-tl-item:not(:last-child)::before{content:"";position:absolute;left:5px;top:14px;bottom:0;width:2px;background:#e6eaf1;}
@@ -1648,6 +1658,8 @@ function atualizarBadgePendencias(){
 }
 
 function abrirPendencias(){
+  // Controle de acesso: somente Administrador e Gestor (bloqueia acesso direto via URL/console)
+  if(!podeAprovar()){ alert("⚠️ Acesso restrito a Administradores e Gestores."); return; }
   var lista=listarPendenciasAprovacao();
   if(lista.length===0){
     abrirModal("🔔 Pendências de Aprovação",
@@ -3305,11 +3317,30 @@ function _proxFicCodigo(obra){
   return "FIC-"+String(max+1).padStart(3,"0");
 }
 function _ensureCodigo(est){ if(est && est.tipo==="cronograma" && !est.codigo){ est.codigo=_proxFicCodigo(est.obra||obraAtual); return true; } return false; }
-// Ficha vinculada a uma atividade do cronograma (por cronogramaId). null se não houver.
+// TODAS as fichas vinculadas a uma atividade do cronograma (relação 1:N por cronogramaId).
+// Ordena por código (FIC-001, FIC-002, ...). Garante código nas fichas que ainda não têm.
+function _fichasDaAtividade(taskId, obra){
+  obra=obra||obraAtual; var of=(DB.fichas&&DB.fichas[obra])||{}, ks=Object.keys(of), out=[], mudou=false;
+  for(var i=0;i<ks.length;i++){ var e=of[ks[i]]; if(e&&e.tipo==="cronograma"&&e.cronogramaId===taskId&&_fichaVisivel(e)){ if(_ensureCodigo(e)) mudou=true; out.push({key:ks[i], est:e}); } }
+  if(mudou) salvarDB();
+  out.sort(function(a,b){ return String(a.est.codigo||"").localeCompare(String(b.est.codigo||""), undefined, {numeric:true}); });
+  return out;
+}
+// Primeira ficha vinculada (compat. retroativa). Use _fichasDaAtividade() para a relação 1:N.
 function _fichaDaAtividade(taskId, obra){
-  obra=obra||obraAtual; var of=(DB.fichas&&DB.fichas[obra])||{}, ks=Object.keys(of);
-  for(var i=0;i<ks.length;i++){ var e=of[ks[i]]; if(e&&e.tipo==="cronograma"&&e.cronogramaId===taskId&&_fichaVisivel(e)) return {key:ks[i], est:e}; }
-  return null;
+  var l=_fichasDaAtividade(taskId, obra);
+  return l.length ? l[0] : null;
+}
+// Status visual de uma ficha (para listagens/rastreabilidade).
+function _fichaStatusInfo(est){
+  var s=(est&&est.aprovacao&&est.aprovacao.status)||"pendente";
+  if(est&&est.rascunho&&s==="pendente") return {lbl:"Rascunho", ic:"🔒", cor:"#8a6d00", bg:"#fff8e1"};
+  return ({
+    pendente:{lbl:"Em preenchimento", ic:"🔵", cor:"#1565c0", bg:"#e3f2fd"},
+    submetido:{lbl:"Aguardando aprovação", ic:"🟡", cor:"#f9a825", bg:"#fff8e1"},
+    aprovado:{lbl:"Aprovada", ic:"🟢", cor:"#2e7d32", bg:"#e8f5e9"},
+    reprovado:{lbl:"Reprovada", ic:"🔴", cor:"#c62828", bg:"#ffebee"}
+  })[s] || {lbl:s, ic:"⚪", cor:"#616161", bg:"#f0f0f0"};
 }
 var _fichaDestaque=null; // chave da ficha aberta a partir do cronograma (para destacar)
 function cronoAbrirFichaLigada(key){
@@ -3327,13 +3358,12 @@ function abrirCronoDrill(status){
     if(x.temFilhos) return;                 // só folhas (igual ao cálculo dos cards)
     if(calc.st[x.id]!==status) return;
     var anc=_cronoAncestrais(t,x);
-    var lig=_fichaDaAtividade(x.id);          // ficha vinculada (por cronogramaId)
-    var codigo="—";
-    if(lig){ if(_ensureCodigo(lig.est)) precisaSalvar=true; codigo=lig.est.codigo; }
+    var ligs=_fichasDaAtividade(x.id);        // TODAS as fichas vinculadas (1:N)
+    var codigo = ligs.length===0 ? "—" : (ligs.length===1 ? (ligs[0].est.codigo||"FIC") : (ligs.length+" fichas"));
     itens.push({
       id:x.id, nome:x.nome, servico:anc.servico, fase:anc.fase,
       pct:(calc.pct[x.id]||0),
-      fichaKey:(lig?lig.key:""), codigo:codigo
+      fichaCount:ligs.length, fichaKey:(ligs.length===1?ligs[0].key:""), codigo:codigo
     });
   });
   if(precisaSalvar) salvarDB();
@@ -3365,13 +3395,13 @@ function renderCronoDrill(){
   var optServ='<option value="">Todos os serviços</option>'+servs.map(function(s){return '<option value="'+escapeHtml(s)+'"'+(d.servico===s?' selected':'')+'>'+escapeHtml(s)+'</option>';}).join("");
   var stLbl=info.lbl.replace(/s$/,'').replace("Concluída","Concluída");
   var rows=pageItens.map(function(it){
-    var temFicha=!!it.fichaKey;
-    var acao = temFicha
-      ? '<button type="button" class="dr-ver" onclick="event.stopPropagation();cronoAbrirFichaLigada(\''+it.fichaKey+'\')">Abrir ficha ›</button>'
-      : '<span class="dr-indisp" title="Ainda não há ficha vinculada a este serviço">🟡 Ficha indisponível</span>';
-    var click = temFicha ? ' onclick="cronoAbrirFichaLigada(\''+it.fichaKey+'\')" style="cursor:pointer;"' : ' class="dr-row-off" title="Sem ficha vinculada"';
+    var n=it.fichaCount||0;
+    var acao, click;
+    if(n===0){ acao='<span class="dr-indisp" title="Ainda não há ficha vinculada a esta atividade">🟡 Ficha indisponível</span>'; click=' class="dr-row-off" title="Sem ficha vinculada"'; }
+    else if(n===1){ acao='<button type="button" class="dr-ver" onclick="event.stopPropagation();cronoAbrirFichaLigada(\''+it.fichaKey+'\')">Abrir ficha ›</button>'; click=' onclick="cronoAbrirFichaLigada(\''+it.fichaKey+'\')" style="cursor:pointer;"'; }
+    else { acao='<button type="button" class="dr-ver" onclick="event.stopPropagation();fecharModalForce();abrirCronoPanel('+it.id+')">Ver '+n+' fichas ›</button>'; click=' onclick="fecharModalForce();abrirCronoPanel('+it.id+')" style="cursor:pointer;"'; }
     return '<tr'+click+'>'
-      +'<td>'+(temFicha?'<b>'+escapeHtml(it.codigo)+'</b>':'<span class="dr-cod-off">—</span>')+'</td>'
+      +'<td>'+(n>0?'<b>'+escapeHtml(it.codigo)+'</b>':'<span class="dr-cod-off">—</span>')+'</td>'
       +'<td class="dr-nome"><b>'+escapeHtml(it.nome)+'</b></td>'
       +'<td>'+escapeHtml(it.servico)+'</td>'
       +'<td>'+escapeHtml(it.fase)+'</td>'
@@ -3470,8 +3500,8 @@ function renderCronoPanel(id){
   var info=_CRONO_ST_INFO[st]||_CRONO_ST_INFO.futura;
   var stLblFull={concluida:"Concluído",pendente_aprov:"Pendente de Aprovação",andamento:"Em andamento",atrasada:"Atrasado",futura:"Futura"}[st];
   var fin=_finalizacao(id);
-  var lig=_fichaDaAtividade(id);
-  if(lig && _ensureCodigo(lig.est)) salvarDB();
+  var ligs=_fichasDaAtividade(id);   // relação 1:N — TODAS as fichas da atividade
+  var lig=ligs.length?ligs[0]:null;  // primeira (para o rodapé / atalho rápido)
 
   // ----- Planejado / Real / Diferença -----
   var realISO = (fin&&fin.status==="aprovado"&&fin.aprovadoData)? paraISO(fin.aprovadoData) : (x.fim||"");
@@ -3536,26 +3566,39 @@ function renderCronoPanel(id){
     +'<div class="cp-status-big" style="color:'+info.cor+';background:'+info.bg+';border:1px solid '+info.cor+'33;">'+info.ic+' '+stLblFull+'</div>'
     +'<div class="cp-status-expl">'+stExpl+'</div></div>';
 
-  // ===== CARD RELACIONAMENTOS (TRACEABILITY) =====
-  var finLbl={pendente:"🟡 Pendente de Aprovação",aprovado:"🟢 Aprovada",rejeitado:"🔴 Rejeitada"}[(fin&&fin.status)]||"—";
-  html+='<div class="cp-card"><div class="cp-card-tit">Relacionamentos</div>';
-  html+='<div class="cp-rel">';
-  // Ficha
-  if(lig){
-    html+='<div class="cp-rel-l"><span class="cp-i-ic">📄</span><div class="cp-i-txt"><div class="cp-i-tit">Ficha vinculada</div>'
-      +'<div class="cp-i-val"><b>'+escapeHtml(lig.est.codigo||"—")+'</b></div></div>'
-      +'<button type="button" class="cp-btn cp-btn-sec cp-rel-act" onclick="cronoAbrirFichaLigada(\''+lig.key+'\')">Abrir Ficha ›</button></div>';
+  // ===== CARD FICHAS VINCULADAS (1:N) =====
+  html+='<div class="cp-card"><div class="cp-card-tit">Fichas vinculadas <span class="cp-count">'+ligs.length+'</span></div>';
+  if(ligs.length){
+    if(!x.temFilhos && podeEditar()) html+='<button type="button" class="cp-btn cp-btn-sec cp-addficha" onclick="novaFichaCronoAbrir('+id+')">➕ Nova ficha</button>';
+    html+='<div class="cp-fichas">';
+    ligs.forEach(function(l){
+      var si=_fichaStatusInfo(l.est);
+      html+='<div class="cp-ficha">'
+        +'<div class="cp-ficha-top"><span class="cp-ficha-cod">'+escapeHtml(l.est.codigo||"FIC")+'</span>'
+          +'<span class="cp-ficha-badge" style="color:'+si.cor+';background:'+si.bg+';">'+si.ic+' '+si.lbl+'</span></div>'
+        +'<div class="cp-ficha-nome">'+escapeHtml(l.est.nome||x.nome)+'</div>'
+        +'<div class="cp-ficha-meta">👤 '+escapeHtml(l.est.respInsp||"—")+' &nbsp;·&nbsp; 📅 '+escapeHtml(l.est.data||"—")+'</div>'
+        +'<button type="button" class="cp-btn cp-btn-sec cp-ficha-abrir" onclick="cronoAbrirFichaLigada(\''+l.key+'\')">Abrir ›</button>'
+      +'</div>';
+    });
+    html+='</div>';
   } else {
-    html+='<div class="cp-rel-l"><span class="cp-i-ic">📄</span><div class="cp-i-txt"><div class="cp-i-tit">Ficha vinculada</div>'
-      +'<div class="cp-i-val"><span class="cp-indisp">🟡 Ficha indisponível</span></div></div></div>';
+    html+='<div class="cp-rel-l"><span class="cp-i-ic">📄</span><div class="cp-i-txt"><div class="cp-i-val"><span class="cp-indisp">🟡 Nenhuma ficha vinculada</span></div></div>'
+      +(!x.temFilhos && podeEditar()?'<button type="button" class="cp-btn cp-btn-sec cp-rel-act" onclick="novaFichaCronoAbrir('+id+')">➕ Criar ficha</button>':'')+'</div>';
   }
-  // Finalização
-  html+=_cpLinha("✔","Finalização de Serviço", finLbl);
+  html+='</div>';
+
+  // ===== CARD FINALIZAÇÃO / APROVAÇÃO =====
+  var finLbl={pendente:"🟡 Pendente de Aprovação",aprovado:"🟢 Aprovada",rejeitado:"🔴 Rejeitada"}[(fin&&fin.status)]||"—";
+  html+='<div class="cp-card"><div class="cp-card-tit">Finalização de Serviço</div><div class="cp-rel">';
+  html+=_cpLinha("✔","Status", finLbl);
   if(fin){
     html+=_cpLinha("👤","Usuário responsável", escapeHtml(fin.por||"—"));
     html+=_cpLinha("📅","Data da submissão", escapeHtml(fin.data||"—"));
     if(fin.status==="aprovado"&&fin.aprovadoPor) html+=_cpLinha("🟢","Aprovado por", escapeHtml(fin.aprovadoPor)+(fin.aprovadoData?" · "+escapeHtml(fin.aprovadoData):""));
     if(fin.observacoes) html+=_cpLinha("📝","Observações", escapeHtml(fin.observacoes));
+  } else {
+    html+='<div class="cp-nota">Nenhuma submissão de finalização para esta atividade.</div>';
   }
   html+='</div></div>';
 
@@ -3582,7 +3625,7 @@ function renderCronoPanel(id){
 
   // ===== RODAPÉ =====
   var foot='<div class="cp-foot">';
-  if(lig) foot+='<button type="button" class="cp-btn cp-btn-sec" onclick="cronoAbrirFichaLigada(\''+lig.key+'\')">📄 Abrir Ficha</button>';
+  if(ligs.length===1) foot+='<button type="button" class="cp-btn cp-btn-sec" onclick="cronoAbrirFichaLigada(\''+lig.key+'\')">📄 Abrir Ficha</button>';
   if(fin) foot+='<button type="button" class="cp-btn cp-btn-sec" onclick="fecharCronoPanel();abrirFinalizacao()">📨 Abrir Submissão</button>';
   if(fin && fin.status==="pendente" && ehAdmin()){
     foot+='<button type="button" class="cp-btn cp-btn-rej" onclick="rejeitarFinalizacao('+id+')">✖ Rejeitar</button>'
@@ -3848,10 +3891,9 @@ function renderFichasSalvas(){
     return '<button type="button" class="'+cls+'" onclick="setFiltroFichas(\''+ch.k+'\')">'+ch.lbl+' <span class="chip-n">'+ch.n+'</span></button>';
   }).join("");
 
-  // Botões de ação (cronograma + nova ficha)
+  // Botões de ação (a navegação entre módulos é feita pelo Dashboard da obra)
   const btnNova = '<div class="salvas-acoes">'
-    + '<button type="button" class="secundario" onclick="trocarModo(\'workspace\')">‹ Voltar</button>'
-    + '<button type="button" class="btn-cronograma" onclick="abrirCronograma()">📅 Cronograma</button>'
+    + '<button type="button" class="secundario" onclick="trocarModo(\'workspace\')">‹ Voltar ao painel</button>'
     + (podeEditar() ? '<button type="button" class="btn-nova-ficha" onclick="novaFicha()">➕ Nova ficha</button>' : '')
     + '</div>';
 
@@ -4006,6 +4048,7 @@ function onRecebChange(ri, campo, valor){
   est.recebimentos[ri][campo] = valor;
   if(de!==valor) registrarHistorico(materialAtual, "alterou recebimento "+(ri+1)+" «"+campo+"»", (de||"")+" → "+valor);
   salvarDB();
+  atualizarUIValidacao();
 }
 function adicionarRecebimento(){
   const est = getEstadoMaterial(materialAtual);
@@ -4028,6 +4071,7 @@ function onHeaderMatChange(campo, valor){
   est[campo] = valor;
   if(de!==valor) registrarHistorico(materialAtual, "alterou campo «"+campo+"»", (de||"")+" → "+valor);
   salvarDB();
+  atualizarUIValidacao();
 }
 function onCubicChange(campo, valor){
   const est = getEstadoMaterial(materialAtual);
@@ -4059,6 +4103,7 @@ function onCriterioCustomChange(ci, campo, valor){
   est.criteriosCustom[ci][campo] = valor;
   if(de!==valor) registrarHistorico(materialAtual, "alterou critério extra "+(ci+1)+" «"+campo+"»", (de||"")+" → "+valor);
   salvarDB();
+  atualizarUIValidacao();
 }
 function adicionarCriterioMat(){
   const est = getEstadoMaterial(materialAtual);
@@ -4484,18 +4529,21 @@ function onHeaderChange(campo, valor){
   est[campo] = valor;
   if(de!==valor) registrarHistorico(servicoAtual, "alterou campo «"+campo+"»", (de||"")+" → "+valor);
   salvarDB();
+  atualizarUIValidacao();
 }
 function onProjetoChange(input){
   const ri = parseInt(input.dataset.row,10);
   const est = getEstado(servicoAtual);
   est.projeto[ri] = input.value;
   salvarDB();
+  atualizarUIValidacao();
 }
 function onLocalNomeChange(input){
   const li = parseInt(input.dataset.local,10);
   const est = getEstado(servicoAtual);
   est.locais[li] = input.value || ("Local "+(li+1));
   salvarDB();
+  atualizarUIValidacao();
 }
 function onStatusClick(ri, li){
   const est = getEstado(servicoAtual);
@@ -4548,6 +4596,7 @@ function onNcChange(i, campo, valor){
   if(!est) return;
   est.nc[i][campo] = valor;
   salvarDB();
+  atualizarUIValidacao();
 }
 function limparFicha(){
   if(!DB.fichas[obraAtual]) DB.fichas[obraAtual] = {};
