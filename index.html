@@ -352,6 +352,22 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .wiz-spin{width:38px;height:38px;border:4px solid #e0e0e0;border-top-color:var(--verde-escuro);border-radius:50%;animation:appSpin .9s linear infinite;}
 .wiz-ok{font-size:14px;font-weight:bold;color:#2e7d32;margin-bottom:10px;}
 .wiz-resumo{list-style:none;padding:0;margin:0;font-size:13px;color:#333;line-height:2;}
+/* Seletor de atividade do cronograma (Nova ficha) */
+.crono-pick{max-height:50vh;overflow-y:auto;border:1px solid #eee;border-radius:8px;padding:6px;}
+.cp-grupo{font-size:11px;font-weight:bold;text-transform:uppercase;color:#607d8b;background:#f3f5f6;border-radius:4px;padding:5px 8px;margin:6px 0 3px;}
+.cp-atv{display:block;width:100%;text-align:left;border:1px solid #e6e6e6;background:#fff;border-radius:6px;padding:9px 10px;margin-bottom:5px;cursor:pointer;font-size:13px;}
+.cp-atv:hover{border-color:var(--verde);background:#f1f8e9;}
+.cp-atv .cp-datas{display:block;font-size:11px;color:#888;margin-top:2px;}
+.cp-atv .cp-cont{color:#e65100;font-size:11px;font-weight:bold;}
+/* Ficha genérica de cronograma */
+.cf-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.cf-grid label,.cf-lbl{font-size:12px;font-weight:bold;color:#444;display:block;margin-bottom:3px;}
+.cf-grid input,.cf-grid select{width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid #ccc;border-radius:6px;font-size:14px;}
+.cf-nc{border:1px solid #eee;border-radius:6px;padding:8px;margin-bottom:6px;display:flex;flex-direction:column;gap:5px;}
+.cf-nc-h{font-size:12px;font-weight:bold;color:#b71c1c;}
+.cf-nc input{padding:6px 8px;border:1px solid #ccc;border-radius:5px;font-size:13px;}
+.card-badge.crono{background:#455a64;color:#fff;}
+@media(max-width:700px){ .cf-grid{grid-template-columns:1fr;} }
 .btn-cronograma{font-size:13px;font-weight:bold;padding:9px 14px;background:#37474f;color:#fff;border:none;border-radius:6px;cursor:pointer;}
 .btn-cronograma:hover{background:#263238;}
 .crono-topo{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:6px;}
@@ -1402,6 +1418,11 @@ function listarPendenciasAprovacao(){
     Object.keys(of).forEach(function(id){
       var est=of[id];
       if(!est || !est.aprovacao || est.aprovacao.status!=="submetido") return;
+      if(est.tipo==="cronograma"){
+        res.push({obra:obra,tipo:"cronograma",id:id,badge:"CRONO",badgeCls:"crono",titulo:est.nome||"Atividade",
+                  por:(est.aprovacao.por||"—"),data:(est.aprovacao.data||"—")});
+        return;
+      }
       var servicoId = est.servicoId || ((String(id).indexOf("#")>=0)?String(id).split("#")[0]:id);
       var serv=SERVICOS.find(function(s){return s.id===servicoId;});
       var tipo,badge,badgeCls,titulo;
@@ -1911,12 +1932,28 @@ function getEstadoMaterial(id){
 }
 function estadoAtual(){
   if(modoAtual==="servico") return servicoAtual ? getEstado(servicoAtual) : null;
+  if(modoAtual==="fichacrono") return servicoAtual ? getEstadoCrono(servicoAtual) : null;
   return materialAtual ? getEstadoMaterial(materialAtual) : null;
+}
+// Id da ficha aberta atualmente (chave de instância), independente do modo
+function _fichaIdAtual(){ return (modoAtual==="material") ? materialAtual : servicoAtual; }
+// Ficha genérica baseada no cronograma (obras com cronograma importado)
+function getEstadoCrono(key){
+  if(!DB.fichas[obraAtual]) DB.fichas[obraAtual] = {};
+  var est = DB.fichas[obraAtual][key];
+  if(!est) return null;
+  if(!est.obra) est.obra = obraAtual;
+  if(!est.nc) est.nc = [];
+  if(!est.fotos) est.fotos = [];
+  if(!est.aprovacao) est.aprovacao = {status:"pendente", por:"", data:"", obs:""};
+  return est;
 }
 // Resolve o id do CATÁLOGO (serviço/material) a partir da chave de instância atual
 function _idCatalogo(key){ var of=(DB.fichas&&DB.fichas[obraAtual])||{}; var e=of[key]; return (e&&e.servicoId) || ((String(key).indexOf("#")>=0)?String(key).split("#")[0]:key); }
 function _servicoIdAtual(){ return _idCatalogo(servicoAtual); }
 function _materialIdAtual(){ return _idCatalogo(materialAtual); }
+// Obra usa cronograma como fonte de verdade?
+function _obraTemCronograma(obra){ obra=obra||obraAtual; return !!(DB.obraCronograma && DB.obraCronograma[obra] && DB.obraCronograma[obra].tarefas && DB.obraCronograma[obra].tarefas.length); }
 
 let servicoAtual = null;
 let materialAtual = null;
@@ -1971,6 +2008,7 @@ function renderAtual(){
   atualizarHeaderUsuario();
   if(!obraAtual){ renderSeletorObra(); return; }
   if(modoAtual==="cronograma"){ renderCronograma(); return; }
+  if(modoAtual==="fichacrono"){ if(servicoAtual) renderFichaCronograma(servicoAtual); else { modoAtual="salvas"; renderFichasSalvas(); } return; }
   if(modoAtual==="salvas"){ renderFichasSalvas(); return; }
   if(modoAtual==="servico"){
     if(!servicoAtual){ document.getElementById("main").innerHTML = '<div class="empty">Selecione um serviço acima para abrir a ficha.</div>'; return; }
@@ -2664,6 +2702,8 @@ function _selectFiltroServicoHtml(){
 
 // Passo 1: escolher o tipo (FVS / FVM)
 function novaFicha(){
+  // Obras com cronograma: fichas SÓ podem ser criadas a partir do cronograma (fonte única)
+  if(_obraTemCronograma()){ novaFichaCrono(); return; }
   document.getElementById("modal-box").classList.add("modal-wide");
   abrirModal("➕ Nova ficha",
     '<p style="font-size:13px;margin:0 0 14px;color:#555;">Que tipo de ficha você quer criar?</p>'
@@ -2671,6 +2711,98 @@ function novaFicha(){
     +'<button type="button" class="nova-ficha-opt" onclick="novaFichaSecoes(\'material\')"><span class="nf-logo fvm">FVM</span><span><span class="nf-tit">Ficha de Verificação de Material</span><br><span class="nf-sub">📦 Conferência de materiais recebidos</span></span></button>',
     '<button type="button" class="secundario" onclick="fecharModalForce()">Cancelar</button>'
   );
+}
+
+// ===== FICHAS A PARTIR DO CRONOGRAMA (fonte única) =====
+function _cronoTarefasObra(obra){ obra=obra||obraAtual; var c=DB.obraCronograma&&DB.obraCronograma[obra]; return (c&&c.tarefas)||[]; }
+function _cronoFaseDe(tarefas, idx){ // nome do ancestral de nível <=1
+  var lv=tarefas[idx].nivel;
+  for(var j=idx-1;j>=0;j--){ if(tarefas[j].nivel<lv){ if(tarefas[j].nivel<=1) return tarefas[j].nome; lv=tarefas[j].nivel; } }
+  return "";
+}
+function _cronoTemFilhos(tarefas){ tarefas.forEach(function(t,i){ t.temFilhos=(i+1<tarefas.length)&&tarefas[i+1].nivel>t.nivel; }); return tarefas; }
+function _cronoContagemFichas(servicoId){ // quantas fichas já existem p/ esta atividade
+  var of=(DB.fichas&&DB.fichas[obraAtual])||{};
+  return Object.keys(of).filter(function(k){ var e=of[k]; return e&&e.tipo==="cronograma"&&e.cronogramaId===servicoId; }).length;
+}
+function novaFichaCrono(){
+  var tarefas=_cronoTemFilhos(_cronoTarefasObra());
+  if(!tarefas.length){ abrirModal("➕ Nova ficha","<p style=\"font-size:13px;\">O cronograma desta obra não tem atividades.</p>",'<button type="button" class="secundario" onclick="fecharModalForce()">Fechar</button>'); return; }
+  var corpo='<p style="font-size:13px;margin:0 0 12px;color:#555;">Escolha a <b>atividade do cronograma</b> para criar a ficha de verificação. (As atividades vêm exclusivamente do cronograma importado.)</p>'
+    +'<div class="crono-pick">';
+  tarefas.forEach(function(t,i){
+    if(t.temFilhos){
+      corpo+='<div class="cp-grupo" style="padding-left:'+(t.nivel*12)+'px;">'+escapeHtml(t.nome)+'</div>';
+    } else {
+      var n=_cronoContagemFichas(t.id);
+      var jaTem = n>0 ? ' <span class="cp-cont">'+n+' ficha(s)</span>' : '';
+      corpo+='<button type="button" class="cp-atv" style="padding-left:'+(t.nivel*12+10)+'px;" onclick="novaFichaCronoAbrir('+t.id+')">📝 '+escapeHtml(t.nome)
+        +'<span class="cp-datas">'+(t.ini?_fmtBR(t.ini):'')+(t.fim?' → '+_fmtBR(t.fim):'')+'</span>'+jaTem+'</button>';
+    }
+  });
+  corpo+='</div>';
+  document.getElementById("modal-box").classList.add("modal-wide");
+  abrirModal("➕ Nova ficha — cronograma", corpo, '<button type="button" class="secundario" onclick="fecharModalForce()">Cancelar</button>');
+}
+function novaFichaCronoAbrir(taskId){
+  var tarefas=_cronoTemFilhos(_cronoTarefasObra());
+  var t=null,idx=-1; for(var i=0;i<tarefas.length;i++){ if(tarefas[i].id===taskId){ t=tarefas[i]; idx=i; break; } }
+  if(!t){ fecharModalForce(); alert("Atividade não encontrada no cronograma."); return; }
+  if(!DB.fichas) DB.fichas={}; if(!DB.fichas[obraAtual]) DB.fichas[obraAtual]={};
+  var key="C"+taskId+"#"+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  DB.fichas[obraAtual][key]={
+    obra:obraAtual, tipo:"cronograma", cronogramaId:taskId,
+    nome:t.nome, fase:_cronoFaseDe(tarefas,idx), planIni:t.ini, planFim:t.fim, planDur:t.dur, planPred:t.pred,
+    respInsp:"", data:"", inspecionadoPor:"", dataFechamento:"",
+    resultado:"", observacoes:"",
+    nc:[], fotos:[],
+    aprovacao:{status:"pendente",por:"",data:"",obs:""},
+    criadoPor: sessao?sessao.id:""
+  };
+  registrarHistorico(key,"criou ficha (cronograma): "+t.nome);
+  salvarDB();
+  fecharModalForce();
+  abrirFichaSalva("cronograma", key);
+}
+
+// onchange genérico dos campos da ficha de cronograma
+function onCronoChange(campo, valor){ var e=estadoAtual(); if(!e) return; e[campo]=valor; salvarDB(); if(campo==="resultado") renderFichaCronograma(servicoAtual); }
+function removerFotoCrono(i){ var e=estadoAtual(); if(!e||!e.fotos) return; e.fotos.splice(i,1); salvarDB(); renderFichaCronograma(servicoAtual); }
+function legendaFotoCrono(i,v){ var e=estadoAtual(); if(!e||!e.fotos) return; e.fotos[i].legenda=v; salvarDB(); }
+
+function renderFichaCronograma(key){
+  var est=getEstadoCrono(key);
+  var main=document.getElementById("main");
+  if(!est){ main.innerHTML='<div class="empty">Ficha não encontrada.</div>'; return; }
+  var bloq = fichaEstaBloqueada(est) || !podeEditar();
+  var ro = bloq ? 'disabled' : '';
+  var resOpts=[["","— selecione —"],["C","✅ Conforme"],["NC","❌ Não Conforme"],["NA","➖ Não Aplicável"]]
+    .map(function(o){ return '<option value="'+o[0]+'"'+(est.resultado===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join("");
+  var ncHtml = (est.nc||[]).map(function(n,i){
+    return '<div class="cf-nc"><div class="cf-nc-h">NC '+(i+1)+(bloq?'':' <button type="button" class="nc-row-rm" onclick="removerNc('+i+')">remover</button>')+'</div>'
+      +'<input type="text" '+ro+' placeholder="Problema" value="'+escapeHtml(n.problema||"")+'" onchange="onNcChange('+i+',\'problema\',this.value)">'
+      +'<input type="text" '+ro+' placeholder="Solução / tratamento" value="'+escapeHtml(n.solucao||"")+'" onchange="onNcChange('+i+',\'solucao\',this.value)">'
+      +'<input type="date" '+ro+' value="'+escapeHtml(paraISO(n.reinspecao||""))+'" onchange="onNcChange('+i+',\'reinspecao\',paraBR(this.value))"></div>';
+  }).join("");
+  main.innerHTML=
+    '<div class="crono-topo"><div><h2>📝 '+escapeHtml(est.nome)+'</h2>'
+      +'<div style="font-size:12px;color:#555;">'+(est.fase?escapeHtml(est.fase)+' · ':'')+'Cronograma: '+(est.planIni?_fmtBR(est.planIni):'—')+(est.planFim?' → '+_fmtBR(est.planFim):'')+' · '+(est.planDur||0)+' dia(s)'+(est.planPred?' · pred: '+escapeHtml(est.planPred):'')+'</div></div>'
+      +'<button type="button" class="secundario" onclick="trocarModo(\'salvas\')">‹ Voltar às fichas</button></div>'
+    +'<div class="ficha-doc'+(bloq?' ficha-bloqueada':'')+'" style="max-width:760px;">'
+    +(bloq?'<div class="bloquear-overlay"></div>':'')
+    +'<div class="cf-grid">'
+      +'<div><label>Responsável pela inspeção</label><input type="text" '+ro+' value="'+escapeHtml(est.respInsp||"")+'" onchange="onCronoChange(\'respInsp\',this.value)"></div>'
+      +'<div><label>Data da inspeção</label><input type="date" '+ro+' value="'+escapeHtml(paraISO(est.data||""))+'" onchange="onCronoChange(\'data\',paraBR(this.value))"></div>'
+      +'<div><label>Resultado</label><select '+ro+' onchange="onCronoChange(\'resultado\',this.value)">'+resOpts+'</select></div>'
+      +'<div><label>Inspecionado por</label><input type="text" '+ro+' value="'+escapeHtml(est.inspecionadoPor||"")+'" onchange="onCronoChange(\'inspecionadoPor\',this.value)"></div>'
+    +'</div>'
+    +'<label class="cf-lbl">Observações</label><textarea '+ro+' rows="3" style="width:100%;box-sizing:border-box;" onchange="onCronoChange(\'observacoes\',this.value)">'+escapeHtml(est.observacoes||"")+'</textarea>'
+    +'<div class="nc-titulo" style="margin-top:14px;">Não Conformidades</div>'+(ncHtml||'<div class="nc-vazio" style="font-size:12px;color:#888;">Nenhuma NC.</div>')
+    +(bloq?'':'<div class="nc-actions"><button type="button" class="secundario" onclick="adicionarNc()">+ Adicionar Não Conformidade</button></div>')
+    +htmlFotos(est,"removerFotoCrono","legendaFotoCrono")
+    +'<div class="rodape">'+htmlAprovacao(est)+'</div>'
+    +htmlHistorico(est)
+    +'</div>';
 }
 
 // Passo 2: escolher a seção (cada uma com ícone representativo)
@@ -2758,7 +2890,16 @@ function setCronoPct(id,val){
 }
 
 function _cronoTarefas(){
-  var t = CRONOGRAMA.map(function(a){ return {id:a[0],lv:a[1],nome:a[2],dur:a[3],ini:a[4],fim:a[5],pred:a[6]}; });
+  var t;
+  if(_obraTemCronograma()){
+    // Fonte de verdade: cronograma importado DESTA obra (só linhas com datas válidas para o Gantt)
+    t = DB.obraCronograma[obraAtual].tarefas
+      .filter(function(o){ return o.ini && o.fim; })
+      .map(function(o){ return {id:o.id, lv:(o.nivel||0), nome:o.nome, dur:(o.dur||0), ini:o.ini, fim:o.fim, pred:(o.pred||"")}; });
+    if(!t.length){ t = CRONOGRAMA.map(function(a){ return {id:a[0],lv:a[1],nome:a[2],dur:a[3],ini:a[4],fim:a[5],pred:a[6]}; }); }
+  } else {
+    t = CRONOGRAMA.map(function(a){ return {id:a[0],lv:a[1],nome:a[2],dur:a[3],ini:a[4],fim:a[5],pred:a[6]}; });
+  }
   t.forEach(function(x,i){
     x.temFilhos = (i+1<t.length) && t[i+1].lv > x.lv;
     x.parent = null;
@@ -2906,6 +3047,19 @@ function renderFichasSalvas(){
   Object.keys(obraFichas).forEach(function(key){
     const est = obraFichas[key];
     if(!est || typeof est!=="object") return;
+    // Ficha baseada no cronograma (fonte única)
+    if(est.tipo==="cronograma"){
+      if(!_fichaVisivel(est)) return;
+      var aprovC = est.aprovacao||{status:"pendente"};
+      cards.push({tipo:"cronograma", id:key, servicoId:"C"+est.cronogramaId, grupo:(est.fase?est.fase+" — ":"")+est.nome, badge:"CRONO", badgeCls:"crono",
+        titulo: est.nome, rascunho: !!est.rascunho,
+        obra: est.obra||"—", data: est.data||"—", resp: est.respInsp||"—",
+        pct: (est.resultado?100:0), cls:(est.resultado?"":"vazio"), ncCount:(est.nc?est.nc.length:0),
+        aprovStatus: aprovC.status, aprovPor: aprovC.por,
+        info: (est.resultado?({C:"Conforme",NC:"Não Conforme",NA:"N.A."}[est.resultado]||"Preenchida"):"Não preenchida")
+      });
+      return;
+    }
     const servicoId = est.servicoId || ((String(key).indexOf("#")>=0) ? String(key).split("#")[0] : key);
     const tipo = est.tipo || ((String(servicoId).charAt(0)==="M") ? "material" : "servico");
     if(!_fichaTemDados(est, tipo)) return;
@@ -3044,6 +3198,15 @@ function renderFichasSalvas(){
 }
 
 function abrirFichaSalva(tipo, id){
+  // Detecta ficha de cronograma pela própria ficha (retrocompat: tipo pode vir "cronograma")
+  var of=(DB.fichas&&DB.fichas[obraAtual])||{};
+  var ehCrono = tipo==="cronograma" || (of[id] && of[id].tipo==="cronograma");
+  if(ehCrono){
+    modoAtual="fichacrono"; servicoAtual=id; materialAtual=null;
+    var _tb=document.querySelector(".toolbar"); if(_tb) _tb.style.display="none";
+    renderFichaCronograma(id);
+    return;
+  }
   if(tipo==="servico"){
     trocarModo("servico");
     document.getElementById("servicoSelect").value = id;
@@ -3640,7 +3803,7 @@ function adicionarNc(){
   if(!est) return;
   est.nc.push({problema:"",solucao:"",reinspecao:""});
   if(modoAtual==="servico"){ if(!est.fotosNc) est.fotosNc=[]; est.fotosNc.push(null); }
-  const fichaId = modoAtual==="servico"?servicoAtual:materialAtual;
+  const fichaId = _fichaIdAtual();
   registrarHistorico(fichaId, "adicionou NC #"+est.nc.length);
   salvarDB();
   renderAtual();
@@ -3703,6 +3866,14 @@ function fichaEstaBloqueada(est){
 function validarItensPreenchidos(pularFotos){
   const est = estadoAtual();
   if(!est) return "Nenhuma ficha selecionada.";
+  // Ficha baseada no cronograma (genérica)
+  if(est.tipo==="cronograma" || modoAtual==="fichacrono"){
+    if(!est.respInsp || !est.respInsp.trim()) return "Preencha o RESPONSÁVEL pela inspeção.";
+    if(!est.data) return "Preencha a DATA da inspeção.";
+    if(!est.resultado) return "Selecione o RESULTADO (Conforme / Não Conforme / N.A.).";
+    if(est.resultado==="NC" && (!est.nc || !est.nc.length)) return "Resultado Não Conforme: registre ao menos 1 Não Conformidade.";
+    return null;
+  }
   if(!est.obra || !est.obra.trim()) return "Preencha o campo OBRA.";
   if(modoAtual==="servico"){
     if(!est.respInsp || !est.respInsp.trim()) return "Preencha o campo RESP. INSP.";
@@ -3869,7 +4040,7 @@ function confirmarAprovacao(acao){
   const _hojeISO = _hoje.toISOString().slice(0,10);
   est.aprovacao.obs = obs.trim();
   if(acao==="aprovar"){ est.aprovadoPor = sessao.nome; est.aprovadoData = paraBR(_hojeISO); }
-  const fichaId = modoAtual==="servico"?servicoAtual:materialAtual;
+  const fichaId = _fichaIdAtual();
   registrarHistorico(fichaId, acao==="aprovar"?"aprovação":"reprovação", obs.trim()||"");
   registrarLog(acao==="aprovar"?"aprovacao":"reprovacao", {fichaId:fichaId, obra:obraAtual});
   salvarDB();
@@ -3889,7 +4060,7 @@ function reabrirAprovacao(){
 function confirmarReabertura(){
   if(!podeAprovar()){ fecharModalForce(); return; }
   const est=estadoAtual(); if(!est) return;
-  const fichaId=modoAtual==="servico"?servicoAtual:materialAtual;
+  const fichaId=_fichaIdAtual();
   registrarHistorico(fichaId, "reabriu aprovação");
   registrarLog("reabrir-aprovacao",{fichaId:fichaId,obra:obraAtual});
   est.aprovacao={status:"pendente",por:"",data:"",obs:""};
@@ -3919,7 +4090,7 @@ function toggleRascunho(){
   var est = estadoAtual(); if(!est) return;
   est.rascunho = !est.rascunho;
   if(est.rascunho && !est.criadoPor) est.criadoPor = (sessao && sessao.id) || "";
-  var fichaId = modoAtual==="servico" ? servicoAtual : materialAtual;
+  var fichaId = _fichaIdAtual();
   registrarHistorico(fichaId, est.rascunho ? "marcou como rascunho" : "removeu rascunho");
   salvarDB();
   renderAtual();
@@ -3934,7 +4105,7 @@ function confirmarSubmissao(){
   const _hoje = new Date();
   est.aprovacao.data = _hoje.toLocaleDateString("pt-BR");
   est.aprovacao.obs = "";
-  const fichaId = modoAtual==="servico"?servicoAtual:materialAtual;
+  const fichaId = _fichaIdAtual();
   registrarHistorico(fichaId, "submeteu para aprovação");
   registrarLog("submissao",{fichaId:fichaId,obra:obraAtual});
   salvarDB(); fecharModalForce(); renderAtual();
@@ -3953,7 +4124,7 @@ function confirmarDevolucao(){
   if(!podeAprovar()){ fecharModalForce(); return; }
   const est=estadoAtual(); if(!est) return;
   est.aprovacao={status:"pendente",por:"",data:"",obs:""};
-  const fichaId=modoAtual==="servico"?servicoAtual:materialAtual;
+  const fichaId=_fichaIdAtual();
   registrarHistorico(fichaId, "devolveu para edição");
   registrarLog("devolucao",{fichaId:fichaId,obra:obraAtual});
   salvarDB(); fecharModalForce(); renderAtual();
