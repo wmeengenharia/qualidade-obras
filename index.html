@@ -401,7 +401,10 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .ws-topo{margin:6px 0 18px;}
 .ws-topo h2{font-size:22px;margin:0 0 4px;color:var(--verde-escuro);}
 .ws-topo p{font-size:13px;color:#777;margin:0;}
-.ws-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:900px;}
+.ws-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;max-width:1140px;}
+@media(max-width:1000px){ .ws-grid{grid-template-columns:1fr;} }
+.ws-final:hover{border-color:#ffcc80;}
+.ws-btn-final{background:#f9a825;} .ws-btn-final:hover{background:#f57f17;}
 .ws-card{background:#fff;border:1px solid #e6e6e6;border-radius:14px;padding:22px;cursor:pointer;transition:box-shadow .15s,transform .15s,border-color .15s;display:flex;flex-direction:column;}
 .ws-card:hover{box-shadow:0 10px 28px rgba(0,0,0,.12);transform:translateY(-3px);}
 .ws-crono:hover{border-color:#90caf9;}
@@ -496,6 +499,14 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .gbar.st-andamento{background:#bbdefb;} .gbar.st-andamento .gbar-fill{background:#1e88e5;}
 .gbar.st-atrasada{background:#ffcdd2;}  .gbar.st-atrasada .gbar-fill{background:#e53935;}
 .gbar.st-futura{background:#e0e0e0;}    .gbar.st-futura .gbar-fill{background:#9e9e9e;}
+.gbar.st-pendente_aprov{background:#fff3c4;} .gbar.st-pendente_aprov .gbar-fill{background:#f9a825;}
+.gn-dot.st-pendente_aprov,.lg.st-pendente_aprov,.dr-badge.dr-pendente_aprov{background:#f9a825;}
+.dr-badge.dr-pendente_aprov{color:#7a5c00;background:#fff8e1;}
+.gn-pend{font-size:10px;font-weight:bold;color:#8a6d00;background:#fff8e1;border:1px solid #ffd54f;border-radius:10px;padding:0 6px;white-space:nowrap;}
+.cd-card.cd-pend{border-color:#ffd54f;box-shadow:0 0 0 2px rgba(249,168,37,.25);}
+.cd-fin{margin-top:12px;border:1px solid #ddd;border-left-width:4px;border-radius:6px;padding:10px 12px;font-size:12.5px;line-height:1.7;background:#fafafa;}
+.pend-fin .pend-acoes{display:flex;gap:6px;flex:0 0 auto;}
+.pend-fin .pend-acoes button{font-size:13px;padding:5px 9px;border-radius:6px;}
 .gn-dot.st-concluida,.lg.st-concluida{background:#43a047;}
 .gn-dot.st-andamento,.lg.st-andamento{background:#1e88e5;}
 .gn-dot.st-atrasada,.lg.st-atrasada{background:#e53935;}
@@ -593,6 +604,12 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .obra-dd-item .obra-dd-nome{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .obra-dd-item .obra-dd-check{color:var(--verde);font-weight:bold;}
 .obra-dd-vazio{padding:12px;color:#888;font-size:12px;text-align:center;}
+.obra-dd-atual{padding:8px 11px;font-size:11px;color:#888;border-bottom:1px solid #eee;}
+.obra-dd-atual b{font-size:13.5px;color:var(--verde-escuro);}
+.obra-dd-busca{width:100%;box-sizing:border-box;margin:6px 0;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;color:#1b1b1b;}
+.obra-dd-lbl{font-size:10px;text-transform:uppercase;color:#999;font-weight:bold;padding:2px 4px 4px;}
+.obra-dd-trocar{width:100%;margin-top:6px;border:none;border-top:1px solid #eee;background:#f7f9f7;color:var(--verde-escuro);font-weight:bold;font-size:12.5px;padding:10px;cursor:pointer;border-radius:0 0 8px 8px;}
+.obra-dd-trocar:hover{background:#eafbe5;}
 
 /* ===== RESPONSIVO MOBILE ===== */
 @media (max-width: 700px){
@@ -707,7 +724,7 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
     <div class="sub">WME Engenharia · Qualidade</div>
   </div>
   <div id="obraAtualBar" class="obra-atual-bar" style="display:none;">
-    <button type="button" class="bc-home" onclick="mostrarSeletorObra()" title="Home — todas as obras">🏠</button>
+    <button type="button" class="bc-home" onclick="trocarModo('workspace')" title="Início da obra">🏠</button>
     <span class="bc-sep">›</span>
     <div class="obra-dropdown">
       <button type="button" class="obra-chip" id="obraChipBtn" onclick="toggleObraDropdown(event)" title="Trocar de obra">
@@ -1539,6 +1556,18 @@ function listarPendenciasAprovacao(){
                 por:(est.aprovacao.por||"—"),data:(est.aprovacao.data||"—")});
     });
   });
+  // Finalizações de serviço pendentes (governança) — somente admin aprova
+  if(ehAdmin()){
+    var finz=DB.finalizacoes||{};
+    obras.forEach(function(obra){
+      var fo=finz[obra]||{};
+      Object.keys(fo).forEach(function(tid){
+        var fin=fo[tid]; if(!fin||fin.status!=="pendente") return;
+        res.push({kind:"finalizacao", obra:obra, id:tid, titulo:(fin.servicoNome||"Serviço"), fase:(fin.fase||""),
+                  por:(fin.por||"—"), data:(fin.data||"—"), observacoes:(fin.observacoes||"")});
+      });
+    });
+  }
   return res;
 }
 
@@ -1576,6 +1605,17 @@ function abrirPendencias(){
     corpo+='<div class="pend-obra">🏗️ '+escapeHtml(obra)+'</div>';
     grupos[obra].forEach(function(p){
       var oArg=p.obra.replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+      if(p.kind==="finalizacao"){
+        corpo+='<div class="pend-item pend-fin" onclick="irParaFinalizacao(\''+oArg+'\','+p.id+')">'
+          +'<span class="pend-tag" style="background:#f9a825;">✔️ Final.</span>'
+          +'<div class="pend-corpo">'
+            +'<div class="pend-tit">'+escapeHtml(p.titulo)+'</div>'
+            +'<div class="pend-sub">'+(p.fase?escapeHtml(p.fase)+' · ':'')+'enviado por '+escapeHtml(p.por)+(p.data&&p.data!=="—"?' · '+escapeHtml(p.data):'')+(p.observacoes?'<br>📝 '+escapeHtml(p.observacoes):'')+'</div>'
+          +'</div>'
+          +'<span class="pend-acoes" onclick="event.stopPropagation();"><button type="button" class="btn-reprovar" title="Rejeitar" onclick="rejeitarFinalizacaoBell(\''+oArg+'\','+p.id+')">✖</button><button type="button" class="btn-aprovar" title="Aprovar" onclick="aprovarFinalizacaoBell(\''+oArg+'\','+p.id+')">✔</button></span>'
+        +'</div>';
+        return;
+      }
       corpo+='<div class="pend-item" onclick="irParaPendencia(\''+oArg+'\',\''+p.tipo+'\',\''+p.id+'\')">'
         +'<span class="pend-tag '+p.badgeCls+'">'+escapeHtml(p.badge)+'</span>'
         +'<div class="pend-corpo">'
@@ -1595,6 +1635,73 @@ function irParaPendencia(obra,tipo,id){
   selecionarObra(obra);
   abrirFichaSalva(tipo,id);
 }
+function irParaFinalizacao(obra,taskId){
+  fecharModalForce();
+  selecionarObra(obra);
+  abrirCronograma();
+  setTimeout(function(){ cronoDetalhe(taskId); }, 60);
+}
+
+// ===== FLUXO DE FINALIZAÇÃO DE SERVIÇO (governança) =====
+function abrirFinalizacao(){
+  if(!_obraTemCronograma()){ abrirModal("✔️ Finalização de Serviço","<p style='font-size:13px;'>Esta obra não possui cronograma importado — não há serviços para finalizar.</p>",'<button type="button" class="secundario" onclick="fecharModalForce()">Fechar</button>'); return; }
+  var tarefas=_cronoTemFilhos(_cronoTarefasObra());
+  var corpo='<p style="font-size:13px;margin:0 0 12px;color:#555;">Selecione a atividade do cronograma a <b>finalizar</b>. Será criada uma solicitação que precisa de <b>aprovação do administrador</b>.</p><div class="crono-pick">';
+  tarefas.forEach(function(tk){
+    if(tk.temFilhos){ corpo+='<div class="cp-grupo" style="padding-left:'+(tk.nivel*12)+'px;">'+escapeHtml(tk.nome)+'</div>'; return; }
+    var fin=_finalizacao(tk.id);
+    var tag = fin ? (fin.status==="pendente"?'<br><span class="cp-cont" style="color:#f9a825;">🟡 aguardando aprovação</span>': fin.status==="aprovado"?'<br><span class="cp-cont" style="color:#2e7d32;">✅ concluída</span>':'<br><span class="cp-cont" style="color:#c62828;">✖ rejeitada — reenviar</span>') : '';
+    corpo+='<button type="button" class="cp-atv" style="padding-left:'+(tk.nivel*12+10)+'px;" onclick="formFinalizacao('+tk.id+')"><span class="cp-ic">✔️</span><span class="cp-info"><span class="cp-nome">'+escapeHtml(tk.nome)+'</span>'+tag+'</span></button>';
+  });
+  corpo+='</div>';
+  document.getElementById("modal-box").classList.add("modal-wide");
+  abrirModal("✔️ Finalização de Serviço", corpo, '<button type="button" class="secundario" onclick="fecharModalForce()">Cancelar</button>');
+}
+function formFinalizacao(taskId){
+  var tarefas=_cronoTemFilhos(_cronoTarefasObra());
+  var t=null,idx=-1; for(var i=0;i<tarefas.length;i++){ if(tarefas[i].id===taskId){t=tarefas[i];idx=i;break;} }
+  if(!t) return;
+  var fin=_finalizacao(taskId);
+  if(fin && fin.status==="pendente"){ abrirModal("Finalização","<p style='font-size:13px;'>Já existe uma solicitação <b>pendente de aprovação</b> para esta atividade.</p>",'<button type="button" class="secundario" onclick="abrirFinalizacao()">‹ Voltar</button>'); return; }
+  if(fin && fin.status==="aprovado"){ abrirModal("Finalização","<p style='font-size:13px;'>Esta atividade já está <b>concluída</b> (finalização aprovada).</p>",'<button type="button" class="secundario" onclick="abrirFinalizacao()">‹ Voltar</button>'); return; }
+  var fase=_cronoFaseDe(tarefas,idx);
+  var corpo='<div style="font-size:13px;line-height:1.5;margin-bottom:12px;"><b>'+escapeHtml(t.nome)+'</b><br><span style="color:#888;">'+(fase?escapeHtml(fase)+' · ':'')+escapeHtml(obraAtual)+'</span></div>'
+    +'<label class="wiz-campo-lbl">Observações</label><textarea id="fin-obs" class="wiz-input" rows="3" placeholder="Descreva a execução / evidências..."></textarea>'
+    +'<label class="wiz-campo-lbl" style="margin-top:10px;">Comentários finais</label><textarea id="fin-com" class="wiz-input" rows="2"></textarea>';
+  document.getElementById("modal-box").classList.add("modal-wide");
+  abrirModal("✔️ Finalizar serviço", corpo,
+    '<button type="button" class="secundario" onclick="abrirFinalizacao()">‹ Voltar</button>'
+    +'<button type="button" class="btn-submeter" onclick="enviarFinalizacao('+taskId+')">📤 Enviar para aprovação</button>');
+}
+function enviarFinalizacao(taskId){
+  var tarefas=_cronoTemFilhos(_cronoTarefasObra());
+  var t=null,idx=-1; for(var i=0;i<tarefas.length;i++){ if(tarefas[i].id===taskId){t=tarefas[i];idx=i;break;} }
+  if(!t) return;
+  var obs=((document.getElementById("fin-obs")||{}).value||"").trim();
+  var com=((document.getElementById("fin-com")||{}).value||"").trim();
+  if(!DB.finalizacoes) DB.finalizacoes={}; if(!DB.finalizacoes[obraAtual]) DB.finalizacoes[obraAtual]={};
+  DB.finalizacoes[obraAtual][taskId]={
+    status:"pendente", por:(sessao?sessao.nome:""), porId:(sessao?sessao.id:""),
+    data:new Date().toLocaleDateString("pt-BR"), observacoes:obs, comentarios:com,
+    fase:_cronoFaseDe(tarefas,idx), servicoNome:t.nome
+  };
+  registrarLog("finalizacao-submetida",{obra:obraAtual,tarefa:taskId});
+  salvarDB(); atualizarBadgePendencias();
+  abrirModal("✅ Enviado!","<p style='font-size:13px;'>Finalização de <b>"+escapeHtml(t.nome)+"</b> enviada.<br>O serviço ficará <b>🟡 Pendente de Aprovação</b> até a decisão do administrador.</p>",
+    '<button type="button" onclick="fecharModalForce();trocarModo(\'workspace\')">OK</button>');
+}
+function _setFinStatus(obra,taskId,status){
+  if(!ehAdmin()){ alert("Apenas administradores podem aprovar/rejeitar finalizações."); return false; }
+  var fo=DB.finalizacoes&&DB.finalizacoes[obra]; var fin=fo&&fo[taskId]; if(!fin) return false;
+  fin.status=status; fin.aprovadoPor=(sessao?sessao.nome:""); fin.aprovadoData=new Date().toLocaleDateString("pt-BR");
+  registrarLog("finalizacao-"+status,{obra:obra,tarefa:taskId});
+  salvarDB(); atualizarBadgePendencias();
+  return true;
+}
+function aprovarFinalizacao(taskId,obra){ if(_setFinStatus(obra||obraAtual,taskId,"aprovado")){ fecharModalForce(); renderAtual(); } }
+function rejeitarFinalizacao(taskId,obra){ if(_setFinStatus(obra||obraAtual,taskId,"rejeitado")){ fecharModalForce(); renderAtual(); } }
+function aprovarFinalizacaoBell(obra,taskId){ if(_setFinStatus(obra,taskId,"aprovado")){ if(obra===obraAtual) renderAtual(); abrirPendencias(); } }
+function rejeitarFinalizacaoBell(obra,taskId){ if(_setFinStatus(obra,taskId,"rejeitado")){ if(obra===obraAtual) renderAtual(); abrirPendencias(); } }
 
 function logout(){
   if(sessao){ registrarLog("logout"); salvarDB(); }
@@ -1792,6 +1899,7 @@ function migrarDB(){
   if(!DB.obraServicos) DB.obraServicos = {}; // {obra:{servicos:[ids],materiais:[ids]}} — ausente = todos (retrocompat)
   if(!DB.cronogramaPct) DB.cronogramaPct = {}; // {obra:{taskId:pct}} — progresso manual das atividades do cronograma
   if(!DB.obraCronograma) DB.obraCronograma = {}; // {obra:{projeto,tarefas:[...],importadoEm}} — cronograma importado por obra (fonte de verdade)
+  if(!DB.finalizacoes) DB.finalizacoes = {};   // {obra:{taskId:{status,por,porId,data,observacoes,comentarios,fase,servicoNome,aprovadoPor,aprovadoData}}} — fluxo de finalização de serviço
   // Carimba servicoId/tipo nas fichas (suporta várias fichas por serviço via chave de instância "servicoId#xxxx")
   Object.keys(DB.fichas).forEach(function(obra){
     var of = DB.fichas[obra]; if(!of || typeof of!=="object") return;
@@ -2213,22 +2321,30 @@ function toggleObraDropdown(e){
   if(menu.style.display==="none" || !menu.style.display) abrirObraDropdown();
   else fecharObraDropdown();
 }
+function _obraDDLista(busca){
+  var b=(busca||"").toLowerCase();
+  var obras=_obrasDisponiveis().filter(function(nome){ return nome.toLowerCase().indexOf(b)>=0; });
+  if(!obras.length) return '<div class="obra-dd-vazio">Nenhuma obra encontrada</div>';
+  return obras.map(function(nome){
+    var atual = nome===obraAtual;
+    var arg = nome.replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+    return '<button type="button" class="obra-dd-item'+(atual?' atual':'')+'" onclick="selecionarObraDropdown(\''+arg+'\')">'
+      +'<span class="obra-dd-ic">🏗️</span><span class="obra-dd-nome">'+escapeHtml(nome)+'</span>'
+      +(atual?'<span class="obra-dd-check">✓</span>':'')+'</button>';
+  }).join("");
+}
+function filtrarObraDropdown(v){ var l=document.getElementById("obraDDLista"); if(l) l.innerHTML=_obraDDLista(v); }
 function abrirObraDropdown(){
   var menu = document.getElementById("obraDropdownMenu");
   if(!menu) return;
-  var obras = _obrasDisponiveis();
-  if(!obras.length){
-    menu.innerHTML = '<div class="obra-dd-vazio">Nenhuma obra disponível</div>';
-  } else {
-    menu.innerHTML = obras.map(function(nome){
-      var atual = nome===obraAtual;
-      var arg = nome.replace(/\\/g,"\\\\").replace(/'/g,"\\'");
-      return '<button type="button" class="obra-dd-item'+(atual?' atual':'')+'" onclick="selecionarObraDropdown(\''+arg+'\')">'
-        +'<span class="obra-dd-ic">🏗️</span><span class="obra-dd-nome">'+escapeHtml(nome)+'</span>'
-        +(atual?'<span class="obra-dd-check">✓</span>':'')+'</button>';
-    }).join("");
-  }
+  menu.innerHTML =
+    '<div class="obra-dd-atual">📍 Obra atual<br><b>'+escapeHtml(obraAtual||"")+'</b></div>'
+    +'<input type="text" id="obraDDBusca" class="obra-dd-busca" placeholder="🔎 Buscar obra..." oninput="filtrarObraDropdown(this.value)" onclick="event.stopPropagation();">'
+    +'<div class="obra-dd-lbl">Trocar para outra obra</div>'
+    +'<div id="obraDDLista">'+_obraDDLista("")+'</div>'
+    +'<button type="button" class="obra-dd-trocar" onclick="mostrarSeletorObra()">📋 Ver todas as obras</button>';
   menu.style.display="";
+  setTimeout(function(){ var i=document.getElementById("obraDDBusca"); if(i) i.focus(); },50);
 }
 function fecharObraDropdown(){ var m=document.getElementById("obraDropdownMenu"); if(m) m.style.display="none"; }
 function selecionarObraDropdown(nome){ fecharObraDropdown(); selecionarObra(nome); }
@@ -3052,6 +3168,13 @@ function _cronoTarefas(){
 // Finish preenchido  => Concluída / 100% / verde.
 // Finish vazio       => Não iniciada (futura) / Em andamento / Atrasada conforme as datas.
 function _cronoStatus(tar){
+  // Governança: finalização sobrepõe o status base
+  var fin=_finalizacao(tar.id);
+  if(fin){
+    if(fin.status==="pendente") return "pendente_aprov";   // aguardando aprovação do admin
+    if(fin.status==="aprovado") return "concluida";
+    // rejeitado → segue regra normal (volta a poder ser finalizado)
+  }
   if(tar.fim) return "concluida";
   var hoje=_hojeISO();
   if(!tar.ini || hoje < tar.ini) return "futura";
@@ -3061,7 +3184,13 @@ function _cronoStatus(tar){
   if(hoje > fimPrev) return "atrasada";
   return "andamento";
 }
-function _cronoPctTarefa(tar){ return tar.fim ? 100 : (_cronoPct(tar.id)||0); }
+// Finalização de serviço (governança): submissão por atividade do cronograma
+function _finalizacao(taskId, obra){ obra=obra||obraAtual; var o=DB.finalizacoes&&DB.finalizacoes[obra]; return (o&&o[taskId])||null; }
+function _cronoPctTarefa(tar){
+  var fin=_finalizacao(tar.id);
+  if(fin){ if(fin.status==="aprovado") return 100; if(fin.status==="pendente") return 0; } // pendente não conta como concluído
+  return tar.fim ? 100 : (_cronoPct(tar.id)||0);
+}
 function _cronoCalc(t){
   var pctById={}, stById={};
   // Folhas: 100% se tem Finish; senão % manual (0 por padrão)
@@ -3070,8 +3199,8 @@ function _cronoCalc(t){
   t.forEach(function(x,i){
     if(x.temFilhos){ var fs=folhasDesc(i),tot=0,acc=0; fs.forEach(function(f){ var d=Math.max(f.dur,0.5); tot+=d; acc+=d*(pctById[f.id]||0); }); pctById[x.id]=tot?Math.round(acc/tot):0; }
   });
-  var tot=0,acc=0,cont={concluida:0,andamento:0,atrasada:0,futura:0};
-  t.forEach(function(x){ stById[x.id]=_cronoStatus(x); if(!x.temFilhos){ var d=Math.max(x.dur,0.5); tot+=d; acc+=d*(pctById[x.id]||0); cont[stById[x.id]]++; } });
+  var tot=0,acc=0,cont={concluida:0,andamento:0,atrasada:0,futura:0,pendente_aprov:0};
+  t.forEach(function(x){ stById[x.id]=_cronoStatus(x); if(!x.temFilhos){ var d=Math.max(x.dur,0.5); tot+=d; acc+=d*(pctById[x.id]||0); if(cont[stById[x.id]]!==undefined) cont[stById[x.id]]++; } });
   return {pct:pctById, st:stById, geral:(tot?Math.round(acc/tot):0), cont:cont};
 }
 // % por fase (nível 1 com filhos) — usa o rollup do _cronoCalc
@@ -3094,6 +3223,7 @@ function abrirCronograma(){ trocarModo("cronograma"); }
 var _cronoDrill=null;
 var _CRONO_ST_INFO={
   concluida:{lbl:"Concluídas", ic:"✅", cor:"#2e7d32", bg:"#e8f5e9"},
+  pendente_aprov:{lbl:"Pendente de Aprovação", ic:"🟡", cor:"#f9a825", bg:"#fff8e1"},
   andamento:{lbl:"Em andamento", ic:"🔵", cor:"#1565c0", bg:"#e3f2fd"},
   atrasada:{lbl:"Atrasadas", ic:"🔴", cor:"#c62828", bg:"#ffebee"},
   futura:{lbl:"Futuras", ic:"⚪", cor:"#616161", bg:"#f0f0f0"}
@@ -3230,7 +3360,7 @@ function cronoDetalhe(id){
   var t=_cronoTarefas(); var x=null; for(var k=0;k<t.length;k++){ if(t[k].id===id){x=t[k];break;} }
   if(!x) return;
   var calc=_cronoCalc(t); var pct=calc.pct[id]||0; var st=calc.st[id];
-  var stLbl={concluida:"✅ Concluída",andamento:"🔵 Em andamento",atrasada:"🔴 Atrasada",futura:"⚪ Futura"}[st];
+  var stLbl={concluida:"✅ Concluída",pendente_aprov:"🟡 Pendente de Aprovação",andamento:"🔵 Em andamento",atrasada:"🔴 Atrasada",futura:"⚪ Futura"}[st];
   // fase = ancestral de nível 1
   var fase=""; var pid=x.parent; while(pid!=null){ var pt=null; for(var k=0;k<t.length;k++){ if(t[k].id===pid){pt=t[k];break;} } if(pt){ if(pt.lv===1) fase=pt.nome; pid=pt.parent; } else pid=null; }
   var corpo='<div style="font-size:13px;line-height:1.9;">'
@@ -3252,8 +3382,27 @@ function cronoDetalhe(id){
   } else if(x.temFilhos){
     corpo+='<div style="margin-top:8px;font-size:11.5px;color:#888;">% calculado automaticamente pela média das atividades do grupo.</div>';
   }
+  // Submissão de finalização (rastreabilidade)
+  var fin=_finalizacao(id);
+  var lig=_fichaDaAtividade(id);
+  if(fin){
+    var finCor={pendente:"#f9a825",aprovado:"#2e7d32",rejeitado:"#c62828"}[fin.status]||"#666";
+    var finLbl={pendente:"🟡 Pendente de Aprovação",aprovado:"✅ Aprovada",rejeitado:"✖ Rejeitada"}[fin.status]||fin.status;
+    corpo+='<div class="cd-fin" style="border-color:'+finCor+';">'
+      +'<div style="font-weight:bold;color:'+finCor+';margin-bottom:4px;">📨 Finalização — '+finLbl+'</div>'
+      +'<div><b>Enviado por:</b> '+escapeHtml(fin.por||"—")+(fin.data?' · '+escapeHtml(fin.data):'')+'</div>'
+      +(fin.observacoes?'<div><b>Observações:</b> '+escapeHtml(fin.observacoes)+'</div>':'')
+      +(fin.comentarios?'<div><b>Comentários:</b> '+escapeHtml(fin.comentarios)+'</div>':'')
+      +(fin.status==="aprovado"&&fin.aprovadoPor?'<div><b>Aprovado por:</b> '+escapeHtml(fin.aprovadoPor)+(fin.aprovadoData?' · '+escapeHtml(fin.aprovadoData):'')+'</div>':'')
+      +'</div>';
+  }
   corpo+='</div>';
   var rodape='<button type="button" class="secundario" onclick="fecharModalForce()">Fechar</button>';
+  if(lig) rodape+='<button type="button" class="secundario" onclick="cronoAbrirFichaLigada(\''+lig.key+'\')">📋 Abrir Ficha</button>';
+  if(fin && fin.status==="pendente" && ehAdmin()){
+    rodape+='<button type="button" class="btn-reprovar" onclick="rejeitarFinalizacao('+id+')">✖ Rejeitar</button>'
+      +'<button type="button" class="btn-aprovar" onclick="aprovarFinalizacao('+id+')">✔ Aprovar</button>';
+  }
   if(editavel) rodape+='<button type="button" onclick="setCronoPct('+id+',document.getElementById(\'crono-pct\').value);fecharModalForce()">💾 Salvar %</button>';
   abrirModal("📌 "+escapeHtml(x.nome), corpo, rodape);
 }
@@ -3286,6 +3435,7 @@ function renderCronograma(){
     +'<div class="cd-card cd-geral"><div class="cd-num">'+calc.geral+'%</div><div class="cd-lbl">Conclusão geral</div>'
       +'<div class="cd-bar"><div class="cd-bar-fill" style="width:'+calc.geral+'%"></div></div></div>'
     +'<div class="cd-card cd-click" onclick="abrirCronoDrill(\'concluida\')"><div class="cd-num" style="color:#2e7d32;">'+c.concluida+'</div><div class="cd-lbl">✅ Concluídas</div></div>'
+    +'<div class="cd-card cd-click'+(c.pendente_aprov?' cd-pend':'')+'" onclick="abrirCronoDrill(\'pendente_aprov\')"><div class="cd-num" style="color:#f9a825;">'+c.pendente_aprov+'</div><div class="cd-lbl">🟡 Pend. Aprovação</div></div>'
     +'<div class="cd-card cd-click" onclick="abrirCronoDrill(\'andamento\')"><div class="cd-num" style="color:#1565c0;">'+c.andamento+'</div><div class="cd-lbl">🔵 Em andamento</div></div>'
     +'<div class="cd-card cd-click" onclick="abrirCronoDrill(\'atrasada\')"><div class="cd-num" style="color:#c62828;">'+c.atrasada+'</div><div class="cd-lbl">🔴 Atrasadas</div></div>'
     +'<div class="cd-card cd-click" onclick="abrirCronoDrill(\'futura\')"><div class="cd-num" style="color:#777;">'+c.futura+'</div><div class="cd-lbl">⚪ Futuras</div></div>'
@@ -3320,7 +3470,7 @@ function renderCronograma(){
         +'<div class="gbar-fill" style="width:'+pct+'%;"></div><span class="gbar-pct">'+(wb>34?pct+'%':'')+'</span></div>';
     }
     linhas+='<div class="g-row">'
-      +'<div class="g-name '+nomeCls+'" style="padding-left:'+indent+'px;" onclick="cronoDetalhe('+x.id+')">'+caret+'<span class="gn-dot st-'+st+'"></span>'+escapeHtml(x.nome)+'</div>'
+      +'<div class="g-name '+nomeCls+'" style="padding-left:'+indent+'px;" onclick="cronoDetalhe('+x.id+')">'+caret+'<span class="gn-dot st-'+st+'"></span>'+escapeHtml(x.nome)+(st==="pendente_aprov"?' <span class="gn-pend">⏳ Aguardando</span>':'')+'</div>'
       +'<div class="g-time" style="width:'+W+'px;">'+barra+'<div class="g-hoje" style="left:'+tx+'px;"></div></div>'
       +'</div>';
   });
@@ -3336,7 +3486,7 @@ function renderCronograma(){
     '<div class="crono-topo"><div><h2>📅 Cronograma da Obra</h2><div style="font-size:12px;color:#555;">'+escapeHtml(nomeProj)+'</div></div>'
       +'<button type="button" class="secundario" onclick="trocarModo(\'workspace\')">‹ Voltar</button></div>'
     + dash + proxHtml + fasesHtml
-    + '<div class="crono-legenda"><span><i class="lg st-concluida"></i>Concluída</span><span><i class="lg st-andamento"></i>Em andamento</span><span><i class="lg st-atrasada"></i>Atrasada</span><span><i class="lg st-futura"></i>Futura</span><span><i class="lg lg-marco">◆</i>Marco</span></div>'
+    + '<div class="crono-legenda"><span><i class="lg st-concluida"></i>Concluída</span><span><i class="lg st-pendente_aprov"></i>⏳ Pendente de Aprovação</span><span><i class="lg st-andamento"></i>Em andamento</span><span><i class="lg st-atrasada"></i>Atrasada</span><span><i class="lg st-futura"></i>Futura</span><span><i class="lg lg-marco">◆</i>Marco</span></div>'
     + '<div class="gantt">'
       + '<div class="g-row g-head"><div class="g-name g-name-head">Serviço / Atividade</div><div class="g-time g-time-head" style="width:'+W+'px;">'+meses+headHoje+'</div></div>'
       + linhas
@@ -3380,6 +3530,9 @@ function renderWorkspace(){
     var st=(e.aprovacao&&e.aprovacao.status)||"pendente";
     if(f[st]!==undefined) f[st]++;
   });
+  // --- Resumo das Finalizações ---
+  var fz=(DB.finalizacoes&&DB.finalizacoes[obraAtual])||{}, fzP=0,fzA=0,fzR=0;
+  Object.keys(fz).forEach(function(k){ var s=fz[k]&&fz[k].status; if(s==="pendente")fzP++; else if(s==="aprovado")fzA++; else if(s==="rejeitado")fzR++; });
 
   main.innerHTML=
     '<div class="ws-topo"><h2>'+escapeHtml(obraAtual)+'</h2><p>O que você quer acessar nesta obra?</p></div>'
@@ -3404,6 +3557,17 @@ function renderWorkspace(){
           +'<div class="ws-mini"><b style="color:#c62828;">'+f.reprovado+'</b><span>reprovadas</span></div>'
         +'</div>'
         +'<button type="button" class="ws-btn ws-btn-fichas" onclick="event.stopPropagation();trocarModo(\'salvas\')">Abrir Fichas ›</button>'
+      +'</div>'
+      +'<div class="ws-card ws-final" onclick="abrirFinalizacao()">'
+        +'<div class="ws-ic">✔️</div>'
+        +'<div class="ws-tit">Finalização de Serviço</div>'
+        +'<div class="ws-desc">Submeta a conclusão de um serviço para aprovação do gestor.</div>'
+        +'<div class="ws-stats">'
+          +'<div class="ws-mini"><b style="color:#f9a825;">'+fzP+'</b><span>aguardando</span></div>'
+          +'<div class="ws-mini"><b style="color:#2e7d32;">'+fzA+'</b><span>aprovadas</span></div>'
+          +'<div class="ws-mini"><b style="color:#c62828;">'+fzR+'</b><span>rejeitadas</span></div>'
+        +'</div>'
+        +'<button type="button" class="ws-btn ws-btn-final" onclick="event.stopPropagation();abrirFinalizacao()">Iniciar Finalização ›</button>'
       +'</div>'
     +'</div>';
 }
