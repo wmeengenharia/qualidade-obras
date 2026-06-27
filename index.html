@@ -397,6 +397,40 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .crono-dash{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0;}
 .cd-card{flex:1;min-width:120px;background:#fff;border:1px solid #e6e6e6;border-radius:8px;padding:12px;text-align:center;}
 .cd-card.cd-geral{flex:1.5;min-width:170px;background:#f1f8e9;border-color:#c5e1a5;}
+.cd-card.cd-click{cursor:pointer;transition:box-shadow .12s,transform .12s,border-color .12s;}
+.cd-card.cd-click:hover{box-shadow:0 4px 14px rgba(0,0,0,.12);transform:translateY(-2px);border-color:#bdbdbd;}
+/* Modal grande (drill-down) */
+#modal-box.modal-xl{max-width:1040px;width:80vw;padding:0;overflow:hidden;}
+#modal-box h3:empty{display:none;margin:0;}
+#modal-box.modal-xl #modal-corpo{padding:0;}
+#modal-box.modal-xl .modal-footer{padding:12px 18px;border-top:1px solid #eee;}
+.dr-head{display:flex;align-items:center;gap:10px;padding:16px 20px;font-size:16px;font-weight:bold;}
+.dr-head .dr-ic{font-size:20px;}
+.dr-filtros{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 18px;border-bottom:1px solid #eee;}
+.dr-filtros .dr-busca{flex:1;min-width:160px;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;color:#1b1b1b;}
+.dr-filtros select{padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;background:#fff;color:#1b1b1b;}
+.dr-filtros .dr-export{background:#2e7d32;color:#fff;border:none;border-radius:6px;padding:8px 12px;font-size:13px;font-weight:bold;cursor:pointer;}
+.dr-filtros .dr-export:hover{background:#1b5e20;}
+.dr-tbwrap{max-height:52vh;overflow:auto;}
+.dr-tabela{width:100%;border-collapse:collapse;font-size:12.5px;}
+.dr-tabela thead th{position:sticky;top:0;background:#fafafa;text-align:left;padding:9px 12px;color:#555;font-size:11px;text-transform:uppercase;border-bottom:1px solid #e6e6e6;white-space:nowrap;z-index:1;}
+.dr-tabela tbody td{padding:9px 12px;border-bottom:1px solid #f2f2f2;color:#333;}
+.dr-tabela tbody tr{cursor:pointer;}
+.dr-tabela tbody tr:hover{background:#f6f9f4;}
+.dr-tabela .dr-nome{min-width:180px;}
+.dr-badge{display:inline-block;font-size:11px;font-weight:bold;padding:2px 9px;border-radius:12px;white-space:nowrap;}
+.dr-badge.dr-concluida{background:#e8f5e9;color:#2e7d32;}
+.dr-badge.dr-andamento{background:#e3f2fd;color:#1565c0;}
+.dr-badge.dr-atrasada{background:#ffebee;color:#c62828;}
+.dr-badge.dr-futura{background:#eeeeee;color:#616161;}
+.dr-ver{background:none;border:1px solid #cfcfcf;border-radius:5px;color:#1565c0;font-size:11px;padding:3px 8px;cursor:pointer;white-space:nowrap;}
+.dr-ver:hover{border-color:#1565c0;background:#e3f2fd;}
+.dr-vazio{text-align:center;color:#999;padding:28px;}
+.dr-rodape{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;padding:10px 18px;font-size:12px;color:#666;}
+.dr-pags{display:flex;gap:4px;flex-wrap:wrap;}
+.dr-pg{min-width:28px;height:28px;border:1px solid #ddd;background:#fff;border-radius:6px;cursor:pointer;font-size:12px;color:#444;}
+.dr-pg.atual{background:var(--verde-escuro);color:#fff;border-color:var(--verde-escuro);font-weight:bold;}
+@media(max-width:700px){ #modal-box.modal-xl{width:96vw;max-width:96vw;} .dr-tbwrap{max-height:60vh;} }
 .cd-num{font-size:24px;font-weight:bold;color:#333;line-height:1.1;}
 .cd-lbl{font-size:11.5px;color:#666;margin-top:3px;}
 .cd-bar{height:8px;background:#e0e0e0;border-radius:5px;margin-top:9px;overflow:hidden;}
@@ -3004,6 +3038,116 @@ function _cronoVisiveis(t){
 function toggleCronoGrupo(id){ _cronoColapsado[id]=!_cronoColapsado[id]; renderCronograma(); }
 function abrirCronograma(){ trocarModo("cronograma"); }
 
+// ===== DRILL-DOWN: clicar num indicador abre modal com as fichas daquele status =====
+var _cronoDrill=null;
+var _CRONO_ST_INFO={
+  concluida:{lbl:"Concluídas", ic:"✅", cor:"#2e7d32", bg:"#e8f5e9"},
+  andamento:{lbl:"Em andamento", ic:"🔵", cor:"#1565c0", bg:"#e3f2fd"},
+  atrasada:{lbl:"Atrasadas", ic:"🔴", cor:"#c62828", bg:"#ffebee"},
+  futura:{lbl:"Futuras", ic:"⚪", cor:"#616161", bg:"#f0f0f0"}
+};
+function _cronoAncestrais(t, x){
+  var serv="", fase="", pid=x.parent, first=true;
+  while(pid!=null){
+    var pt=null; for(var k=0;k<t.length;k++){ if(t[k].id===pid){pt=t[k];break;} }
+    if(!pt) break;
+    if(first){ serv=pt.nome; first=false; }
+    if(pt.nivel<=1){ fase=pt.nome; }
+    pid=pt.parent;
+  }
+  return {servico:serv||"—", fase:fase||"—"};
+}
+function abrirCronoDrill(status){
+  var t=_cronoTarefas(), calc=_cronoCalc(t); // MESMA fonte dos indicadores
+  var itens=[];
+  t.forEach(function(x){
+    if(x.temFilhos) return;                 // só folhas (igual ao cálculo dos cards)
+    if(calc.st[x.id]!==status) return;
+    var anc=_cronoAncestrais(t,x);
+    itens.push({
+      id:x.id, codigo:"ATV-"+String(x.id).padStart(3,"0"), nome:x.nome,
+      servico:anc.servico, fase:anc.fase, resp:(x.resp||"—"),
+      prevista:(x.ini?_fmtBR(x.ini):"—")+(x.fim?" → "+_fmtBR(x.fim):""),
+      conclusao:(status==="concluida"&&x.fim)?_fmtBR(x.fim):"—",
+      pct:(calc.pct[x.id]||0)
+    });
+  });
+  _cronoDrill={status:status, itens:itens, busca:"", fase:"", servico:"", pagina:1};
+  renderCronoDrill();
+}
+function setCronoDrill(campo,val){ if(!_cronoDrill) return; _cronoDrill[campo]=val; _cronoDrill.pagina=1; renderCronoDrill(); }
+function cronoDrillPag(p){ if(!_cronoDrill) return; _cronoDrill.pagina=p; renderCronoDrill(); }
+function cronoDrillLimpar(){ if(!_cronoDrill) return; _cronoDrill.busca="";_cronoDrill.fase="";_cronoDrill.servico="";_cronoDrill.pagina=1; renderCronoDrill(); }
+function _cronoDrillFiltrados(){
+  var d=_cronoDrill, b=(d.busca||"").toLowerCase();
+  return d.itens.filter(function(it){
+    if(b && it.nome.toLowerCase().indexOf(b)<0 && it.codigo.toLowerCase().indexOf(b)<0) return false;
+    if(d.fase && it.fase!==d.fase) return false;
+    if(d.servico && it.servico!==d.servico) return false;
+    return true;
+  });
+}
+function renderCronoDrill(){
+  var d=_cronoDrill; if(!d) return;
+  var info=_CRONO_ST_INFO[d.status];
+  var fs=_cronoDrillFiltrados();
+  var perPage=12, totalPag=Math.max(1,Math.ceil(fs.length/perPage));
+  if(d.pagina>totalPag) d.pagina=totalPag;
+  var iniIdx=(d.pagina-1)*perPage, pageItens=fs.slice(iniIdx,iniIdx+perPage);
+  var fases=d.itens.map(function(i){return i.fase;}).filter(function(v,i,a){return a.indexOf(v)===i;}).sort();
+  var servs=d.itens.map(function(i){return i.servico;}).filter(function(v,i,a){return a.indexOf(v)===i;}).sort();
+  var optFase='<option value="">Todas as fases</option>'+fases.map(function(f){return '<option value="'+escapeHtml(f)+'"'+(d.fase===f?' selected':'')+'>'+escapeHtml(f)+'</option>';}).join("");
+  var optServ='<option value="">Todos os serviços</option>'+servs.map(function(s){return '<option value="'+escapeHtml(s)+'"'+(d.servico===s?' selected':'')+'>'+escapeHtml(s)+'</option>';}).join("");
+  var stLbl=info.lbl.replace(/s$/,'').replace("Concluída","Concluída");
+  var rows=pageItens.map(function(it){
+    return '<tr onclick="cronoDrillVerDetalhe('+it.id+')">'
+      +'<td>'+escapeHtml(it.codigo)+'</td>'
+      +'<td class="dr-nome"><b>'+escapeHtml(it.nome)+'</b></td>'
+      +'<td>'+escapeHtml(it.servico)+'</td>'
+      +'<td>'+escapeHtml(it.fase)+'</td>'
+      +'<td>'+escapeHtml(it.resp)+'</td>'
+      +'<td>'+escapeHtml(it.prevista)+'</td>'
+      +'<td>'+escapeHtml(it.conclusao)+'</td>'
+      +'<td><span class="dr-badge dr-'+d.status+'">'+it.pct+'%</span></td>'
+      +'<td><span class="dr-badge dr-'+d.status+'">'+escapeHtml(stLbl)+'</span></td>'
+      +'<td><button type="button" class="dr-ver" onclick="event.stopPropagation();cronoDrillVerDetalhe('+it.id+')">ver ›</button></td>'
+      +'</tr>';
+  }).join("");
+  if(!pageItens.length) rows='<tr><td colspan="10" class="dr-vazio">Nenhuma ficha encontrada com os filtros.</td></tr>';
+  var pag=''; if(totalPag>1){ for(var p=1;p<=totalPag;p++){ pag+='<button type="button" class="dr-pg'+(p===d.pagina?' atual':'')+'" onclick="cronoDrillPag('+p+')">'+p+'</button>'; } }
+  var corpo=
+    '<div class="dr-head" style="background:'+info.bg+';color:'+info.cor+';"><span class="dr-ic">'+info.ic+'</span>'
+      +'<span class="dr-tit">Fichas '+info.lbl+' <b>('+d.itens.length+')</b></span></div>'
+    +'<div class="dr-filtros">'
+      +'<input type="text" class="dr-busca" placeholder="🔎 Buscar ficha..." value="'+escapeHtml(d.busca)+'" oninput="setCronoDrill(\'busca\',this.value)">'
+      +'<select onchange="setCronoDrill(\'fase\',this.value)">'+optFase+'</select>'
+      +'<select onchange="setCronoDrill(\'servico\',this.value)">'+optServ+'</select>'
+      +'<button type="button" class="secundario" onclick="cronoDrillLimpar()">Limpar filtros</button>'
+      +'<button type="button" class="dr-export" onclick="cronoDrillExport()">📥 Exportar</button>'
+    +'</div>'
+    +'<div class="dr-tbwrap"><table class="dr-tabela"><thead><tr>'
+      +'<th>Código</th><th>Atividade</th><th>Serviço</th><th>Fase</th><th>Resp.</th><th>Prevista</th><th>Conclusão</th><th>%</th><th>Status</th><th></th>'
+    +'</tr></thead><tbody>'+rows+'</tbody></table></div>'
+    +'<div class="dr-rodape"><span>Mostrando '+(fs.length?iniIdx+1:0)+'–'+Math.min(iniIdx+perPage,fs.length)+' de '+fs.length+' ficha(s)</span><span class="dr-pags">'+pag+'</span></div>';
+  document.getElementById("modal-box").classList.add("modal-xl");
+  abrirModal("", corpo, '<button type="button" class="secundario" onclick="fecharModalForce()">Fechar</button>');
+}
+function cronoDrillVerDetalhe(id){ document.getElementById("modal-box").classList.remove("modal-xl"); cronoDetalhe(id); }
+function cronoDrillExport(){
+  var d=_cronoDrill; if(!d) return;
+  var fs=_cronoDrillFiltrados();
+  var sep=";", head=["Código","Atividade","Serviço","Fase","Responsável","Prevista","Conclusão","%","Status"];
+  function esc(v){ v=String(v==null?"":v); return (v.indexOf('"')>=0||v.indexOf(sep)>=0||v.indexOf("\n")>=0) ? '"'+v.replace(/"/g,'""')+'"' : v; }
+  var lbl=_CRONO_ST_INFO[d.status].lbl;
+  var linhas=[head.join(sep)].concat(fs.map(function(it){ return [it.codigo,it.nome,it.servico,it.fase,it.resp,it.prevista,it.conclusao,it.pct+"%",lbl].map(esc).join(sep); }));
+  var csv="﻿"+linhas.join("\r\n");
+  var blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+  var url=URL.createObjectURL(blob), a=document.createElement("a");
+  a.href=url; a.download="fichas_"+d.status+"_"+String(obraAtual||"obra").replace(/[^a-z0-9]+/gi,"_")+".csv";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); },1000);
+}
+
 function cronoDetalhe(id){
   var t=_cronoTarefas(); var x=null; for(var k=0;k<t.length;k++){ if(t[k].id===id){x=t[k];break;} }
   if(!x) return;
@@ -3063,10 +3207,10 @@ function renderCronograma(){
   var dash='<div class="crono-dash">'
     +'<div class="cd-card cd-geral"><div class="cd-num">'+calc.geral+'%</div><div class="cd-lbl">Conclusão geral</div>'
       +'<div class="cd-bar"><div class="cd-bar-fill" style="width:'+calc.geral+'%"></div></div></div>'
-    +'<div class="cd-card"><div class="cd-num" style="color:#2e7d32;">'+c.concluida+'</div><div class="cd-lbl">✅ Concluídas</div></div>'
-    +'<div class="cd-card"><div class="cd-num" style="color:#1565c0;">'+c.andamento+'</div><div class="cd-lbl">🔵 Em andamento</div></div>'
-    +'<div class="cd-card"><div class="cd-num" style="color:#c62828;">'+c.atrasada+'</div><div class="cd-lbl">🔴 Atrasadas</div></div>'
-    +'<div class="cd-card"><div class="cd-num" style="color:#777;">'+c.futura+'</div><div class="cd-lbl">⚪ Futuras</div></div>'
+    +'<div class="cd-card cd-click" onclick="abrirCronoDrill(\'concluida\')"><div class="cd-num" style="color:#2e7d32;">'+c.concluida+'</div><div class="cd-lbl">✅ Concluídas</div></div>'
+    +'<div class="cd-card cd-click" onclick="abrirCronoDrill(\'andamento\')"><div class="cd-num" style="color:#1565c0;">'+c.andamento+'</div><div class="cd-lbl">🔵 Em andamento</div></div>'
+    +'<div class="cd-card cd-click" onclick="abrirCronoDrill(\'atrasada\')"><div class="cd-num" style="color:#c62828;">'+c.atrasada+'</div><div class="cd-lbl">🔴 Atrasadas</div></div>'
+    +'<div class="cd-card cd-click" onclick="abrirCronoDrill(\'futura\')"><div class="cd-num" style="color:#777;">'+c.futura+'</div><div class="cd-lbl">⚪ Futuras</div></div>'
     +'<div class="cd-card"><div class="cd-num" style="font-size:16px;">'+_fmtBR(maxISO)+'</div><div class="cd-lbl">📅 Previsão de término</div></div>'
     +'</div>';
   var proxHtml='<div class="crono-prox"><b>'+proxTit+':</b> '+(prox.length? prox.map(function(p){ return escapeHtml(p.nome)+' <span style="color:#888;">('+_fmtBR(p.ini)+')</span>'; }).join(' &nbsp;·&nbsp; ') : 'cronograma encerrado.')+'</div>';
@@ -3936,7 +4080,7 @@ function fecharModal(e){
   if(e && e.target !== document.getElementById("modal-overlay")) return;
   document.getElementById("modal-overlay").classList.remove("ativo");
 }
-function fecharModalForce(){ document.getElementById("modal-overlay").classList.remove("ativo"); document.getElementById("modal-box").classList.remove("modal-wide"); }
+function fecharModalForce(){ var mb=document.getElementById("modal-box"); document.getElementById("modal-overlay").classList.remove("ativo"); mb.classList.remove("modal-wide"); mb.classList.remove("modal-xl"); }
 function modalMsg(txt){ document.getElementById("modal-msg").textContent = txt; }
 
 // ===== APROVAÇÃO =====
