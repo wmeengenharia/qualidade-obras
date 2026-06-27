@@ -448,6 +448,13 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .dr-badge.dr-andamento{background:#e3f2fd;color:#1565c0;}
 .dr-badge.dr-atrasada{background:#ffebee;color:#c62828;}
 .dr-badge.dr-futura{background:#eeeeee;color:#616161;}
+.dr-indisp{display:inline-block;background:#fff8e1;color:#8a6d00;border:1px solid #ffd54f;border-radius:12px;font-size:11px;font-weight:bold;padding:3px 9px;white-space:nowrap;}
+.dr-row-off{cursor:not-allowed;opacity:.75;}
+.dr-row-off:hover{background:#fff !important;}
+.dr-cod-off{color:#bbb;}
+.ficha-destaque{background:#e8f5e9;border:1px solid #66bb6a;color:#2e7d32;border-radius:8px;padding:9px 14px;margin-bottom:10px;font-size:13px;font-weight:bold;}
+.ficha-doc-dest{box-shadow:0 0 0 3px rgba(67,160,71,.35);border-radius:6px;animation:destPulse 1.6s ease-out 1;}
+@keyframes destPulse{0%{box-shadow:0 0 0 6px rgba(67,160,71,.5);}100%{box-shadow:0 0 0 3px rgba(67,160,71,.35);}}
 .dr-ver{background:none;border:1px solid #cfcfcf;border-radius:5px;color:#1565c0;font-size:11px;padding:3px 8px;cursor:pointer;white-space:nowrap;}
 .dr-ver:hover{border-color:#1565c0;background:#e3f2fd;}
 .dr-vazio{text-align:center;color:#999;padding:28px;}
@@ -629,11 +636,18 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
   header{flex-direction:column;align-items:stretch;}
   header h1{font-size:13px;line-height:1.25;}
   header > div:last-child{align-items:stretch !important;}
-  .obra-atual-bar{width:100%;}
-  .obra-dropdown{flex:1;}
-  .obra-chip{width:100%;justify-content:flex-start;}
-  .obra-chip .nome{max-width:60vw;}
-  .obra-dropdown-menu{left:0;right:0;width:100%;min-width:unset;}
+  .obra-atual-bar{width:100%;flex-wrap:wrap;}
+  .obra-chip{justify-content:flex-start;}
+  .obra-chip .nome{max-width:48vw;}
+  .obra-dropdown-menu{min-width:220px;}
+  .bc-atual{font-size:12px;}
+  /* Workspace no celular: 1 coluna, cards compactos */
+  .ws-grid{grid-template-columns:1fr !important;gap:12px;max-width:100%;}
+  .ws-card{padding:16px;}
+  .ws-topo h2{font-size:18px;}
+  .ws-ic{font-size:32px;}
+  .ws-stats{gap:10px 16px;}
+  .ws-mini b{font-size:16px;}
   .user-badge{width:100%;justify-content:flex-start;gap:6px;}
   .user-badge .u-nome{flex-basis:100%;}
   .user-badge button{font-size:11px;padding:7px 10px;}
@@ -2875,7 +2889,7 @@ function novaFichaCronoAbrir(taskId){
   if(!DB.fichas) DB.fichas={}; if(!DB.fichas[obraAtual]) DB.fichas[obraAtual]={};
   var key="C"+taskId+"#"+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
   DB.fichas[obraAtual][key]={
-    obra:obraAtual, tipo:"cronograma", cronogramaId:taskId,
+    obra:obraAtual, tipo:"cronograma", cronogramaId:taskId, codigo:_proxFicCodigo(obraAtual),
     nome:t.nome, fase:_cronoFaseDe(tarefas,idx), planIni:t.ini, planFim:t.fim, planDur:t.dur, planPred:t.pred,
     respInsp:"", data:"", inspecionadoPor:"", dataFechamento:"",
     resultado:"", observacoes:"",
@@ -2908,11 +2922,14 @@ function renderFichaCronograma(key){
       +'<input type="text" '+ro+' placeholder="Solução / tratamento" value="'+escapeHtml(n.solucao||"")+'" onchange="onNcChange('+i+',\'solucao\',this.value)">'
       +'<input type="date" '+ro+' value="'+escapeHtml(paraISO(n.reinspecao||""))+'" onchange="onNcChange('+i+',\'reinspecao\',paraBR(this.value))"></div>';
   }).join("");
+  if(_ensureCodigo(est)) salvarDB();
+  var _dest = (_fichaDestaque===key); _fichaDestaque=null;
   main.innerHTML=
-    '<div class="crono-topo"><div><h2>📝 '+escapeHtml(est.nome)+'</h2>'
+    '<div class="crono-topo"><div><h2>📝 '+(est.codigo?escapeHtml(est.codigo)+' — ':'')+escapeHtml(est.nome)+'</h2>'
       +'<div style="font-size:12px;color:#555;">'+(est.fase?escapeHtml(est.fase)+' · ':'')+'Cronograma: '+(est.planIni?_fmtBR(est.planIni):'—')+(est.planFim?' → '+_fmtBR(est.planFim):'')+' · '+(est.planDur||0)+' dia(s)'+(est.planPred?' · pred: '+escapeHtml(est.planPred):'')+'</div></div>'
       +'<button type="button" class="secundario" onclick="trocarModo(\'salvas\')">‹ Voltar às fichas</button></div>'
-    +'<div class="ficha-doc'+(bloq?' ficha-bloqueada':'')+'" style="max-width:760px;">'
+    +(_dest?'<div class="ficha-destaque">✓ Ficha aberta a partir do cronograma'+(est.codigo?' ('+escapeHtml(est.codigo)+')':'')+'</div>':'')
+    +'<div class="ficha-doc'+(_dest?' ficha-doc-dest':'')+(bloq?' ficha-bloqueada':'')+'" style="max-width:760px;">'
     +(bloq?'<div class="bloquear-overlay"></div>':'')
     +'<div class="cf-grid">'
       +'<div><label>Responsável pela inspeção</label><input type="text" '+ro+' value="'+escapeHtml(est.respInsp||"")+'" onchange="onCronoChange(\'respInsp\',this.value)"></div>'
@@ -3087,26 +3104,50 @@ function _cronoAncestrais(t, x){
     var pt=null; for(var k=0;k<t.length;k++){ if(t[k].id===pid){pt=t[k];break;} }
     if(!pt) break;
     if(first){ serv=pt.nome; first=false; }
-    if(pt.nivel<=1){ fase=pt.nome; }
+    if(pt.lv===1 && !fase){ fase=pt.nome; }   // nível 1 = FASE (objetos usam .lv, não .nivel)
     pid=pt.parent;
   }
   return {servico:serv||"—", fase:fase||"—"};
 }
+// Próximo código FIC-NNN da obra
+function _proxFicCodigo(obra){
+  obra=obra||obraAtual; var of=(DB.fichas&&DB.fichas[obra])||{}, max=0;
+  Object.keys(of).forEach(function(k){ var e=of[k]; if(e&&e.codigo){ var m=String(e.codigo).match(/(\d+)/); if(m){ var n=+m[1]; if(n>max)max=n; } } });
+  return "FIC-"+String(max+1).padStart(3,"0");
+}
+function _ensureCodigo(est){ if(est && est.tipo==="cronograma" && !est.codigo){ est.codigo=_proxFicCodigo(est.obra||obraAtual); return true; } return false; }
+// Ficha vinculada a uma atividade do cronograma (por cronogramaId). null se não houver.
+function _fichaDaAtividade(taskId, obra){
+  obra=obra||obraAtual; var of=(DB.fichas&&DB.fichas[obra])||{}, ks=Object.keys(of);
+  for(var i=0;i<ks.length;i++){ var e=of[ks[i]]; if(e&&e.tipo==="cronograma"&&e.cronogramaId===taskId&&_fichaVisivel(e)) return {key:ks[i], est:e}; }
+  return null;
+}
+var _fichaDestaque=null; // chave da ficha aberta a partir do cronograma (para destacar)
+function cronoAbrirFichaLigada(key){
+  var of=(DB.fichas&&DB.fichas[obraAtual])||{};
+  if(!of[key]){ alert("Ficha não encontrada."); return; }
+  _fichaDestaque=key;
+  fecharModalForce();
+  abrirFichaSalva("cronograma", key);
+}
+
 function abrirCronoDrill(status){
   var t=_cronoTarefas(), calc=_cronoCalc(t); // MESMA fonte dos indicadores
-  var itens=[];
+  var itens=[], precisaSalvar=false;
   t.forEach(function(x){
     if(x.temFilhos) return;                 // só folhas (igual ao cálculo dos cards)
     if(calc.st[x.id]!==status) return;
     var anc=_cronoAncestrais(t,x);
+    var lig=_fichaDaAtividade(x.id);          // ficha vinculada (por cronogramaId)
+    var codigo="—";
+    if(lig){ if(_ensureCodigo(lig.est)) precisaSalvar=true; codigo=lig.est.codigo; }
     itens.push({
-      id:x.id, codigo:"ATV-"+String(x.id).padStart(3,"0"), nome:x.nome,
-      servico:anc.servico, fase:anc.fase, resp:(x.resp||"—"),
-      prevista:(x.ini?_fmtBR(x.ini):"—")+(x.fim?" → "+_fmtBR(x.fim):""),
-      conclusao:(status==="concluida"&&x.fim)?_fmtBR(x.fim):"—",
-      pct:(calc.pct[x.id]||0)
+      id:x.id, nome:x.nome, servico:anc.servico, fase:anc.fase,
+      pct:(calc.pct[x.id]||0),
+      fichaKey:(lig?lig.key:""), codigo:codigo
     });
   });
+  if(precisaSalvar) salvarDB();
   _cronoDrill={status:status, itens:itens, busca:"", fase:"", servico:"", pagina:1};
   renderCronoDrill();
 }
@@ -3135,20 +3176,22 @@ function renderCronoDrill(){
   var optServ='<option value="">Todos os serviços</option>'+servs.map(function(s){return '<option value="'+escapeHtml(s)+'"'+(d.servico===s?' selected':'')+'>'+escapeHtml(s)+'</option>';}).join("");
   var stLbl=info.lbl.replace(/s$/,'').replace("Concluída","Concluída");
   var rows=pageItens.map(function(it){
-    return '<tr onclick="cronoDrillVerDetalhe('+it.id+')">'
-      +'<td>'+escapeHtml(it.codigo)+'</td>'
+    var temFicha=!!it.fichaKey;
+    var acao = temFicha
+      ? '<button type="button" class="dr-ver" onclick="event.stopPropagation();cronoAbrirFichaLigada(\''+it.fichaKey+'\')">Abrir ficha ›</button>'
+      : '<span class="dr-indisp" title="Ainda não há ficha vinculada a este serviço">🟡 Ficha indisponível</span>';
+    var click = temFicha ? ' onclick="cronoAbrirFichaLigada(\''+it.fichaKey+'\')" style="cursor:pointer;"' : ' class="dr-row-off" title="Sem ficha vinculada"';
+    return '<tr'+click+'>'
+      +'<td>'+(temFicha?'<b>'+escapeHtml(it.codigo)+'</b>':'<span class="dr-cod-off">—</span>')+'</td>'
       +'<td class="dr-nome"><b>'+escapeHtml(it.nome)+'</b></td>'
       +'<td>'+escapeHtml(it.servico)+'</td>'
       +'<td>'+escapeHtml(it.fase)+'</td>'
-      +'<td>'+escapeHtml(it.resp)+'</td>'
-      +'<td>'+escapeHtml(it.prevista)+'</td>'
-      +'<td>'+escapeHtml(it.conclusao)+'</td>'
-      +'<td><span class="dr-badge dr-'+d.status+'">'+it.pct+'%</span></td>'
       +'<td><span class="dr-badge dr-'+d.status+'">'+escapeHtml(stLbl)+'</span></td>'
-      +'<td><button type="button" class="dr-ver" onclick="event.stopPropagation();cronoDrillVerDetalhe('+it.id+')">ver ›</button></td>'
+      +'<td><span class="dr-badge dr-'+d.status+'">'+it.pct+'%</span></td>'
+      +'<td>'+acao+'</td>'
       +'</tr>';
   }).join("");
-  if(!pageItens.length) rows='<tr><td colspan="10" class="dr-vazio">Nenhuma ficha encontrada com os filtros.</td></tr>';
+  if(!pageItens.length) rows='<tr><td colspan="7" class="dr-vazio">Nenhuma ficha encontrada com os filtros.</td></tr>';
   var pag=''; if(totalPag>1){ for(var p=1;p<=totalPag;p++){ pag+='<button type="button" class="dr-pg'+(p===d.pagina?' atual':'')+'" onclick="cronoDrillPag('+p+')">'+p+'</button>'; } }
   var corpo=
     '<div class="dr-head" style="background:'+info.bg+';color:'+info.cor+';"><span class="dr-ic">'+info.ic+'</span>'
@@ -3161,7 +3204,7 @@ function renderCronoDrill(){
       +'<button type="button" class="dr-export" onclick="cronoDrillExport()">📥 Exportar</button>'
     +'</div>'
     +'<div class="dr-tbwrap"><table class="dr-tabela"><thead><tr>'
-      +'<th>Código</th><th>Atividade</th><th>Serviço</th><th>Fase</th><th>Resp.</th><th>Prevista</th><th>Conclusão</th><th>%</th><th>Status</th><th></th>'
+      +'<th>Ficha</th><th>Nome</th><th>Serviço</th><th>Fase</th><th>Status</th><th>%</th><th>Ação</th>'
     +'</tr></thead><tbody>'+rows+'</tbody></table></div>'
     +'<div class="dr-rodape"><span>Mostrando '+(fs.length?iniIdx+1:0)+'–'+Math.min(iniIdx+perPage,fs.length)+' de '+fs.length+' ficha(s)</span><span class="dr-pags">'+pag+'</span></div>';
   document.getElementById("modal-box").classList.add("modal-xl");
@@ -3171,10 +3214,10 @@ function cronoDrillVerDetalhe(id){ document.getElementById("modal-box").classLis
 function cronoDrillExport(){
   var d=_cronoDrill; if(!d) return;
   var fs=_cronoDrillFiltrados();
-  var sep=";", head=["Código","Atividade","Serviço","Fase","Responsável","Prevista","Conclusão","%","Status"];
+  var sep=";", head=["Ficha","Nome","Serviço","Fase","Status","%","Ficha vinculada"];
   function esc(v){ v=String(v==null?"":v); return (v.indexOf('"')>=0||v.indexOf(sep)>=0||v.indexOf("\n")>=0) ? '"'+v.replace(/"/g,'""')+'"' : v; }
   var lbl=_CRONO_ST_INFO[d.status].lbl;
-  var linhas=[head.join(sep)].concat(fs.map(function(it){ return [it.codigo,it.nome,it.servico,it.fase,it.resp,it.prevista,it.conclusao,it.pct+"%",lbl].map(esc).join(sep); }));
+  var linhas=[head.join(sep)].concat(fs.map(function(it){ return [it.codigo,it.nome,it.servico,it.fase,lbl,it.pct+"%",(it.fichaKey?"Sim":"Não")].map(esc).join(sep); }));
   var csv="﻿"+linhas.join("\r\n");
   var blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
   var url=URL.createObjectURL(blob), a=document.createElement("a");
@@ -3379,7 +3422,7 @@ function renderFichasSalvas(){
     if(est.tipo==="cronograma"){
       if(!_fichaVisivel(est)) return;
       var aprovC = est.aprovacao||{status:"pendente"};
-      cards.push({tipo:"cronograma", id:key, servicoId:"C"+est.cronogramaId, grupo:(est.fase?est.fase+" — ":"")+est.nome, badge:"CRONO", badgeCls:"crono",
+      cards.push({tipo:"cronograma", id:key, servicoId:"C"+est.cronogramaId, grupo:(est.fase?est.fase+" — ":"")+est.nome, badge:(est.codigo||"CRONO"), badgeCls:"crono",
         titulo: est.nome, rascunho: !!est.rascunho,
         obra: est.obra||"—", data: est.data||"—", resp: est.respInsp||"—",
         pct: (est.resultado?100:0), cls:(est.resultado?"":"vazio"), ncCount:(est.nc?est.nc.length:0),
@@ -3533,6 +3576,7 @@ function abrirFichaSalva(tipo, id){
   if(ehCrono){
     modoAtual="fichacrono"; servicoAtual=id; materialAtual=null;
     var _tb=document.querySelector(".toolbar"); if(_tb) _tb.style.display="none";
+    _setBreadcrumb("Ficha");
     renderFichaCronograma(id);
     return;
   }
