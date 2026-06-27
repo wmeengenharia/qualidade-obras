@@ -1233,13 +1233,14 @@ function listarPendenciasAprovacao(){
     Object.keys(of).forEach(function(id){
       var est=of[id];
       if(!est || !est.aprovacao || est.aprovacao.status!=="submetido") return;
-      var serv=SERVICOS.find(function(s){return s.id===id;});
+      var servicoId = est.servicoId || ((String(id).indexOf("#")>=0)?String(id).split("#")[0]:id);
+      var serv=SERVICOS.find(function(s){return s.id===servicoId;});
       var tipo,badge,badgeCls,titulo;
-      if(serv){ tipo="servico"; badge="FVS "+id; badgeCls=""; titulo=serv.titulo; }
+      if(serv){ tipo="servico"; badge="FVS "+servicoId; badgeCls=""; titulo=serv.titulo; }
       else{
-        var mat=MATERIAIS.find(function(m){return m.id===id;});
+        var mat=MATERIAIS.find(function(m){return m.id===servicoId;});
         if(!mat) return;
-        tipo="material"; badge="FVM "+id.replace("M",""); badgeCls="fvm"; titulo=mat.material;
+        tipo="material"; badge="FVM "+String(servicoId).replace("M",""); badgeCls="fvm"; titulo=mat.material;
       }
       res.push({obra:obra,tipo:tipo,id:id,badge:badge,badgeCls:badgeCls,titulo:titulo,
                 por:(est.aprovacao.por||"—"),data:(est.aprovacao.data||"—")});
@@ -1496,6 +1497,15 @@ function migrarDB(){
   if(!DB.obraAcessos) DB.obraAcessos = {};
   if(!DB.obraLogos)   DB.obraLogos   = {};
   if(!DB.obraServicos) DB.obraServicos = {}; // {obra:{servicos:[ids],materiais:[ids]}} — ausente = todos (retrocompat)
+  // Carimba servicoId/tipo nas fichas (suporta várias fichas por serviço via chave de instância "servicoId#xxxx")
+  Object.keys(DB.fichas).forEach(function(obra){
+    var of = DB.fichas[obra]; if(!of || typeof of!=="object") return;
+    Object.keys(of).forEach(function(key){
+      var e = of[key]; if(!e || typeof e!=="object") return;
+      if(!e.servicoId) e.servicoId = (key.indexOf("#")>=0) ? key.split("#")[0] : key;
+      if(!e.tipo) e.tipo = (String(e.servicoId).charAt(0)==="M") ? "material" : "servico";
+    });
+  });
   // Migrar estrutura antiga: chaves diretas (ex: "1", "M01") para dentro de fichas
   var TODOS_IDS = SERVICOS.map(function(s){return s.id;}).concat(MATERIAIS.map(function(m){return m.id;}));
   var antigas = {};
@@ -1645,11 +1655,14 @@ function novoEstado(servico){
   };
 }
 function getEstado(id){
-  const servico = SERVICOS.find(s=>s.id===id);
   if(!DB.fichas[obraAtual]) DB.fichas[obraAtual] = {};
   const obraFichas = DB.fichas[obraAtual];
-  if(!obraFichas[id]) obraFichas[id] = novoEstado(servico);
-  const est = obraFichas[id];
+  var est = obraFichas[id];
+  var servicoId = (est && est.servicoId) || ((String(id).indexOf("#")>=0) ? String(id).split("#")[0] : id);
+  const servico = SERVICOS.find(s=>s.id===servicoId);
+  if(!servico) return est || null;
+  if(!est){ est = obraFichas[id] = novoEstado(servico); }
+  est.servicoId = servicoId; est.tipo = "servico";
   if(!est.obra) est.obra = obraAtual;
   if(!est.status || est.status.length !== servico.itens.length){
     est.status = servico.itens.map(()=> est.locais.map(()=>""));
@@ -1692,11 +1705,14 @@ function novoEstadoMaterial(mat){
   };
 }
 function getEstadoMaterial(id){
-  const mat = MATERIAIS.find(m=>m.id===id);
   if(!DB.fichas[obraAtual]) DB.fichas[obraAtual] = {};
   const obraFichas = DB.fichas[obraAtual];
-  if(!obraFichas[id]) obraFichas[id] = novoEstadoMaterial(mat);
-  const est = obraFichas[id];
+  var est = obraFichas[id];
+  var servicoId = (est && est.servicoId) || ((String(id).indexOf("#")>=0) ? String(id).split("#")[0] : id);
+  const mat = MATERIAIS.find(m=>m.id===servicoId);
+  if(!mat) return est || null;
+  if(!est){ est = obraFichas[id] = novoEstadoMaterial(mat); }
+  est.servicoId = servicoId; est.tipo = "material";
   if(!est.obra) est.obra = obraAtual;
   if(!est.resultados || est.resultados.length !== mat.criterios.length){
     est.resultados = mat.criterios.map(()=>"");
@@ -1726,6 +1742,10 @@ function estadoAtual(){
   if(modoAtual==="servico") return servicoAtual ? getEstado(servicoAtual) : null;
   return materialAtual ? getEstadoMaterial(materialAtual) : null;
 }
+// Resolve o id do CATÁLOGO (serviço/material) a partir da chave de instância atual
+function _idCatalogo(key){ var of=(DB.fichas&&DB.fichas[obraAtual])||{}; var e=of[key]; return (e&&e.servicoId) || ((String(key).indexOf("#")>=0)?String(key).split("#")[0]:key); }
+function _servicoIdAtual(){ return _idCatalogo(servicoAtual); }
+function _materialIdAtual(){ return _idCatalogo(materialAtual); }
 
 let servicoAtual = null;
 let materialAtual = null;
@@ -2326,7 +2346,8 @@ function novaFichaItens(tipo, catIdx){
     var it = lista.find(function(x){ return x.id===id; });
     if(!it) return;
     var label = tipo==="servico" ? ("FVS "+id+" — "+it.titulo) : ("FVM "+id.replace("M","")+" — "+it.material);
-    var jaTem = _fichaTemDados(of[id], tipo) ? '<br><span class="nf-sub" style="color:#e65100;">✓ já iniciada</span>' : '';
+    var nInst = Object.keys(of).filter(function(k){ var e=of[k]; if(!e) return false; var sid=e.servicoId||((String(k).indexOf("#")>=0)?String(k).split("#")[0]:k); return sid===id && _fichaTemDados(e,tipo); }).length;
+    var jaTem = nInst>0 ? '<br><span class="nf-sub" style="color:#e65100;">✓ '+nInst+' ficha(s) criada(s) — nova será adicional</span>' : '';
     corpo += '<button type="button" class="nova-ficha-opt" onclick="novaFichaAbrir(\''+tipo+'\',\''+id+'\')">'
       +'<span class="nf-emoji">'+ic+'</span><span><span class="nf-tit">'+escapeHtml(label)+'</span>'+jaTem+'</span></button>';
   });
@@ -2337,9 +2358,22 @@ function novaFichaItens(tipo, catIdx){
   );
 }
 
-function novaFichaAbrir(tipo, id){
+// Cria SEMPRE uma nova instância da ficha (permite várias fichas do mesmo serviço)
+function novaFichaAbrir(tipo, servicoId){
+  if(!DB.fichas) DB.fichas = {};
+  if(!DB.fichas[obraAtual]) DB.fichas[obraAtual] = {};
+  var of = DB.fichas[obraAtual];
+  var cat = (tipo==="servico"?SERVICOS:MATERIAIS).find(function(x){ return x.id===servicoId; });
+  if(!cat){ fecharModalForce(); alert("Serviço não encontrado."); return; }
+  var key = servicoId + "#" + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+  of[key] = (tipo==="servico") ? novoEstado(cat) : novoEstadoMaterial(cat);
+  of[key].servicoId = servicoId;
+  of[key].tipo = tipo;
+  of[key].obra = obraAtual;
+  if(sessao) of[key].criadoPor = sessao.id;
+  salvarDB();
   fecharModalForce();
-  abrirFichaSalva(tipo, id);
+  abrirFichaSalva(tipo, key);
 }
 
 function renderFichasSalvas(){
@@ -2348,42 +2382,43 @@ function renderFichasSalvas(){
 
   const obraFichas = (DB.fichas && DB.fichas[obraAtual]) || {};
 
-  // FVS
-  SERVICOS.forEach(function(s){
-    const est = obraFichas[s.id];
-    if(!_fichaTemDados(est, "servico")) return;
+  // Itera TODAS as fichas da obra (suporta várias fichas por serviço/material)
+  Object.keys(obraFichas).forEach(function(key){
+    const est = obraFichas[key];
+    if(!est || typeof est!=="object") return;
+    const servicoId = est.servicoId || ((String(key).indexOf("#")>=0) ? String(key).split("#")[0] : key);
+    const tipo = est.tipo || ((String(servicoId).charAt(0)==="M") ? "material" : "servico");
+    if(!_fichaTemDados(est, tipo)) return;
     if(!_fichaVisivel(est)) return; // rascunho de outro usuário → oculto
-    const totalItens = est.status.reduce(function(acc,row){ return acc+row.length; }, 0);
-    const preenchidos = est.status.reduce(function(acc,row){ return acc+row.filter(function(v){ return v!==""; }).length; }, 0);
-    const pct = totalItens ? Math.round(preenchidos/totalItens*100) : 0;
-    const cls = pct===0?"vazio":pct<100?"parcial":"";
-    const ncCount = est.nc ? est.nc.length : 0;
     const aprov = est.aprovacao||{status:"pendente"};
-    cards.push({tipo:"servico", id:s.id, badge:"FVS "+s.id, badgeCls:"",
-      titulo: s.titulo, rascunho: !!est.rascunho,
-      obra: est.obra||"—", data: est.data||"—", resp: est.respInsp||"—",
-      pct, cls, ncCount, aprovStatus: aprov.status, aprovPor: aprov.por,
-      info: preenchidos+"/"+totalItens+" status preenchidos"
-    });
-  });
-
-  // FVM
-  MATERIAIS.forEach(function(m){
-    const est = obraFichas[m.id];
-    if(!_fichaTemDados(est, "material")) return;
-    if(!_fichaVisivel(est)) return; // rascunho de outro usuário → oculto
-    const total = 5;
-    const preenchidos = est.resultados ? est.resultados.filter(function(r){ return r!==""; }).length : 0;
-    const pct = Math.round(preenchidos/total*100);
-    const cls = pct===0?"vazio":pct<100?"parcial":"";
-    const ncCount = est.nc ? est.nc.length : 0;
-    const aprovM = est.aprovacao||{status:"pendente"};
-    cards.push({tipo:"material", id:m.id, badge:"FVM "+m.id.replace("M",""), badgeCls:"fvm",
-      titulo: m.material, rascunho: !!est.rascunho,
-      obra: est.obra||"—", data: est.data||"—", resp: est.fornecedor||"—",
-      pct, cls, ncCount, aprovStatus: aprovM.status, aprovPor: aprovM.por,
-      info: preenchidos+"/"+total+" verificações preenchidas"
-    });
+    if(tipo==="servico"){
+      const s = SERVICOS.find(function(x){ return x.id===servicoId; });
+      if(!s) return;
+      const status = est.status||[];
+      const totalItens = status.reduce(function(acc,row){ return acc+(row?row.length:0); }, 0);
+      const preenchidos = status.reduce(function(acc,row){ return acc+(row?row.filter(function(v){ return v!==""; }).length:0); }, 0);
+      const pct = totalItens ? Math.round(preenchidos/totalItens*100) : 0;
+      cards.push({tipo:"servico", id:key, badge:"FVS "+servicoId, badgeCls:"",
+        titulo: s.titulo, rascunho: !!est.rascunho,
+        obra: est.obra||"—", data: est.data||"—", resp: est.respInsp||"—",
+        pct, cls:(pct===0?"vazio":pct<100?"parcial":""), ncCount:(est.nc?est.nc.length:0),
+        aprovStatus: aprov.status, aprovPor: aprov.por,
+        info: preenchidos+"/"+totalItens+" status preenchidos"
+      });
+    } else {
+      const m = MATERIAIS.find(function(x){ return x.id===servicoId; });
+      if(!m) return;
+      const total = 5;
+      const preenchidos = est.resultados ? est.resultados.filter(function(r){ return r!==""; }).length : 0;
+      const pct = Math.round(preenchidos/total*100);
+      cards.push({tipo:"material", id:key, badge:"FVM "+String(servicoId).replace("M",""), badgeCls:"fvm",
+        titulo: m.material, rascunho: !!est.rascunho,
+        obra: est.obra||"—", data: est.data||"—", resp: (est.recebimentos&&est.recebimentos[0]&&est.recebimentos[0].fornecedor)||est.fornecedor||"—",
+        pct, cls:(pct===0?"vazio":pct<100?"parcial":""), ncCount:(est.nc?est.nc.length:0),
+        aprovStatus: aprov.status, aprovPor: aprov.por,
+        info: preenchidos+"/"+total+" verificações preenchidas"
+      });
+    }
   });
 
   // Contagens por status de aprovação
@@ -2644,7 +2679,7 @@ function statusLabel(s){
 }
 
 function renderFicha(){
-  const servico = SERVICOS.find(s=>s.id===servicoAtual);
+  const servico = SERVICOS.find(s=>s.id===_servicoIdAtual());
   const est = getEstado(servicoAtual);
   const main = document.getElementById("main");
 
@@ -2799,7 +2834,7 @@ function renderFicha(){
 }
 
 function renderFichaMaterial(){
-  const mat = MATERIAIS.find(m=>m.id===materialAtual);
+  const mat = MATERIAIS.find(m=>m.id===_materialIdAtual());
   const est = getEstadoMaterial(materialAtual);
   const main = document.getElementById("main");
 
@@ -3083,13 +3118,15 @@ function limparFicha(){
   if(modoAtual==="servico"){
     if(!servicoAtual) return;
     if(!confirm("Limpar todos os dados preenchidos desta ficha?")) return;
-    const servico = SERVICOS.find(s=>s.id===servicoAtual);
-    DB.fichas[obraAtual][servicoAtual] = novoEstado(servico);
+    const servico = SERVICOS.find(s=>s.id===_servicoIdAtual());
+    var novo = novoEstado(servico); novo.servicoId = _servicoIdAtual(); novo.tipo = "servico"; novo.obra = obraAtual;
+    DB.fichas[obraAtual][servicoAtual] = novo;
   } else {
     if(!materialAtual) return;
     if(!confirm("Limpar todos os dados preenchidos desta ficha?")) return;
-    const mat = MATERIAIS.find(m=>m.id===materialAtual);
-    DB.fichas[obraAtual][materialAtual] = novoEstadoMaterial(mat);
+    const mat = MATERIAIS.find(m=>m.id===_materialIdAtual());
+    var novoM = novoEstadoMaterial(mat); novoM.servicoId = _materialIdAtual(); novoM.tipo = "material"; novoM.obra = obraAtual;
+    DB.fichas[obraAtual][materialAtual] = novoM;
   }
   salvarDB();
   renderAtual();
@@ -3403,7 +3440,7 @@ function verFotoItem(ri, li){
   const est = getEstado(servicoAtual);
   const foto = est.fotosItens && est.fotosItens[ri] && est.fotosItens[ri][li];
   if(!foto) return;
-  const serv = SERVICOS.find(s=>s.id===servicoAtual);
+  const serv = SERVICOS.find(s=>s.id===_servicoIdAtual());
   const label = (ri+1)+'. '+serv.itens[ri].item+' — '+est.locais[li];
   document.getElementById("modal-box").classList.add("modal-wide");
   abrirModal(label,
