@@ -397,6 +397,31 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .crono-dash{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0;}
 .cd-card{flex:1;min-width:120px;background:#fff;border:1px solid #e6e6e6;border-radius:8px;padding:12px;text-align:center;}
 .cd-card.cd-geral{flex:1.5;min-width:170px;background:#f1f8e9;border-color:#c5e1a5;}
+/* Workspace / Landing da obra */
+.ws-topo{margin:6px 0 18px;}
+.ws-topo h2{font-size:22px;margin:0 0 4px;color:var(--verde-escuro);}
+.ws-topo p{font-size:13px;color:#777;margin:0;}
+.ws-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:900px;}
+.ws-card{background:#fff;border:1px solid #e6e6e6;border-radius:14px;padding:22px;cursor:pointer;transition:box-shadow .15s,transform .15s,border-color .15s;display:flex;flex-direction:column;}
+.ws-card:hover{box-shadow:0 10px 28px rgba(0,0,0,.12);transform:translateY(-3px);}
+.ws-crono:hover{border-color:#90caf9;}
+.ws-fichas:hover{border-color:#a5d6a7;}
+.ws-ic{font-size:38px;line-height:1;margin-bottom:10px;}
+.ws-tit{font-size:18px;font-weight:bold;color:#222;}
+.ws-desc{font-size:12.5px;color:#777;margin:4px 0 12px;}
+.ws-prog{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.ws-prog-bar{flex:1;height:10px;background:#e8e8e8;border-radius:6px;overflow:hidden;}
+.ws-prog-bar span{display:block;height:100%;background:#43a047;}
+.ws-prog b{font-size:15px;color:var(--verde-escuro);}
+.ws-stats{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:16px;}
+.ws-mini{display:flex;flex-direction:column;line-height:1.2;}
+.ws-mini b{font-size:18px;color:#333;}
+.ws-mini span{font-size:11px;color:#888;}
+.ws-sem{font-size:12.5px;color:#999;background:#fafafa;border:1px dashed #ddd;border-radius:8px;padding:12px;margin-bottom:16px;}
+.ws-btn{margin-top:auto;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:bold;color:#fff;cursor:pointer;}
+.ws-btn-crono{background:#1565c0;} .ws-btn-crono:hover{background:#0d47a1;}
+.ws-btn-fichas{background:var(--verde-escuro);} .ws-btn-fichas:hover{background:#2e5e2a;}
+@media(max-width:700px){ .ws-grid{grid-template-columns:1fr;} .ws-topo h2{font-size:18px;} }
 .cd-card.cd-click{cursor:pointer;transition:box-shadow .12s,transform .12s,border-color .12s;}
 .cd-card.cd-click:hover{box-shadow:0 4px 14px rgba(0,0,0,.12);transform:translateY(-2px);border-color:#bdbdbd;}
 /* Modal grande (drill-down) */
@@ -542,6 +567,11 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .obra-atual-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 .voltar-obras-btn{font-size:12.5px;font-weight:600;padding:7px 14px;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.45);border-radius:20px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .14s;white-space:nowrap;}
 .voltar-obras-btn:hover{background:#fff;color:var(--verde-escuro);border-color:#fff;transform:translateX(-2px);}
+/* Breadcrumb (Home > Obra > Página) */
+.bc-home{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:#fff;font-size:15px;line-height:1;padding:6px 10px;border-radius:8px;cursor:pointer;}
+.bc-home:hover{background:#fff;}
+.bc-sep{color:rgba(255,255,255,.7);font-size:14px;}
+.bc-atual{color:#fff;font-size:13px;font-weight:bold;opacity:.95;}
 .obra-dropdown{position:relative;}
 .obra-chip{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.32);border-radius:22px;padding:4px 14px 4px 5px;cursor:pointer;transition:background .14s;}
 .obra-chip:hover{background:rgba(255,255,255,.3);}
@@ -663,7 +693,8 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
     <div class="sub">WME Engenharia · Qualidade</div>
   </div>
   <div id="obraAtualBar" class="obra-atual-bar" style="display:none;">
-    <button type="button" class="voltar-obras-btn" onclick="mostrarSeletorObra()" title="Ver todas as obras">← Obras</button>
+    <button type="button" class="bc-home" onclick="mostrarSeletorObra()" title="Home — todas as obras">🏠</button>
+    <span class="bc-sep">›</span>
     <div class="obra-dropdown">
       <button type="button" class="obra-chip" id="obraChipBtn" onclick="toggleObraDropdown(event)" title="Trocar de obra">
         <span class="obra-chip-ic">🏗️</span>
@@ -672,6 +703,8 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
       </button>
       <div class="obra-dropdown-menu" id="obraDropdownMenu" style="display:none;"></div>
     </div>
+    <span class="bc-sep" id="bcSep2" style="display:none;">›</span>
+    <span class="bc-atual" id="bcPagina"></span>
   </div>
   <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
     <div id="usuarioBar" class="user-badge" style="display:none;">
@@ -2034,7 +2067,7 @@ function trocarModo(modo){
   var _bSa=document.getElementById("btnModoSalvas"); if(_bSa) _bSa.classList.toggle("ativo", modo==="salvas");
   const ehSalvas = modo==="salvas";
   // Na lista (salvas) a barra branca de ferramentas é redundante → esconde; aparece só dentro de uma ficha
-  var _tb=document.querySelector(".toolbar"); if(_tb) _tb.style.display = (ehSalvas||modo==="cronograma") ? "none" : "";
+  var _tb=document.querySelector(".toolbar"); if(_tb) _tb.style.display = (ehSalvas||modo==="cronograma"||modo==="workspace"||modo==="fichacrono") ? "none" : "";
   atualizarSeletorFicha(); // seletor "Serviço:/Material:" só aparece ao escolher (some quando a ficha abre)
   document.getElementById("btnAddLocal").style.display = modo==="servico" ? "" : "none";
   document.getElementById("btnRmLocal").style.display = modo==="servico" ? "" : "none";
@@ -2063,6 +2096,8 @@ function renderAtual(){
   if(!sessao){ atualizarHeaderUsuario(); renderLogin(); return; }
   atualizarHeaderUsuario();
   if(!obraAtual){ renderSeletorObra(); return; }
+  _setBreadcrumb({workspace:"",cronograma:"Cronograma",salvas:"Fichas",servico:"Ficha",material:"Ficha",fichacrono:"Ficha"}[modoAtual]||"");
+  if(modoAtual==="workspace"){ renderWorkspace(); return; }
   if(modoAtual==="cronograma"){ renderCronograma(); return; }
   if(modoAtual==="fichacrono"){ if(servicoAtual) renderFichaCronograma(servicoAtual); else { modoAtual="salvas"; renderFichasSalvas(); } return; }
   if(modoAtual==="salvas"){ renderFichasSalvas(); return; }
@@ -2138,8 +2173,8 @@ function selecionarObra(nome){
   var of = DB.fichas[obraAtual] || {};
   var temAguardando = Object.keys(of).some(function(k){ var e=of[k]; return e && e.aprovacao && e.aprovacao.status==="submetido"; });
   _filtroFichas = (temAguardando && podeAprovar()) ? "submetido" : "todos";
-  // Entra direto na lista de fichas da obra (visão geral)
-  trocarModo("salvas");
+  // Abre a landing/workspace da obra (menu: Cronograma | Fichas)
+  trocarModo("workspace");
 }
 
 function mostrarSeletorObra(){
@@ -3256,13 +3291,78 @@ function renderCronograma(){
   var nomeProj = _obraTemCronograma() ? (DB.obraCronograma[obraAtual].projeto||obraAtual) : CRONOGRAMA_PROJETO;
   main.innerHTML=
     '<div class="crono-topo"><div><h2>📅 Cronograma da Obra</h2><div style="font-size:12px;color:#555;">'+escapeHtml(nomeProj)+'</div></div>'
-      +'<button type="button" class="secundario" onclick="trocarModo(\'salvas\')">‹ Voltar às fichas</button></div>'
+      +'<button type="button" class="secundario" onclick="trocarModo(\'workspace\')">‹ Voltar</button></div>'
     + dash + proxHtml + fasesHtml
     + '<div class="crono-legenda"><span><i class="lg st-concluida"></i>Concluída</span><span><i class="lg st-andamento"></i>Em andamento</span><span><i class="lg st-atrasada"></i>Atrasada</span><span><i class="lg st-futura"></i>Futura</span><span><i class="lg lg-marco">◆</i>Marco</span></div>'
     + '<div class="gantt">'
       + '<div class="g-row g-head"><div class="g-name g-name-head">Serviço / Atividade</div><div class="g-time g-time-head" style="width:'+W+'px;">'+meses+headHoje+'</div></div>'
       + linhas
     + '</div>';
+}
+
+function _setBreadcrumb(txt){
+  var el=document.getElementById("bcPagina"), sep=document.getElementById("bcSep2");
+  if(el) el.textContent=txt||"";
+  if(sep) sep.style.display = txt ? "" : "none";
+}
+
+// ===== LANDING / WORKSPACE DA OBRA (menu: Cronograma | Fichas) =====
+function renderWorkspace(){
+  var main=document.getElementById("main");
+  // --- Resumo do Cronograma ---
+  var temCrono=_obraTemCronograma();
+  var cgStats, cgPct=0;
+  if(temCrono){
+    var t=_cronoTarefas(), calc=_cronoCalc(t), c=calc.cont; cgPct=calc.geral;
+    var maxISO=""; t.forEach(function(x){ var f=x.fim||x.ini||""; if(f>maxISO)maxISO=f; });
+    var nAtiv=t.filter(function(x){return !x.temFilhos;}).length;
+    cgStats='<div class="ws-mini"><b>'+nAtiv+'</b><span>atividades</span></div>'
+      +'<div class="ws-mini"><b style="color:#2e7d32;">'+c.concluida+'</b><span>concluídas</span></div>'
+      +'<div class="ws-mini"><b style="color:#1565c0;">'+c.andamento+'</b><span>em andamento</span></div>'
+      +'<div class="ws-mini"><b style="color:#c62828;">'+c.atrasada+'</b><span>atrasadas</span></div>'
+      +'<div class="ws-mini"><b style="font-size:13px;">'+(maxISO?_fmtBR(maxISO):"—")+'</b><span>previsão</span></div>';
+  } else {
+    cgStats='<div class="ws-sem">Cronograma não importado nesta obra.</div>';
+  }
+  // --- Resumo das Fichas ---
+  var of=(DB.fichas&&DB.fichas[obraAtual])||{};
+  var f={total:0,pendente:0,submetido:0,aprovado:0,reprovado:0};
+  Object.keys(of).forEach(function(k){
+    var e=of[k]; if(!e||typeof e!=="object") return;
+    if(!_fichaVisivel(e)) return;
+    var tipo=e.tipo||(String(e.servicoId||k).charAt(0)==="M"?"material":"servico");
+    var temDados = (tipo==="cronograma") ? true : _fichaTemDados(e, tipo);
+    if(!temDados) return;
+    f.total++;
+    var st=(e.aprovacao&&e.aprovacao.status)||"pendente";
+    if(f[st]!==undefined) f[st]++;
+  });
+
+  main.innerHTML=
+    '<div class="ws-topo"><h2>'+escapeHtml(obraAtual)+'</h2><p>O que você quer acessar nesta obra?</p></div>'
+    +'<div class="ws-grid">'
+      +'<div class="ws-card ws-crono" onclick="abrirCronograma()">'
+        +'<div class="ws-ic">📅</div>'
+        +'<div class="ws-tit">Cronograma da Obra</div>'
+        +'<div class="ws-desc">Linha do tempo (Gantt), fases, atividades e progresso.</div>'
+        +(temCrono?'<div class="ws-prog"><div class="ws-prog-bar"><span style="width:'+cgPct+'%"></span></div><b>'+cgPct+'%</b></div>':'')
+        +'<div class="ws-stats">'+cgStats+'</div>'
+        +'<button type="button" class="ws-btn ws-btn-crono" onclick="event.stopPropagation();abrirCronograma()">Abrir Cronograma ›</button>'
+      +'</div>'
+      +'<div class="ws-card ws-fichas" onclick="trocarModo(\'salvas\')">'
+        +'<div class="ws-ic">📋</div>'
+        +'<div class="ws-tit">Fichas de Verificação</div>'
+        +'<div class="ws-desc">Preenchimento, submissão e aprovação das fichas.</div>'
+        +'<div class="ws-stats">'
+          +'<div class="ws-mini"><b>'+f.total+'</b><span>total</span></div>'
+          +'<div class="ws-mini"><b style="color:#e65100;">'+f.pendente+'</b><span>em preenchimento</span></div>'
+          +'<div class="ws-mini"><b style="color:#1565c0;">'+f.submetido+'</b><span>em aprovação</span></div>'
+          +'<div class="ws-mini"><b style="color:#2e7d32;">'+f.aprovado+'</b><span>aprovadas</span></div>'
+          +'<div class="ws-mini"><b style="color:#c62828;">'+f.reprovado+'</b><span>reprovadas</span></div>'
+        +'</div>'
+        +'<button type="button" class="ws-btn ws-btn-fichas" onclick="event.stopPropagation();trocarModo(\'salvas\')">Abrir Fichas ›</button>'
+      +'</div>'
+    +'</div>';
 }
 
 function renderFichasSalvas(){
@@ -3353,6 +3453,7 @@ function renderFichasSalvas(){
 
   // Botões de ação (cronograma + nova ficha)
   const btnNova = '<div class="salvas-acoes">'
+    + '<button type="button" class="secundario" onclick="trocarModo(\'workspace\')">‹ Voltar</button>'
     + '<button type="button" class="btn-cronograma" onclick="abrirCronograma()">📅 Cronograma</button>'
     + (podeEditar() ? '<button type="button" class="btn-nova-ficha" onclick="novaFicha()">➕ Nova ficha</button>' : '')
     + '</div>';
