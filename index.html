@@ -351,6 +351,15 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .wiz-upload{width:100%;padding:18px;border:2px dashed #bdbdbd;border-radius:10px;background:#fafafa;font-size:14px;font-weight:bold;color:#555;cursor:pointer;}
 .wiz-upload:hover{border-color:var(--verde);background:#f1f8e9;color:var(--verde-escuro);}
 .wiz-erro{margin-top:12px;background:#ffebee;border:1px solid #ef9a9a;color:#b71c1c;border-radius:6px;padding:9px 12px;font-size:12.5px;}
+.wiz-up-acoes{display:flex;flex-direction:column;gap:8px;}
+.wiz-modelo{width:100%;padding:10px;font-size:13px;font-weight:600;cursor:pointer;}
+.wiz-erro-estrut{text-align:left;line-height:1.5;}
+.wiz-erro-estrut .we-tit{font-size:13.5px;font-weight:bold;margin-bottom:2px;}
+.wiz-erro-estrut .we-sub{color:#7a1414;margin-bottom:8px;}
+.wiz-erro-estrut .we-bloco{margin-top:6px;}
+.wiz-erro-estrut .we-bloco ul{margin:3px 0 0 0;padding-left:20px;}
+.wiz-erro-estrut .we-bloco b{font-size:12.5px;}
+.wiz-erro-estrut .we-rev{margin-top:10px;font-size:12px;color:#7a1414;}
 .wiz-load{display:flex;flex-direction:column;align-items:center;gap:14px;padding:24px 0;color:#555;font-size:13px;}
 .wiz-spin{width:38px;height:38px;border:4px solid #e0e0e0;border-top-color:var(--verde-escuro);border-radius:50%;animation:appSpin .9s linear infinite;}
 .wiz-ok{font-size:14px;font-weight:bold;color:#2e7d32;margin-bottom:10px;}
@@ -790,6 +799,7 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -847,7 +857,7 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
   <button id="limparFichaBtn" class="perigo" onclick="limparFicha()">Limpar esta ficha</button>
 </div>
 <input type="file" id="nfFileInput" accept=".pdf" style="display:none;">
-<input type="file" id="cronoFileInput" accept=".pdf,application/pdf" style="display:none;">
+<input type="file" id="cronoFileInput" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none;">
 <input type="file" id="logoFileInput" accept="image/*" style="display:none;">
 
 <div id="modal-overlay" onclick="fecharModal(event)">
@@ -2480,135 +2490,122 @@ document.addEventListener("click", function(e){
   if(dd && !dd.contains(e.target)) fecharObraDropdown();
 });
 
-// ============ PARSER DO CRONOGRAMA (PDF do MS Project) ============
-function _mspData(s){
-  if(!s) return "";
-  var m=String(s).replace(/^[A-Za-z]{2,4}\.?\s+/,'').match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
-  if(!m) return "";
-  var mm=+m[1],dd=+m[2],yy=+m[3]; if(yy<100) yy+=2000;
-  return yy+"-"+String(mm).padStart(2,"0")+"-"+String(dd).padStart(2,"0");
-}
-function _mspDur(s){ var m=String(s).match(/(\d+(?:[.,]\d+)?)/); return m?Math.round(parseFloat(m[1].replace(",","."))):0; }
-
-// ===== Detecção de cabeçalhos do MS Project — PT e EN, resiliente ao idioma =====
-// Remove acentos e normaliza para comparação tolerante.
+// ============ PARSER DO CRONOGRAMA (XLSX — template oficial) ============
+// Normaliza para comparação tolerante (minúsculas, sem acento). Usado também no #3.
 function _normHdr(s){
   return String(s||"").toLowerCase()
     .normalize("NFD").replace(/[̀-ͯ]/g,"") // tira acentos
     .replace(/\s+/g," ").trim();
 }
-// Sinônimos por coluna (PT + EN). A ordem importa: nome/dur/pred antes de start/finish.
-var _CRONO_HDR = {
-  nome:   ["nome da tarefa","nome da atividade","task name","nome","tarefa","atividade"],
-  dur:    ["duration","duracao","duração","dur"],
-  pred:   ["predecessors","predecessoras","predecessor","predecessora"],
-  start:  ["planned start","data de inicio","data inicio","inicio planejado","inicio","start date","start","comeco","comeco planejado"],
-  finish: ["planned finish","data de termino","data termino","termino planejado","termino","fim","finish date","finish","end date","end","conclusao","data de conclusao"]
+// Duração: "55 dias" / 55 / "1 dia" → número de dias
+function _mspDur(s){ if(typeof s==="number") return Math.round(s); var m=String(s||"").match(/(\d+(?:[.,]\d+)?)/); return m?Math.round(parseFloat(m[1].replace(",","."))):0; }
+// Data pt-BR do MS Project: "Ter 30/06/26" (dd/mm/yy) ou Date do Excel → ISO yyyy-mm-dd
+function _xlsxData(v){
+  if(v==null || v==="") return "";
+  if(v instanceof Date && !isNaN(v)) return v.getFullYear()+"-"+String(v.getMonth()+1).padStart(2,"0")+"-"+String(v.getDate()).padStart(2,"0");
+  var m=String(v).replace(/^[A-Za-zÀ-ú]{2,4}\.?\s+/,'').match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); // dd/mm/yy
+  if(!m) return "";
+  var dd=+m[1], mm=+m[2], yy=+m[3]; if(yy<100) yy+=2000;
+  if(mm<1||mm>12||dd<1||dd>31) return "";
+  return yy+"-"+String(mm).padStart(2,"0")+"-"+String(dd).padStart(2,"0");
+}
+// Percentual concluído: aceita 0..1 (fração do Excel) ou 0..100 ou "50%"
+function _xlsxPct(v){
+  if(v==null || v==="") return 0;
+  if(typeof v==="number"){ var n = (v>0 && v<=1) ? v*100 : v; return Math.max(0,Math.min(100,Math.round(n))); }
+  var s=String(v).replace("%","").replace(",",".").trim(); var f=parseFloat(s); if(isNaN(f)) return 0;
+  if(f>0 && f<=1) f*=100; return Math.max(0,Math.min(100,Math.round(f)));
+}
+// Colunas do CONTRATO oficial (identificadas por NOME, nunca por posição).
+var _XLSX_COLS = {
+  tarefa: {req:true,  rotulo:"Nome da Tarefa",        nomes:["nome da tarefa","tarefa"]},
+  dur:    {req:true,  rotulo:"Duração",               nomes:["duracao","duração","dur"]},
+  ini:    {req:true,  rotulo:"Início",                nomes:["inicio","início","data de inicio"]},
+  fim:    {req:true,  rotulo:"Término",               nomes:["termino","término","data de termino","fim"]},
+  pred:   {req:true,  rotulo:"Predecessoras",         nomes:["predecessoras","predecessores","predecessora","predecessor"]},
+  pct:    {req:true,  rotulo:"Percentual Concluído",  nomes:["percentual concluido","percentual concluído","% concluida","% concluída","% concluido","% concluído","percentual","percentual concluida"]},
+  fase:   {req:false, rotulo:"Fase",                  nomes:["fase"]}
 };
-// Retorna a chave de coluna (nome/dur/pred/start/finish/id) para um texto de cabeçalho, ou null.
-// Usa IGUALDADE EXATA (normalizada) — é como o MS Project imprime os cabeçalhos — para
-// nunca confundir uma célula de dados (ex.: nome contendo "fim"/"início") com cabeçalho.
-function _mapHeader(txtOriginal){
-  var t=_normHdr(txtOriginal);
-  if(!t) return null;
-  if(t==="id" || t==="#") return "id";
-  // ordem: nome/dur/pred primeiro
-  if(_CRONO_HDR.nome.indexOf(t)>=0) return "nome";
-  if(_CRONO_HDR.dur.indexOf(t)>=0) return "dur";
-  if(_CRONO_HDR.pred.indexOf(t)>=0) return "pred";
-  var ehStart=_CRONO_HDR.start.indexOf(t)>=0;
-  var ehFinish=_CRONO_HDR.finish.indexOf(t)>=0;
-  if(ehStart && !ehFinish) return "start";
-  if(ehFinish && !ehStart) return "finish";
+// Localiza, dentro das primeiras linhas, a linha de cabeçalho e mapeia coluna→índice.
+function _xlsxAcharCabecalho(aoa){
+  for(var r=0; r<Math.min(aoa.length,15); r++){
+    var row=aoa[r]||[]; var map={}; var achouTarefa=false;
+    for(var c=0;c<row.length;c++){
+      var h=_normHdr(row[c]); if(!h) continue;
+      Object.keys(_XLSX_COLS).forEach(function(k){
+        if(map[k]==null && _XLSX_COLS[k].nomes.indexOf(h)>=0){ map[k]=c; if(k==="tarefa") achouTarefa=true; }
+      });
+    }
+    // considera cabeçalho a 1ª linha que tenha "Nome da Tarefa" e pelo menos mais uma coluna conhecida
+    if(achouTarefa && Object.keys(map).length>=2) return {linha:r, map:map, headers:row.filter(function(x){return _normHdr(x);}).map(function(x){return String(x).trim();})};
+  }
   return null;
 }
-// É um texto de cabeçalho/rodapé a ser ignorado ao montar as linhas de dados?
-function _ehCabecalhoCrono(txtOriginal){
-  var t=_normHdr(txtOriginal);
-  if(!t) return false;
-  if(_mapHeader(txtOriginal)!=null) return true;                 // cabeçalho de coluna (match exato)
-  if(t==="task mode" || t==="modo da tarefa" || t==="modo de tarefa") return true;
-  if(t==="resource names" || t==="nomes dos recursos" || t==="recursos") return true;
-  // rodapés/metadados (estes podem ter texto adicional → indexOf é seguro pois são frases próprias)
-  if(t.indexOf("project:")>=0 || t.indexOf("projeto:")>=0 || t.indexOf("date:")>=0 || t.indexOf("pagina")>=0) return true;
-  return false;
-}
-
-function parseCronogramaPDF(typedarray){
+function parseCronogramaXLSX(arrayBuffer){
   return new Promise(function(resolve,reject){
-    if(typeof pdfjsLib==="undefined"){ reject(new Error("O leitor de PDF (pdf.js) não carregou. Verifique sua internet e tente novamente.")); return; }
-    try{ pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"; }catch(e){}
-    pdfjsLib.getDocument({data:typedarray}).promise.then(function(pdf){
-      var pgs=[]; for(var i=1;i<=pdf.numPages;i++) pgs.push(i);
-      return Promise.all(pgs.map(function(n){
-        return pdf.getPage(n).then(function(pg){ return pg.getTextContent(); }).then(function(tc){
-          return tc.items.map(function(it){ return {s:(it.str||"").trim(), x:it.transform[4], y:it.transform[5]}; }).filter(function(o){ return o.s!==""; });
-        });
-      }));
-    }).then(function(paginas){
-      var colX=null;
-      paginas.forEach(function(items){
-        if(colX) return;
-        var h={};
-        items.forEach(function(o){
-          var c=_mapHeader(o.s);              // PT/EN, tolerante a acentos e variações
-          if(!c) return;
-          // primeira ocorrência de cada coluna vence (cabeçalho aparece uma vez por página)
-          if(h[c]==null) h[c]=o.x;
-        });
-        if(h.nome!=null && h.dur!=null && h.start!=null && h.finish!=null) colX=h;
+    if(typeof XLSX==="undefined"){ reject({tipo:"lib", msg:"O leitor de planilhas (XLSX) não carregou. Verifique sua internet e tente novamente."}); return; }
+    var wb;
+    try{ wb=XLSX.read(arrayBuffer,{type:"array",cellDates:true}); }
+    catch(e){ reject({tipo:"lib", msg:"Não foi possível abrir o arquivo. Confirme que é um .xlsx válido."}); return; }
+    if(!wb.SheetNames.length){ reject({tipo:"lib", msg:"A planilha está vazia."}); return; }
+    var ws=wb.Sheets[wb.SheetNames[0]];
+    var aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null,blankrows:false});
+    var cab=_xlsxAcharCabecalho(aoa);
+    if(!cab){ reject({tipo:"colunas", faltando:["Nome da Tarefa","Duração","Início","Término","Predecessoras","Percentual Concluído"], encontradas:(aoa[0]||[]).filter(function(x){return x!=null&&String(x).trim();}).map(function(x){return String(x).trim();})}); return; }
+    // Valida colunas obrigatórias
+    var faltando=[];
+    Object.keys(_XLSX_COLS).forEach(function(k){ if(_XLSX_COLS[k].req && cab.map[k]==null) faltando.push(_XLSX_COLS[k].rotulo); });
+    if(faltando.length){ reject({tipo:"colunas", faltando:faltando, encontradas:cab.headers}); return; }
+    var temFase = cab.map.fase!=null;
+    // Lê as linhas de dados
+    var brutos=[];
+    for(var r=cab.linha+1; r<aoa.length; r++){
+      var row=aoa[r]||[];
+      var nome=row[cab.map.tarefa]; if(nome==null || !String(nome).trim()) continue; // ignora linhas vazias
+      var ini=_xlsxData(row[cab.map.ini]);
+      brutos.push({
+        nome:String(nome).trim(),
+        dur:_mspDur(row[cab.map.dur]),
+        ini:ini,
+        fim:_xlsxData(row[cab.map.fim]),
+        pred:(row[cab.map.pred]!=null?String(row[cab.map.pred]).trim():""),
+        pct:_xlsxPct(row[cab.map.pct]),
+        fase: temFase ? (row[cab.map.fase]!=null && String(row[cab.map.fase]).trim() ? String(row[cab.map.fase]).trim() : "") : ""
       });
-      if(!colX){ reject(new Error("Não encontrei a tabela do cronograma. Exporte o MS Project com as colunas Nome da Tarefa / Duração / Início / Término (ou Task Name / Duration / Start / Finish) visíveis.")); return; }
-      var cols=[
-        {k:"id",x:colX.id!=null?colX.id:-99999},
-        {k:"nome",x:colX.nome},
-        {k:"dur",x:colX.dur},
-        {k:"start",x:colX.start},
-        {k:"finish",x:colX.finish},
-        {k:"pred",x:colX.pred!=null?colX.pred:colX.finish+150}
-      ].sort(function(a,b){ return a.x-b.x; });
-      function colDe(x){ var best=cols[0].k; for(var i=0;i<cols.length;i++){ if(x>=cols[i].x-2) best=cols[i].k; } return best; }
-      var linhas=[];
-      paginas.forEach(function(items, pi){
-        var byY=[];
-        items.forEach(function(o){
-          if(_ehCabecalhoCrono(o.s)) return;   // pula textos de cabeçalho/rodapé (PT/EN)
-          var g=null; for(var i=0;i<byY.length;i++){ if(Math.abs(byY[i].y-o.y)<=3){ g=byY[i]; break; } }
-          if(!g){ g={y:o.y, its:[]}; byY.push(g); }
-          g.its.push(o);
-        });
-        byY.forEach(function(g){
-          g.its.sort(function(a,b){ return a.x-b.x; });
-          var cell={id:"",nome:"",dur:"",start:"",finish:"",pred:"",nomeX:null};
-          g.its.forEach(function(o){ var c=colDe(o.x); if(c==="nome"){ if(cell.nomeX==null) cell.nomeX=o.x; cell.nome+=(cell.nome?" ":"")+o.s; } else { cell[c]+=(cell[c]?" ":"")+o.s; } });
-          if(/^\d+$/.test(cell.id.trim()) && cell.nome.trim()){ linhas.push(cell); }
-        });
-      });
-      if(linhas.length<2){ reject(new Error("Li o PDF, mas não consegui extrair as atividades. Confirme que é o cronograma do MS Project com a tabela de tarefas (ID, Nome, Duração, Início, Término).")); return; }
-      var vistos={}; linhas=linhas.filter(function(l){ var id=l.id.trim(); if(vistos[id]) return false; vistos[id]=1; return true; });
-      linhas.sort(function(a,b){ return (+a.id)-(+b.id); });
-      var xs=linhas.map(function(l){ return l.nomeX; }).filter(function(v){ return v!=null; }).sort(function(a,b){ return a-b; });
-      var base=xs.length?xs[0]:0;
-      var tarefas=linhas.map(function(l){
-        return { id:+l.id, nome:l.nome.trim(), dur:_mspDur(l.dur), ini:_mspData(l.start), fim:_mspData(l.finish), pred:(l.pred||"").trim(), _nx:l.nomeX };
-      });
-      var niveisRaw=tarefas.map(function(t){ return t._nx==null?0:Math.max(0,Math.round((t._nx-base)/8)); });
-      var distintos=niveisRaw.filter(function(v,i,a){ return a.indexOf(v)===i; }).sort(function(a,b){ return a-b; });
-      tarefas.forEach(function(t,i){ t.nivel=distintos.indexOf(niveisRaw[i]); delete t._nx; });
-      tarefas.forEach(function(t,i){ t.temFilhos=(i+1<tarefas.length)&&tarefas[i+1].nivel>t.nivel; });
-      var fases=tarefas.filter(function(t){ return t.nivel<=1; }).length;
-      var servicos=tarefas.filter(function(t){ return t.temFilhos; }).length;
-      var atividades=tarefas.filter(function(t){ return !t.temFilhos; }).length;
-      resolve({ tarefas:tarefas, resumo:{ fases:fases, servicos:servicos, atividades:atividades, total:tarefas.length } });
-    }).catch(function(err){ reject(new Error("Falha ao ler o PDF: "+(err&&err.message?err.message:err))); });
+    }
+    // Mantém apenas atividades com data de início (necessária para a timeline)
+    var ativ=brutos.filter(function(b){ return b.ini; });
+    if(!ativ.length){ reject({tipo:"vazio", msg:"Nenhuma atividade com data de Início válida foi encontrada. Verifique a coluna Início (formato dd/mm/aa)."}); return; }
+    // Rótulo da fase: número → "Fase N"; texto → o próprio; vazio → "Geral"
+    function rotFase(v){ if(v==null||v==="") return "Geral"; if(/^\d+(\.0+)?$/.test(String(v))) return "Fase "+parseInt(v,10); return String(v); }
+    // Agrupa por fase (ordem de 1ª aparição). Sem coluna Fase → tudo em "Geral".
+    var ordem=[], grupos={};
+    ativ.forEach(function(b){
+      var f = temFase ? rotFase(b.fase) : "Geral";
+      if(!grupos[f]){ grupos[f]=[]; ordem.push(f); }
+      grupos[f].push(b);
+    });
+    // Monta lista hierárquica: Fase (nível 0) + atividades (nível 1)
+    var tarefas=[], id=0;
+    ordem.forEach(function(f){
+      var filhos=grupos[f];
+      var inis=filhos.map(function(x){return x.ini;}).filter(Boolean).sort();
+      var fims=filhos.map(function(x){return x.fim||x.ini;}).filter(Boolean).sort();
+      var faseIni=inis[0]||"", faseFim=fims[fims.length-1]||"";
+      tarefas.push({id:++id, nivel:0, nome:f, dur:0, ini:faseIni, fim:"", pred:"", pct:0, _fase:true});
+      filhos.forEach(function(b){ tarefas.push({id:++id, nivel:1, nome:b.nome, dur:b.dur, ini:b.ini, fim:b.fim, pred:b.pred, pct:b.pct}); });
+    });
+    var nFases=ordem.length, nAtiv=ativ.length;
+    resolve({ tarefas:tarefas, temPercentual:true, resumo:{ fases:nFases, servicos:nFases, atividades:nAtiv, total:tarefas.length } });
   });
 }
+
 
 // ================= WIZARD DE CRIAÇÃO DE OBRA =================
 var _wiz=null;
 function criarNovaObra(){
   if(!ehAdmin()){ alert("Apenas Administradores podem criar obras."); return; }
-  _wiz={step:1, nome:"", parsed:null, erro:"", processando:false, acessoLivre:true, usuariosSel:[]};
+  _wiz={step:1, nome:"", parsed:null, erro:"", erroEstrut:null, processando:false, acessoLivre:true, usuariosSel:[]};
   document.getElementById("modal-box").classList.add("modal-wide");
   renderWizard();
 }
@@ -2629,9 +2626,12 @@ function renderWizard(){
     rodape='<button type="button" class="secundario" onclick="fecharModalForce()">Cancelar</button>'
       +'<button type="button" onclick="wizPasso1()">Avançar ›</button>';
   } else if(_wiz.step===2){
-    corpo+='<p class="wiz-txt">Envie o cronograma desta obra em <b>PDF exportado do Microsoft Project</b>.<br>A obra só é criada após o processamento com sucesso.</p>'
-      +'<button type="button" class="wiz-upload" onclick="document.getElementById(\'cronoFileInput\').click()">📄 Selecionar PDF do cronograma</button>'
-      +(_wiz.erro?'<div class="wiz-erro">⚠️ '+escapeHtml(_wiz.erro)+'</div>':'');
+    corpo+='<p class="wiz-txt">Envie o cronograma desta obra em <b>.xlsx</b> seguindo o <b>modelo oficial</b>.<br>Colunas obrigatórias: <b>Nome da Tarefa, Duração, Início, Término, Predecessoras, Percentual Concluído</b>. A coluna <b>Fase</b> é opcional. A obra só é criada após a validação com sucesso.</p>'
+      +'<div class="wiz-up-acoes">'
+      +'<button type="button" class="wiz-upload" onclick="document.getElementById(\'cronoFileInput\').click()">📊 Selecionar planilha (.xlsx)</button>'
+      +'<button type="button" class="secundario wiz-modelo" onclick="baixarModeloCronograma()">⬇ Baixar Modelo (.xlsx)</button>'
+      +'</div>'
+      +_wizErroHtml();
     rodape='<button type="button" class="secundario" onclick="wizIr(1)">‹ Voltar</button>'
       +'<button type="button" class="secundario" onclick="fecharModalForce()">Cancelar</button>';
   } else if(_wiz.step===3){
@@ -2639,14 +2639,13 @@ function renderWizard(){
       corpo+='<div class="wiz-load"><div class="wiz-spin"></div><div>Analisando o cronograma…</div></div>';
     } else if(_wiz.parsed){
       var r=_wiz.parsed.resumo;
-      corpo+='<div class="wiz-ok">✓ Cronograma processado com sucesso</div>'
+      corpo+='<div class="wiz-ok">✓ Cronograma validado e processado com sucesso</div>'
         +'<ul class="wiz-resumo">'
         +'<li>✓ <b>'+r.fases+'</b> fase(s) identificada(s)</li>'
-        +'<li>✓ <b>'+r.servicos+'</b> serviço(s)/grupo(s) encontrado(s)</li>'
         +'<li>✓ <b>'+r.atividades+'</b> atividade(s) importada(s)</li>'
-        +'<li>✓ <b>'+r.total+'</b> linha(s) no total</li>'
+        +'<li>✓ <b>'+r.total+'</b> linha(s) no total (fases + atividades)</li>'
         +'</ul>';
-      rodape='<button type="button" class="secundario" onclick="wizIr(2)">‹ Trocar PDF</button>'
+      rodape='<button type="button" class="secundario" onclick="wizIr(2)">‹ Trocar planilha</button>'
         +'<button type="button" onclick="wizIr(4)">Avançar ›</button>';
     }
   } else if(_wiz.step===4){
@@ -2666,7 +2665,7 @@ function renderWizard(){
     corpo+='<p class="wiz-txt">Confira e confirme a criação da obra:</p>'
       +'<div class="wiz-rev">'
       +'<div><span>🏗️ Obra</span><b>'+escapeHtml(_wiz.nome)+'</b></div>'
-      +'<div><span>📄 Cronograma</span><b>'+r2.fases+' fases · '+r2.servicos+' serviços · '+r2.atividades+' atividades</b></div>'
+      +'<div><span>📄 Cronograma</span><b>'+r2.fases+' fase(s) · '+r2.atividades+' atividade(s)</b></div>'
       +'<div><span>👥 Acesso</span><b>'+acessoTxt+'</b></div>'
       +'</div>';
     rodape='<button type="button" class="secundario" onclick="wizIr(4)">‹ Voltar</button>'
@@ -2676,7 +2675,7 @@ function renderWizard(){
   abrirModal("🏗️ Nova Obra", corpo, rodape);
   if(_wiz.step===1) setTimeout(function(){ var e=document.getElementById("wiz-nome"); if(e) e.focus(); },80);
 }
-function wizIr(n){ _wiz.step=n; _wiz.erro=""; renderWizard(); }
+function wizIr(n){ _wiz.step=n; _wiz.erro=""; _wiz.erroEstrut=null; renderWizard(); }
 function wizPasso1(){
   var nome=((document.getElementById("wiz-nome")||{}).value||"").trim();
   if(!nome){ _wiz.erro="Digite o nome da obra."; renderWizard(); return; }
@@ -2697,7 +2696,13 @@ function wizFinalizar(){
   if(!DB.obras) DB.obras=[]; if(!DB.fichas) DB.fichas={}; if(!DB.obraCronograma) DB.obraCronograma={}; if(!DB.obraAcessos) DB.obraAcessos={};
   if(DB.obras.indexOf(nome)<0) DB.obras.push(nome);
   if(!DB.fichas[nome]) DB.fichas[nome]={};
-  DB.obraCronograma[nome]={ projeto:nome, tarefas:_wiz.parsed.tarefas, importadoEm:Date.now() };
+  DB.obraCronograma[nome]={ projeto:nome, tarefas:_wiz.parsed.tarefas, importadoEm:Date.now(), temPercentual:!!_wiz.parsed.temPercentual };
+  // Semeia o percentual inicial vindo da planilha (Percentual Concluído)
+  if(_wiz.parsed.temPercentual){
+    if(!DB.cronogramaPct) DB.cronogramaPct={};
+    DB.cronogramaPct[nome]={};
+    _wiz.parsed.tarefas.forEach(function(t){ if(!t._fase && typeof t.pct==="number") DB.cronogramaPct[nome][t.id]=t.pct; });
+  }
   // Acesso definido no passo 4 (sem etapa de seleção de serviços/fichas — ocultada nesta fase)
   if(_wiz.acessoLivre){ delete DB.obraAcessos[nome]; } else { DB.obraAcessos[nome]=_wiz.usuariosSel.slice(); }
   registrarLog("criar-obra-cronograma",{obra:nome, tarefas:_wiz.parsed.tarefas.length});
@@ -2712,18 +2717,85 @@ function wizFinalizar(){
 document.getElementById("cronoFileInput").addEventListener("change", function(e){
   var file=e.target.files[0]; e.target.value="";
   if(!file || !_wiz) return;
-  _wiz.step=3; _wiz.processando=true; _wiz.parsed=null; _wiz.erro=""; renderWizard();
+  var nome=(file.name||"").toLowerCase();
+  if(!/\.xlsx$/.test(nome)){ _wiz.erro="Envie um arquivo .xlsx (planilha do Excel). PDF não é mais aceito."; _wiz.erroEstrut=null; _wiz.step=2; renderWizard(); return; }
+  _wiz.step=3; _wiz.processando=true; _wiz.parsed=null; _wiz.erro=""; _wiz.erroEstrut=null; renderWizard();
   var reader=new FileReader();
   reader.onload=function(ev){
-    parseCronogramaPDF(new Uint8Array(ev.target.result)).then(function(res){
+    parseCronogramaXLSX(ev.target.result).then(function(res){
       _wiz.processando=false; _wiz.parsed=res; _wiz.step=3; renderWizard();
     }).catch(function(err){
-      _wiz.processando=false; _wiz.parsed=null; _wiz.erro=(err&&err.message)||String(err); _wiz.step=2; renderWizard();
+      _wiz.processando=false; _wiz.parsed=null;
+      if(err && err.tipo==="colunas"){ _wiz.erroEstrut=err; _wiz.erro=""; }
+      else { _wiz.erro=(err&&err.msg)||(err&&err.message)||String(err); _wiz.erroEstrut=null; }
+      _wiz.step=2; renderWizard();
     });
   };
-  reader.onerror=function(){ _wiz.processando=false; _wiz.erro="Não consegui ler o arquivo selecionado."; _wiz.step=2; renderWizard(); };
+  reader.onerror=function(){ _wiz.processando=false; _wiz.erro="Não consegui ler o arquivo selecionado."; _wiz.erroEstrut=null; _wiz.step=2; renderWizard(); };
   reader.readAsArrayBuffer(file);
 });
+
+// Mensagem de erro do wizard (estruturada quando faltam colunas obrigatórias)
+function _wizErroHtml(){
+  if(_wiz.erroEstrut){
+    var e=_wiz.erroEstrut;
+    var falt=(e.faltando||[]).map(function(c){return '<li>'+escapeHtml(c)+'</li>';}).join('');
+    var enc=(e.encontradas&&e.encontradas.length)?(e.encontradas.map(function(c){return '<li>'+escapeHtml(c)+'</li>';}).join('')):'<li><i>(nenhuma coluna reconhecida)</i></li>';
+    return '<div class="wiz-erro wiz-erro-estrut">'
+      +'<div class="we-tit">❌ Não foi possível importar o cronograma.</div>'
+      +'<div class="we-sub">O arquivo enviado não segue o padrão esperado.</div>'
+      +'<div class="we-bloco"><b>Colunas obrigatórias não encontradas:</b><ul>'+falt+'</ul></div>'
+      +'<div class="we-bloco"><b>Colunas encontradas no arquivo:</b><ul>'+enc+'</ul></div>'
+      +'<div class="we-rev">Revise o arquivo e tente novamente. Use o botão <b>Baixar Modelo (.xlsx)</b>.</div>'
+      +'</div>';
+  }
+  return _wiz.erro?'<div class="wiz-erro">⚠️ '+escapeHtml(_wiz.erro)+'</div>':'';
+}
+
+// Gera e baixa o MODELO OFICIAL (.xlsx) com aba de dados + aba de Instruções
+function baixarModeloCronograma(){
+  if(typeof XLSX==="undefined"){ alert("O gerador de planilhas (XLSX) não carregou. Verifique sua internet e tente novamente."); return; }
+  var headers=["Nome da Tarefa","Duração","Início","Término","Predecessoras","Percentual Concluído","Fase"];
+  var exemplo=[
+    ["Reunião de alinhamento","1 dia","Ter 30/06/26","Ter 30/06/26","","0","Serviços Preliminares"],
+    ["Montagem de linha de vida","1 dia","Ter 14/07/26","Ter 14/07/26","","0","Linha 1"],
+    ["Retirada de calha","6 dias","Qua 15/07/26","Qua 22/07/26","2","0","Linha 1"],
+    ["Instalação de calha","6 dias","Qua 15/07/26","Qua 22/07/26","2","50","Linha 1"]
+  ];
+  var aoa=[headers].concat(exemplo);
+  var ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols']=[{wch:42},{wch:10},{wch:14},{wch:14},{wch:14},{wch:20},{wch:22}];
+  var instr=[
+    ["Modelo Oficial de Cronograma — Importação"],
+    [""],
+    ["Este arquivo é o contrato oficial de integração entre o Microsoft Project e o sistema."],
+    ["Preencha a aba 'Cronograma' (1ª aba) com uma linha por ATIVIDADE."],
+    [""],
+    ["COLUNAS OBRIGATÓRIAS (identificadas pelo NOME, em qualquer ordem):"],
+    ["• Nome da Tarefa  — nome da atividade"],
+    ["• Duração         — ex.: '6 dias' ou '1 dia'"],
+    ["• Início          — data de início (dd/mm/aa). Ex.: Ter 30/06/26"],
+    ["• Término         — data de término (dd/mm/aa)"],
+    ["• Predecessoras   — pode ficar vazio"],
+    ["• Percentual Concluído — 0 a 100 (ou 0 a 1). Define o avanço inicial"],
+    [""],
+    ["COLUNA OPCIONAL:"],
+    ["• Fase            — agrupa as atividades por fase. Se ausente, tudo entra em 'Geral'."],
+    [""],
+    ["COMO EXPORTAR DO MICROSOFT PROJECT:"],
+    ["1. Abra o cronograma no MS Project."],
+    ["2. Exiba/garanta as colunas: Nome da Tarefa, Duração, Início, Término, Predecessoras, % concluída e (opcional) Fase."],
+    ["3. Selecione a tabela e copie para o Excel, OU use Arquivo > Salvar como > Pasta de Trabalho do Excel (.xlsx)."],
+    ["4. Ajuste os cabeçalhos exatamente como nesta planilha modelo e salve em .xlsx."],
+    [""],
+    ["IMPORTANTE: a importação só aceita .xlsx. Se faltar qualquer coluna obrigatória, a obra NÃO será criada."]
+  ];
+  var wsI=XLSX.utils.aoa_to_sheet(instr); wsI['!cols']=[{wch:100}];
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Cronograma");
+  XLSX.utils.book_append_sheet(wb, wsI, "Instruções");
+  XLSX.writeFile(wb, "Modelo_Cronograma.xlsx");
+}
 
 function confirmarNovaObra(){
   const nomeT = ((document.getElementById("novaObraNome")||{}).value||"").trim();
@@ -3439,15 +3511,20 @@ function _cronoStatus(tar){
       // rejeitado → segue regra normal
     }
   }
-  if(tar.fim) return "concluida";
+  // Base: obras importadas com Percentual Concluído usam o % como fonte; demais usam o Finish (legado)
+  if(_obraUsaPct()){
+    if((_cronoPct(tar.id)||0) >= 100) return "concluida";
+  } else if(tar.fim){ return "concluida"; }
   var hoje=_hojeISO();
   if(!tar.ini || hoje < tar.ini) return "futura";
   // fim previsto estimado = início + duração (para detectar atraso quando não há Finish)
-  var fimPrev = tar.ini;
-  if(tar.dur>0){ var d=_cdISO(tar.ini); d.setDate(d.getDate()+tar.dur); fimPrev=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+  var fimPrev = tar.fim || tar.ini;
+  if(!tar.fim && tar.dur>0){ var d=_cdISO(tar.ini); d.setDate(d.getDate()+tar.dur); fimPrev=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
   if(hoje > fimPrev) return "atrasada";
   return "andamento";
 }
+// true se a obra atual foi importada com a coluna Percentual Concluído (o % é a fonte do status)
+function _obraUsaPct(obra){ var c=DB.obraCronograma&&DB.obraCronograma[obra||obraAtual]; return !!(c&&c.temPercentual); }
 // Finalização de serviço (governança): submissão por atividade do cronograma
 function _finalizacao(taskId, obra){ obra=obra||obraAtual; var o=DB.finalizacoes&&DB.finalizacoes[obra]; return (o&&o[taskId])||null; }
 
@@ -3497,6 +3574,8 @@ function _cronoPctTarefa(tar){
     var fin=_finalizacao(tar.id);
     if(fin){ if(fin.status==="aprovado") return 100; if(fin.status==="pendente") return 0; }
   }
+  // Obras com Percentual Concluído: o % importado/ajustado é a fonte. Legado: Finish=100%.
+  if(_obraUsaPct()) return Math.max(0,Math.min(100,_cronoPct(tar.id)||0));
   return tar.fim ? 100 : (_cronoPct(tar.id)||0);
 }
 function _cronoCalc(t){
