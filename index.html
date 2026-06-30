@@ -3614,7 +3614,7 @@ function marcarConcluidoManual(taskId){
   if(x && x.temFilhos){ alert("Selecione uma atividade (não uma fase)."); return; }
   var anc = x?_cronoAncestrais(t,x):{fase:""};
   var nome = x?x.nome:("Atividade "+taskId);
-  var hoje=new Date().toLocaleDateString("pt-BR");
+  var hojeISO=_hojeISO(), hoje=new Date().toLocaleDateString("pt-BR");
   if(!DB.finalizacoes) DB.finalizacoes={}; if(!DB.finalizacoes[obraAtual]) DB.finalizacoes[obraAtual]={};
   DB.finalizacoes[obraAtual][taskId]={
     status:"aprovado", por:(sessao?sessao.nome:""), porId:(sessao?sessao.id:""), data:hoje,
@@ -3622,21 +3622,31 @@ function marcarConcluidoManual(taskId){
     fase:(anc.fase&&anc.fase!=="—"?anc.fase:""), servicoNome:nome,
     aprovadoPor:(sessao?sessao.nome:""), aprovadoData:hoje, manual:true
   };
-  registrarEvento("finalizacao_aprovada",{entidade:"finalizacao",entidadeId:taskId,origem:"cronograma",depois:{status:"aprovado",manual:true},detalhe:"Concluído manualmente pelo gestor: "+nome});
+  // Real término + Finish = hoje (guarda o término planejado original para poder reabrir)
+  var d=_cronoDados(taskId);
+  var oc=DB.obraCronograma&&DB.obraCronograma[obraAtual];
+  if(oc&&oc.tarefas){ for(var k=0;k<oc.tarefas.length;k++){ if(oc.tarefas[k].id===taskId){ if(d.fimPlan==null) d.fimPlan=oc.tarefas[k].fim||""; oc.tarefas[k].fim=hojeISO; break; } } }
+  d.realFim=hojeISO;
+  registrarEvento("finalizacao_aprovada",{entidade:"finalizacao",entidadeId:taskId,origem:"cronograma",depois:{status:"aprovado",manual:true,realFim:hojeISO,finish:hojeISO},detalhe:"Concluído manualmente pelo gestor (término real "+hoje+"): "+nome});
   salvarDB(); atualizarBadgePendencias();
   if(modoAtual==="cronograma") renderCronograma();
   renderCronoPanel(taskId);
-  mostrarStatus("✅ Atividade marcada como concluída");
+  mostrarStatus("✅ Concluída — término real e Finish marcados para hoje");
 }
 function reabrirConcluidoManual(taskId){
   if(!podeAprovar()){ alert("Apenas Gestores e Administradores podem reabrir conclusões."); return; }
   var fin=_finalizacao(taskId);
   if(DB.finalizacoes && DB.finalizacoes[obraAtual]) delete DB.finalizacoes[obraAtual][taskId];
-  registrarEvento("atividade_alterada",{entidade:"finalizacao",entidadeId:taskId,origem:"cronograma",antes:{status:(fin&&fin.status)||"aprovado"},depois:{status:"reaberto"},detalhe:"Conclusão reaberta pelo gestor"});
+  // REVERTER: restaura o término planejado original e limpa o término real
+  var d=DB.cronogramaDados&&DB.cronogramaDados[obraAtual]&&DB.cronogramaDados[obraAtual][taskId];
+  var oc=DB.obraCronograma&&DB.obraCronograma[obraAtual];
+  if(oc&&oc.tarefas&&d&&d.fimPlan!=null){ for(var k=0;k<oc.tarefas.length;k++){ if(oc.tarefas[k].id===taskId){ oc.tarefas[k].fim=d.fimPlan; break; } } }
+  if(d){ delete d.realFim; delete d.fimPlan; }
+  registrarEvento("atividade_alterada",{entidade:"finalizacao",entidadeId:taskId,origem:"cronograma",antes:{status:(fin&&fin.status)||"aprovado"},depois:{status:"reaberto"},detalhe:"Conclusão revertida pelo gestor (término planejado restaurado)"});
   salvarDB(); atualizarBadgePendencias();
   if(modoAtual==="cronograma") renderCronograma();
   renderCronoPanel(taskId);
-  mostrarStatus("↩ Conclusão reaberta");
+  mostrarStatus("↩ Conclusão revertida — término planejado restaurado");
 }
 // Eventos de auditoria relacionados a uma atividade (a própria atividade + suas fichas)
 function _eventosDaAtividade(taskId, ligs){
@@ -3911,14 +3921,16 @@ function renderCronoPanel(id){
   var temForm=!!form;
 
   // ----- Planejado / Real / Diferença -----
-  var realISO = (fin&&fin.status==="aprovado"&&fin.aprovadoData)? paraISO(fin.aprovadoData) : (x.fim||"");
+  var cdat=(DB.cronogramaDados&&DB.cronogramaDados[obraAtual]&&DB.cronogramaDados[obraAtual][id])||{};
+  var planFim=(cdat.fimPlan!=null && cdat.fimPlan!=="")? cdat.fimPlan : (x.fim||""); // término planejado (baseline)
+  var realISO=cdat.realFim ? cdat.realFim : ((fin&&fin.status==="aprovado"&&fin.aprovadoData)? paraISO(fin.aprovadoData) : (x.fim||""));
   var difTxt="—", difCor="#616161";
-  if(x.fim && realISO){
-    var dd=_cDias(_cdISO(x.fim), _cdISO(realISO));
+  if(planFim && realISO){
+    var dd=_cDias(_cdISO(planFim), _cdISO(realISO));
     if(dd>0){ difTxt="🔴 +"+dd+" dia(s) de atraso"; difCor="#c62828"; }
     else if(dd<0){ difTxt="🟢 "+(-dd)+" dia(s) adiantado"; difCor="#2e7d32"; }
     else { difTxt="🟢 No prazo"; difCor="#2e7d32"; }
-  } else if(!x.fim){ difTxt="Em aberto (sem término)"; difCor="#616161"; }
+  } else if(!planFim){ difTxt="Em aberto (sem término)"; difCor="#616161"; }
 
   // ----- Explicação do status -----
   var stExpl;
@@ -3963,7 +3975,7 @@ function renderCronoPanel(id){
 
   // ===== CARD CRONOGRAMA =====
   html+='<div class="cp-card"><div class="cp-card-tit">Cronograma</div><div class="cp-grid">'
-    +_cpLinha("🗓","Planejado", (x.ini?_fmtBR(x.ini):"—")+" → "+(x.fim?_fmtBR(x.fim):"—"))
+    +_cpLinha("🗓","Planejado", (x.ini?_fmtBR(x.ini):"—")+" → "+(planFim?_fmtBR(planFim):"—"))
     +_cpLinha("✅","Real (término)", realISO?_fmtBR(realISO):"—")
     +_cpLinha("📊","Diferença", difTxt, difCor)
   +'</div></div>';
