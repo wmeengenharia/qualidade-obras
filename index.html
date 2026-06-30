@@ -3549,6 +3549,13 @@ function _atividadeTemFormulario(nome){ return _formularioDaAtividade(nome)!=nul
 // Atividade SEM formulário → status vem da Finalização de Serviço (aprovação no cronograma).
 // Em ambos, Finish preenchido => Concluída; senão datas (futura/andamento/atrasada).
 function _cronoStatus(tar){
+  // Override universal: Finalização de Serviço aprovada (inclui conclusão MANUAL do gestor)
+  var finO=_finalizacao(tar.id);
+  if(finO){
+    if(finO.status==="aprovado") return "concluida";
+    if(finO.status==="pendente") return "pendente_aprov";
+    // rejeitado → segue regra normal
+  }
   if(_atividadeTemFormulario(tar.nome)){
     // Fluxo de Ficha: aprovação da ficha atualiza o cronograma
     var fs=_fichasDaAtividade(tar.id);
@@ -3560,13 +3567,6 @@ function _cronoStatus(tar){
       // ficha em preenchimento → cai para a regra base (Finish/datas)
     }
   } else {
-    // Sem formulário: governança via Finalização de Serviço (aprovação direta no cronograma)
-    var fin=_finalizacao(tar.id);
-    if(fin){
-      if(fin.status==="pendente") return "pendente_aprov";
-      if(fin.status==="aprovado") return "concluida";
-      // rejeitado → segue regra normal
-    }
   }
   // Base: obras importadas com Percentual Concluído usam o % como fonte; demais usam o Finish (legado)
   if(_obraUsaPct()){
@@ -3606,6 +3606,38 @@ function addComentarioCrono(taskId){
   salvarDB();
   renderCronoPanel(taskId);
 }
+
+// ===== CONCLUSÃO MANUAL (gestor/admin) — marca a atividade como concluída direto no cronograma =====
+function marcarConcluidoManual(taskId){
+  if(!podeAprovar()){ alert("Apenas Gestores e Administradores podem concluir serviços manualmente."); return; }
+  var t=_cronoTarefas(), x=null; for(var i=0;i<t.length;i++){ if(t[i].id===taskId){ x=t[i]; break; } }
+  if(x && x.temFilhos){ alert("Selecione uma atividade (não uma fase)."); return; }
+  var anc = x?_cronoAncestrais(t,x):{fase:""};
+  var nome = x?x.nome:("Atividade "+taskId);
+  var hoje=new Date().toLocaleDateString("pt-BR");
+  if(!DB.finalizacoes) DB.finalizacoes={}; if(!DB.finalizacoes[obraAtual]) DB.finalizacoes[obraAtual]={};
+  DB.finalizacoes[obraAtual][taskId]={
+    status:"aprovado", por:(sessao?sessao.nome:""), porId:(sessao?sessao.id:""), data:hoje,
+    observacoes:"Concluído manualmente pelo gestor", comentarios:"",
+    fase:(anc.fase&&anc.fase!=="—"?anc.fase:""), servicoNome:nome,
+    aprovadoPor:(sessao?sessao.nome:""), aprovadoData:hoje, manual:true
+  };
+  registrarEvento("finalizacao_aprovada",{entidade:"finalizacao",entidadeId:taskId,origem:"cronograma",depois:{status:"aprovado",manual:true},detalhe:"Concluído manualmente pelo gestor: "+nome});
+  salvarDB(); atualizarBadgePendencias();
+  if(modoAtual==="cronograma") renderCronograma();
+  renderCronoPanel(taskId);
+  mostrarStatus("✅ Atividade marcada como concluída");
+}
+function reabrirConcluidoManual(taskId){
+  if(!podeAprovar()){ alert("Apenas Gestores e Administradores podem reabrir conclusões."); return; }
+  var fin=_finalizacao(taskId);
+  if(DB.finalizacoes && DB.finalizacoes[obraAtual]) delete DB.finalizacoes[obraAtual][taskId];
+  registrarEvento("atividade_alterada",{entidade:"finalizacao",entidadeId:taskId,origem:"cronograma",antes:{status:(fin&&fin.status)||"aprovado"},depois:{status:"reaberto"},detalhe:"Conclusão reaberta pelo gestor"});
+  salvarDB(); atualizarBadgePendencias();
+  if(modoAtual==="cronograma") renderCronograma();
+  renderCronoPanel(taskId);
+  mostrarStatus("↩ Conclusão reaberta");
+}
 // Eventos de auditoria relacionados a uma atividade (a própria atividade + suas fichas)
 function _eventosDaAtividade(taskId, ligs){
   var keys={}; keys[String(taskId)]=1; (ligs||[]).forEach(function(l){ keys[String(l.key)]=1; });
@@ -3620,6 +3652,9 @@ var _EV_INFO={
   atividade_alterada:{ic:"✏️",cor:"#1565c0"}, comentario:{ic:"💬",cor:"#6a1b9a"}
 };
 function _cronoPctTarefa(tar){
+  // Override: finalização aprovada (inclui conclusão manual do gestor) = 100%; pendente = 0%
+  var finP=_finalizacao(tar.id);
+  if(finP){ if(finP.status==="aprovado") return 100; if(finP.status==="pendente") return 0; }
   if(_atividadeTemFormulario(tar.nome)){
     var fs=_fichasDaAtividade(tar.id);
     if(fs.length){
@@ -3627,9 +3662,6 @@ function _cronoPctTarefa(tar){
       if(todasAprov) return 100;
       // alguma ainda não aprovada → não conta como concluído (segue base)
     }
-  } else {
-    var fin=_finalizacao(tar.id);
-    if(fin){ if(fin.status==="aprovado") return 100; if(fin.status==="pendente") return 0; }
   }
   // Obras com Percentual Concluído: o % importado/ajustado é a fonte. Legado: Finish=100%.
   if(_obraUsaPct()) return Math.max(0,Math.min(100,_cronoPct(tar.id)||0));
@@ -4055,6 +4087,14 @@ function renderCronoPanel(id){
   if(fin && fin.status==="pendente" && ehAdmin()){
     foot+='<button type="button" class="cp-btn cp-btn-rej" onclick="rejeitarFinalizacao('+id+')">✖ Rejeitar</button>'
       +'<button type="button" class="cp-btn cp-btn-apr" onclick="aprovarFinalizacao('+id+')">✔ Aprovar</button>';
+  }
+  // Conclusão manual pelo gestor/admin (atalho direto, sem precisar de ficha/submissão)
+  if(!x.temFilhos && podeAprovar()){
+    if(fin && fin.status==="aprovado"){
+      foot+='<button type="button" class="cp-btn cp-btn-sec" onclick="reabrirConcluidoManual('+id+')">↩ Reabrir conclusão</button>';
+    } else if(st!=="concluida" && !(fin && fin.status==="pendente")){
+      foot+='<button type="button" class="cp-btn cp-btn-apr" onclick="marcarConcluidoManual('+id+')">✔ Marcar como concluído</button>';
+    }
   }
   foot+='<button type="button" class="cp-btn" onclick="fecharCronoPanel()">Fechar</button>';
   foot+='</div>';
