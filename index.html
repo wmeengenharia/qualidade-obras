@@ -478,40 +478,75 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .dr-pg{min-width:28px;height:28px;border:1px solid #ddd;background:#fff;border-radius:6px;cursor:pointer;font-size:12px;color:#444;}
 .dr-pg.atual{background:var(--verde-escuro);color:#fff;border-color:var(--verde-escuro);font-weight:bold;}
 @media(max-width:700px){ #modal-box.modal-xl{width:96vw;max-width:96vw;} .dr-tbwrap{max-height:60vh;} }
-.cd-num{font-size:24px;font-weight:bold;color:#333;line-height:1.1;}
+.cd-num{font-size:24px;font-weight:bold;color:#333;line-height:1.1;font-variant-numeric:tabular-nums;}
+.cd-num.cd-verde{color:#2e7d32;} .cd-num.cd-amarelo{color:#f9a825;} .cd-num.cd-azul{color:#1565c0;} .cd-num.cd-vermelho{color:#c62828;} .cd-num.cd-cinza{color:#777;} .cd-num.cd-data{font-size:16px;color:#37474f;}
 .cd-lbl{font-size:11.5px;color:#666;margin-top:3px;}
 .cd-bar{height:8px;background:#e0e0e0;border-radius:5px;margin-top:9px;overflow:hidden;}
-.cd-bar-fill{height:100%;background:#43a047;}
-.crono-prox{font-size:12.5px;color:#444;background:#f5f7f5;border-radius:6px;padding:8px 12px;margin-bottom:6px;}
+.cd-bar-fill{height:100%;background:#43a047;transition:width .6s cubic-bezier(.22,.61,.36,1);}
+/* Card "Próximas atividades" */
+.crono-prox-card{background:#fff;border:1px solid #e6eaf1;border-radius:12px;padding:12px 14px;margin:4px 0 12px;box-shadow:0 1px 3px rgba(20,28,40,.05);}
+.px-tit{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8b94a7;margin-bottom:8px;}
+.px-lista{display:flex;flex-direction:column;gap:4px;}
+.px-item{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:#fafbfc;border:1px solid #eef1f5;border-radius:9px;padding:8px 10px;cursor:pointer;transition:background .12s,border-color .12s;}
+.px-item:hover{background:#f1f6ff;border-color:#cfe0f5;}
+.px-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;}
+.px-info{display:flex;flex-direction:column;min-width:0;flex:1;}
+.px-nome{font-size:13px;font-weight:600;color:#1f2a3d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.px-meta{font-size:11px;color:#8b94a7;margin-top:1px;}
+.px-go{color:#b0b8c4;font-size:18px;font-weight:bold;flex:0 0 auto;}
+.px-vazio{font-size:12.5px;color:#2e7d32;padding:6px 2px;}
 .crono-aviso{font-size:12px;color:#b26a00;background:#fff8e1;border:1px solid #ffcc80;border-radius:6px;padding:7px 11px;margin-bottom:8px;}
 .crono-legenda{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:#555;margin:6px 0 10px;}
 .crono-legenda i.lg{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:middle;}
-.crono-legenda i.lg-marco{color:#5e35b1;background:none;width:auto;font-style:normal;}
-.gantt{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid #e0e0e0;border-radius:8px;background:#fff;}
-.g-row{display:flex;min-width:max-content;border-bottom:1px solid #f2f2f2;}
-.g-row.g-head{background:#fafafa;position:sticky;top:0;z-index:3;}
-.g-name{flex:0 0 240px;width:240px;position:sticky;left:0;background:#fff;z-index:2;padding:7px 8px;font-size:12.5px;display:flex;align-items:center;gap:6px;border-right:1px solid #e8e8e8;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.g-row.g-head .g-name{background:#fafafa;font-weight:bold;}
-.g-name-head{color:#333;}
-.gn-caret{width:14px;flex:0 0 auto;text-align:center;color:#888;}
+.crono-legenda i.lg-marco{color:#7e57c2;background:none;width:auto;font-style:normal;}
+/* Gantt — timeline compacta */
+.gantt{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid #e6eaf1;border-radius:10px;background:#fff;}
+.g-row{display:flex;border-bottom:1px solid #f3f5f7;min-height:40px;cursor:pointer;}
+.g-row:hover{background:#f8fafc;}
+.g-row.g-head,.g-row.g-head:hover{background:#fafbfc;position:sticky;top:0;z-index:3;cursor:default;}
+.g-name{flex:0 0 250px;width:250px;position:sticky;left:0;background:#fff;z-index:2;padding:5px 10px;display:flex;align-items:center;gap:5px;border-right:1px solid #eef1f5;}
+.g-row:hover .g-name{background:#f8fafc;}
+.g-row.g-head .g-name{background:#fafbfc;font-weight:bold;align-items:center;}
+.g-name-head{color:#37474f;font-size:12px;text-transform:uppercase;letter-spacing:.4px;}
+.gn-caret{width:14px;flex:0 0 auto;text-align:center;color:#9aa3b0;font-size:10px;cursor:pointer;}
 .gn-caret.gn-vazio{color:transparent;}
+.gn-main{display:flex;flex-direction:column;min-width:0;flex:1;}
+.gn-l1{display:flex;align-items:center;gap:6px;min-width:0;}
 .gn-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;}
-.gn-fase{font-weight:bold;color:var(--verde-escuro);}
-.gn-grupo{font-weight:bold;color:#444;}
-.gn-tarefa{color:#333;}
-.g-time{position:relative;height:30px;flex:0 0 auto;background:repeating-linear-gradient(90deg,transparent 0,transparent 97px,#f4f4f4 97px,#f4f4f4 98px);}
-.g-time-head{height:34px;}
-.gc-mes{position:absolute;top:8px;font-size:11px;font-weight:bold;color:#555;border-left:1px solid #d0d0d0;padding-left:4px;height:24px;}
-.gbar{position:absolute;top:6px;height:18px;border-radius:4px;cursor:pointer;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.12);}
-.gbar-fill{position:absolute;left:0;top:0;height:100%;}
-.gbar-pct{position:absolute;right:5px;top:0;line-height:18px;font-size:10px;font-weight:bold;color:#1b1b1b;}
-.gbar-resumo{background:#455a64;height:9px;top:10px;border-radius:3px;box-shadow:none;}
-.gmarco{position:absolute;top:2px;color:#5e35b1;font-size:17px;line-height:1;cursor:pointer;}
-.gbar.st-concluida{background:#c8e6c9;} .gbar.st-concluida .gbar-fill{background:#43a047;}
-.gbar.st-andamento{background:#bbdefb;} .gbar.st-andamento .gbar-fill{background:#1e88e5;}
-.gbar.st-atrasada{background:#ffcdd2;}  .gbar.st-atrasada .gbar-fill{background:#e53935;}
-.gbar.st-futura{background:#e0e0e0;}    .gbar.st-futura .gbar-fill{background:#9e9e9e;}
-.gbar.st-pendente_aprov{background:#fff3c4;} .gbar.st-pendente_aprov .gbar-fill{background:#f9a825;}
+.gn-nome{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px;color:#26303f;}
+.gn-meta{font-size:10.5px;color:#9aa3b0;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.gn-st{font-weight:700;}
+.gn-st-concluida{color:#2e7d32;} .gn-st-andamento{color:#1565c0;} .gn-st-atrasada{color:#c62828;} .gn-st-pendente_aprov{color:#f9a825;} .gn-st-futura{color:#9aa3b0;}
+.gn-fase .gn-nome{font-weight:bold;color:var(--verde-escuro);}
+.gn-grupo .gn-nome{font-weight:bold;color:#3a4659;}
+.g-time{position:relative;height:40px;flex:1 1 auto;}
+.g-row.g-head .g-time{height:30px;}
+.gc-mes{position:absolute;top:0;height:100%;box-sizing:border-box;font-size:10.5px;font-weight:600;color:#8a93a0;border-left:1px solid #eef0f3;padding:8px 0 0 5px;}
+.gbar{position:absolute;top:50%;transform:translateY(-50%);height:16px;border-radius:6px;cursor:pointer;overflow:hidden;box-shadow:0 1px 2px rgba(20,28,40,.10);min-width:5px;}
+.gbar-fill{position:absolute;left:0;top:0;height:100%;border-radius:6px 0 0 6px;}
+.gbar-pct{position:absolute;right:6px;top:0;line-height:16px;font-size:9.5px;font-weight:700;color:#1b2a3a;}
+.gbar-clock{position:absolute;left:5px;top:0;line-height:16px;font-size:10px;}
+.gbar-resumo{background:#5b6b7c;height:7px;border-radius:4px;box-shadow:none;overflow:visible;}
+.gbar-resumo-cap{position:absolute;top:0;width:2px;height:11px;background:#5b6b7c;}
+.gbar-cap-l{left:0;} .gbar-cap-r{right:0;}
+.gmarco{position:absolute;top:50%;transform:translate(-50%,-50%);color:#7e57c2;font-size:15px;line-height:1;cursor:pointer;}
+.gbar.st-concluida{background:#cdebd0;} .gbar.st-concluida .gbar-fill{background:#43a047;}
+.gbar.st-andamento{background:#cfe4fb;} .gbar.st-andamento .gbar-fill{background:#1e88e5;}
+.gbar.st-atrasada{background:#fbd5d8;}  .gbar.st-atrasada .gbar-fill{background:#e53935;}
+.gbar.st-futura{background:#e9edf1;}    .gbar.st-futura .gbar-fill{background:#aab4c0;}
+.gbar.st-pendente_aprov{background:#ffeeb8;} .gbar.st-pendente_aprov .gbar-fill{background:#f9a825;}
+/* Tooltip rico */
+.crono-tip{position:fixed;z-index:9800;max-width:300px;background:#fff;border:1px solid #e2e7ee;border-radius:10px;box-shadow:0 8px 28px rgba(20,28,40,.22);padding:10px 12px;font-size:12px;pointer-events:none;}
+.crono-tip .ct-h{border-left:3px solid #999;padding-left:8px;margin-bottom:8px;}
+.crono-tip .ct-badge{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:12px;margin-bottom:4px;}
+.crono-tip .ct-nome{font-size:13px;font-weight:700;color:#1f2a3d;line-height:1.3;}
+.crono-tip .ct-l{display:flex;justify-content:space-between;gap:14px;padding:2px 0;color:#6a7484;}
+.crono-tip .ct-l b{color:#1f2a3d;font-weight:600;text-align:right;}
+@media(max-width:680px){
+  .g-name{flex:0 0 150px;width:150px;}
+  .gn-meta{font-size:9.5px;}
+  .crono-tip{display:none !important;}
+}
 .gn-dot.st-pendente_aprov,.lg.st-pendente_aprov,.dr-badge.dr-pendente_aprov{background:#f9a825;}
 .dr-badge.dr-pendente_aprov{color:#7a5c00;background:#fff8e1;}
 .gn-pend{font-size:10px;font-weight:bold;color:#8a6d00;background:#fff8e1;border:1px solid #ffd54f;border-radius:10px;padding:0 6px;white-space:nowrap;}
@@ -4008,91 +4043,162 @@ function renderCronoPanel(id){
   return true;
 }
 
+var _cronoTcache=null, _cronoCalcCache=null; // cache p/ tooltip
+function _cronoFimEf(x){
+  if(x.fim) return x.fim;
+  if(x.ini && x.dur>0){ var d=_cdISO(x.ini); d.setDate(d.getDate()+x.dur); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+  return x.ini;
+}
 function renderCronograma(){
   const main=document.getElementById("main");
   const t=_cronoTarefas();
   const calc=_cronoCalc(t);
-  // fim efetivo p/ geometria: Finish, ou estimativa início+duração quando vazio
-  function _fimEf(x){
-    if(x.fim) return x.fim;
-    if(x.ini && x.dur>0){ var d=_cdISO(x.ini); d.setDate(d.getDate()+x.dur); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
-    return x.ini;
+  _cronoTcache=t; _cronoCalcCache=calc;
+  // índice id→posição (para contar descendentes de fases)
+  var idx={}; t.forEach(function(x,i){ idx[x.id]=i; });
+  function descFolhas(i){ var r=[],bl=t[i].lv; for(var j=i+1;j<t.length;j++){ if(t[j].lv<=bl) break; if(!t[j].temFilhos) r.push(t[j]); } return r; }
+  function faseStatus(folhas){
+    if(!folhas.length) return "futura";
+    if(folhas.every(function(l){return calc.st[l.id]==="concluida";})) return "concluida";
+    var has=function(s){ return folhas.some(function(l){return calc.st[l.id]===s;}); };
+    if(has("atrasada")) return "atrasada";
+    if(has("pendente_aprov")) return "pendente_aprov";
+    if(has("andamento")) return "andamento";
+    return "futura";
   }
-  // janela de datas (span do projeto)
-  var minISO=t[0].ini, maxISO=_fimEf(t[0]);
-  t.forEach(function(x){ var fe=_fimEf(x); if(x.ini && x.ini<minISO)minISO=x.ini; if(fe>maxISO)maxISO=fe; });
+  // ----- janela de datas (escala dinâmica = min início → max término reais) -----
+  var minISO=null, maxISO=null;
+  t.forEach(function(x){ if(!x.temFilhos===false && !x.ini) return; if(x.ini && (!minISO||x.ini<minISO)) minISO=x.ini; var fe=_cronoFimEf(x); if(fe && (!maxISO||fe>maxISO)) maxISO=fe; });
+  if(!minISO) minISO=_hojeISO(); if(!maxISO||maxISO<minISO) maxISO=minISO;
   var min=_cdISO(minISO), max=_cdISO(maxISO);
-  var totalDays=_cDias(min,max)+1;
-  var pxDay=14, W=totalDays*pxDay;
-  var hoje=_cdISO(_hojeISO()); var tx=_cDias(min,hoje)*pxDay; var foraPrazo=false;
-  if(tx<0) tx=0; if(tx>W){ tx=W; foraPrazo=true; }
+  var span=Math.max(_cDias(min,max),1);
+  function pos(iso){ if(!iso) return 0; var p=_cDias(min,_cdISO(iso))/span*100; return Math.max(0,Math.min(100,p)); }
+  var Wmin=Math.max(Math.round(span*7),520); // px mínimos da timeline (responsivo: scroll em telas pequenas)
+  var hojeISO=_hojeISO(); var posHoje=pos(hojeISO); var foraPrazo=(hojeISO>maxISO);
 
-  // Dashboard
+  // ----- Dashboard (cards) -----
   var c=calc.cont;
-  var futuras = t.filter(function(x){ return !x.temFilhos && calc.st[x.id]==="futura"; }).sort(function(a,b){ return a.ini.localeCompare(b.ini); });
-  var prox = (futuras.length? futuras : t.filter(function(x){ return !x.temFilhos && calc.st[x.id]==="atrasada"; }).sort(function(a,b){ return a.ini.localeCompare(b.ini); })).slice(0,4);
-  var proxTit = futuras.length ? "Próximos serviços" : "Pendentes (atrasados)";
   var dash='<div class="crono-dash">'
-    +'<div class="cd-card cd-geral"><div class="cd-num">'+calc.geral+'%</div><div class="cd-lbl">Conclusão geral</div>'
+    +'<div class="cd-card cd-geral"><div class="cd-num" data-count="'+calc.geral+'" data-suf="%">0%</div><div class="cd-lbl">Conclusão geral</div>'
       +'<div class="cd-bar"><div class="cd-bar-fill" style="width:'+calc.geral+'%"></div></div></div>'
-    +'<div class="cd-card cd-click" onclick="abrirCronoDrill(\'concluida\')"><div class="cd-num" style="color:#2e7d32;">'+c.concluida+'</div><div class="cd-lbl">✅ Concluídas</div></div>'
-    +'<div class="cd-card cd-click'+(c.pendente_aprov?' cd-pend':'')+'" onclick="abrirCronoDrill(\'pendente_aprov\')"><div class="cd-num" style="color:#f9a825;">'+c.pendente_aprov+'</div><div class="cd-lbl">🟡 Pend. Aprovação</div></div>'
-    +'<div class="cd-card cd-click" onclick="abrirCronoDrill(\'andamento\')"><div class="cd-num" style="color:#1565c0;">'+c.andamento+'</div><div class="cd-lbl">🔵 Em andamento</div></div>'
-    +'<div class="cd-card cd-click" onclick="abrirCronoDrill(\'atrasada\')"><div class="cd-num" style="color:#c62828;">'+c.atrasada+'</div><div class="cd-lbl">🔴 Atrasadas</div></div>'
-    +'<div class="cd-card cd-click" onclick="abrirCronoDrill(\'futura\')"><div class="cd-num" style="color:#777;">'+c.futura+'</div><div class="cd-lbl">⚪ Futuras</div></div>'
-    +'<div class="cd-card"><div class="cd-num" style="font-size:16px;">'+_fmtBR(maxISO)+'</div><div class="cd-lbl">📅 Previsão de término</div></div>'
+    +'<div class="cd-card cd-click" onclick="abrirCronoDrill(\'concluida\')"><div class="cd-num cd-verde" data-count="'+c.concluida+'">0</div><div class="cd-lbl">🟢 Concluídas</div></div>'
+    +'<div class="cd-card cd-click'+(c.pendente_aprov?' cd-pend':'')+'" onclick="abrirCronoDrill(\'pendente_aprov\')"><div class="cd-num cd-amarelo" data-count="'+c.pendente_aprov+'">0</div><div class="cd-lbl">🟡 Pend. aprovação</div></div>'
+    +'<div class="cd-card cd-click" onclick="abrirCronoDrill(\'andamento\')"><div class="cd-num cd-azul" data-count="'+c.andamento+'">0</div><div class="cd-lbl">🔵 Em andamento</div></div>'
+    +'<div class="cd-card cd-click" onclick="abrirCronoDrill(\'atrasada\')"><div class="cd-num cd-vermelho" data-count="'+c.atrasada+'">0</div><div class="cd-lbl">🔴 Atrasadas</div></div>'
+    +'<div class="cd-card cd-click" onclick="abrirCronoDrill(\'futura\')"><div class="cd-num cd-cinza" data-count="'+c.futura+'">0</div><div class="cd-lbl">⚪ Futuras</div></div>'
+    +'<div class="cd-card cd-prev"><div class="cd-num cd-data">'+_fmtBR(maxISO)+'</div><div class="cd-lbl">📅 Previsão de término</div></div>'
     +'</div>';
-  var proxHtml='<div class="crono-prox"><b>'+proxTit+':</b> '+(prox.length? prox.map(function(p){ return escapeHtml(p.nome)+' <span style="color:#888;">('+_fmtBR(p.ini)+')</span>'; }).join(' &nbsp;·&nbsp; ') : 'cronograma encerrado.')+'</div>';
-  if(foraPrazo) proxHtml+='<div class="crono-aviso">⚠️ Hoje ('+_fmtBR(_hojeISO())+') é posterior ao término planejado ('+_fmtBR(maxISO)+').</div>';
 
-  // Cabeçalho de meses
+  // ----- Card "Próximas atividades" -----
+  var futuras = t.filter(function(x){ return !x.temFilhos && calc.st[x.id]==="futura"; }).sort(function(a,b){ return a.ini.localeCompare(b.ini); });
+  var atrasadas = t.filter(function(x){ return !x.temFilhos && calc.st[x.id]==="atrasada"; }).sort(function(a,b){ return a.ini.localeCompare(b.ini); });
+  var prox=(atrasadas.concat(futuras)).slice(0,5);
+  var proxItens = prox.length ? prox.map(function(p){
+    var st=calc.st[p.id], info=_CRONO_ST_INFO[st]||_CRONO_ST_INFO.futura;
+    return '<button type="button" class="px-item" onclick="cronoDetalhe('+p.id+')">'
+      +'<span class="px-dot st-'+st+'"></span>'
+      +'<span class="px-info"><span class="px-nome">'+escapeHtml(p.nome)+'</span>'
+      +'<span class="px-meta">'+_fmtBR(p.ini)+' · '+info.lbl.replace(/s$/,'').replace("Concluída","Concluída")+'</span></span>'
+      +'<span class="px-go">›</span></button>';
+  }).join('') : '<div class="px-vazio">🎉 Sem próximas atividades pendentes.</div>';
+  var proxCard='<div class="crono-prox-card"><div class="px-tit">⏭ Próximas atividades</div><div class="px-lista">'+proxItens+'</div></div>'
+    + (foraPrazo?'<div class="crono-aviso">⚠️ Hoje ('+_fmtBR(hojeISO)+') é posterior ao término planejado ('+_fmtBR(maxISO)+').</div>':'');
+
+  // ----- Cabeçalho de meses (posições em %) -----
   var meses=''; var dm=new Date(min.getFullYear(),min.getMonth(),1);
-  while(dm<=max){ var mx=_cDias(min,dm)*pxDay; if(mx<0)mx=0; meses+='<div class="gc-mes" style="left:'+mx+'px;">'+_MESES_PT[dm.getMonth()]+'/'+String(dm.getFullYear()).slice(2)+'</div>'; dm=new Date(dm.getFullYear(),dm.getMonth()+1,1); }
+  while(dm<=max){ var d2=(dm<min?min:dm); var mx=pos(d2.getFullYear()+"-"+String(d2.getMonth()+1).padStart(2,"0")+"-"+String(d2.getDate()).padStart(2,"0")); meses+='<div class="gc-mes" style="left:'+mx+'%;">'+_MESES_PT[dm.getMonth()]+'/'+String(dm.getFullYear()).slice(2)+'</div>'; dm=new Date(dm.getFullYear(),dm.getMonth()+1,1); }
 
-  // Linhas
+  // ----- Linhas -----
   var vis=_cronoVisiveis(t);
   var linhas='';
   vis.forEach(function(x){
     var pct=calc.pct[x.id]||0, st=calc.st[x.id];
-    var _fe=_fimEf(x);
-    var L=_cDias(min,_cdISO(x.ini))*pxDay;
-    var wb=Math.max((_cDias(_cdISO(x.ini),_cdISO(_fe))+1)*pxDay,8);
-    var indent=(x.lv)*16;
-    var caret = x.temFilhos ? '<span class="gn-caret" onclick="event.stopPropagation();toggleCronoGrupo('+x.id+')">'+(_cronoColapsado[x.id]?'▸':'▾')+'</span>' : '<span class="gn-caret gn-vazio"></span>';
-    var nomeCls = x.temFilhos ? (x.lv<=1?"gn-fase":"gn-grupo") : "gn-tarefa";
-    var marco = (x.dur===0 || x.ini===_fe);
-    var barra;
+    var _fe=_cronoFimEf(x);
+    var L=pos(x.ini), R=pos(_fe), wb=Math.max(R-L,0.4);
+    var indent=(x.lv)*15;
+    var caret = x.temFilhos ? '<span class="gn-caret" onclick="event.stopPropagation();toggleCronoGrupo('+x.id+')">'+(_cronoColapsado[x.id]?'▶':'▼')+'</span>' : '<span class="gn-caret gn-vazio"></span>';
+    var marco = !x.temFilhos && (x.dur===0 || x.ini===_fe);
+    var barra, metaTxt, nomeCls;
     if(x.temFilhos){
-      barra='<div class="gbar gbar-resumo" style="left:'+L+'px;width:'+wb+'px;" title="'+escapeHtml(x.nome)+'"></div>';
+      nomeCls = x.lv<=1?"gn-fase":"gn-grupo";
+      var folhas=descFolhas(idx[x.id]); var fst=faseStatus(folhas);
+      metaTxt='<span class="gn-meta">'+folhas.length+' ativ. · '+pct+'% · <span class="gn-st gn-st-'+fst+'">'+(_CRONO_ST_INFO[fst]||_CRONO_ST_INFO.futura).lbl.replace(/s$/,'')+'</span></span>';
+      barra='<div class="gbar gbar-resumo" style="left:'+L+'%;width:'+wb+'%;"><span class="gbar-resumo-cap gbar-cap-l"></span><span class="gbar-resumo-cap gbar-cap-r"></span></div>';
     } else if(marco){
-      barra='<div class="gbar gmarco" style="left:'+(L-6)+'px;" onclick="cronoDetalhe('+x.id+')" title="'+escapeHtml(x.nome)+' — '+_fmtBR(x.ini)+'">◆</div>';
+      nomeCls="gn-tarefa";
+      metaTxt='<span class="gn-meta">'+_fmtBR(x.ini)+' · marco</span>';
+      barra='<div class="gmarco" style="left:'+L+'%;">◆</div>';
     } else {
-      barra='<div class="gbar st-'+st+(x.fim?'':' gbar-aberta')+'" style="left:'+L+'px;width:'+wb+'px;" onclick="cronoDetalhe('+x.id+')" title="'+escapeHtml(x.nome)+' ('+_fmtBR(x.ini)+' → '+(x.fim?_fmtBR(x.fim):'sem Finish')+') — '+pct+'%">'
-        +'<div class="gbar-fill" style="width:'+pct+'%;"></div><span class="gbar-pct">'+(wb>34?pct+'%':'')+'</span></div>';
+      nomeCls="gn-tarefa";
+      metaTxt='<span class="gn-meta">'+pct+'% · '+(x.fim?_fmtBR(x.fim):'sem término')+'</span>';
+      var clock = st==="pendente_aprov" ? '<span class="gbar-clock">⏱</span>' : '';
+      barra='<div class="gbar st-'+st+(x.fim?'':' gbar-aberta')+'" style="left:'+L+'%;width:'+wb+'%;">'
+        +'<div class="gbar-fill" style="width:'+pct+'%;"></div>'+clock+'<span class="gbar-pct">'+(wb>5?pct+'%':'')+'</span></div>';
     }
-    linhas+='<div class="g-row" data-tid="'+x.id+'">'
-      +'<div class="g-name '+nomeCls+'" style="padding-left:'+indent+'px;" onclick="cronoDetalhe('+x.id+')">'+caret+'<span class="gn-dot st-'+st+'"></span>'+escapeHtml(x.nome)+(st==="pendente_aprov"?' <span class="gn-pend">⏳ Aguardando</span>':'')+'</div>'
-      +'<div class="g-time" style="width:'+W+'px;">'+barra+'<div class="g-hoje" style="left:'+tx+'px;"></div></div>'
+    linhas+='<div class="g-row" data-tid="'+x.id+'" onclick="cronoDetalhe('+x.id+')" onmouseenter="cronoTip(event,'+x.id+')" onmousemove="cronoTipMove(event)" onmouseleave="cronoTipHide()">'
+      +'<div class="g-name '+nomeCls+'" style="padding-left:'+indent+'px;">'+caret
+        +'<span class="gn-main"><span class="gn-l1"><span class="gn-dot st-'+st+'"></span><span class="gn-nome">'+escapeHtml(x.nome)+'</span></span>'+metaTxt+'</span></div>'
+      +'<div class="g-time" style="min-width:'+Wmin+'px;">'+barra+'<div class="g-hoje" style="left:'+posHoje+'%;"></div></div>'
       +'</div>';
   });
 
-  var headHoje='<div class="g-hoje g-hoje-top" style="left:'+tx+'px;"><span class="g-hoje-lbl">Hoje</span></div>';
-  // % por fase
-  var fases=_cronoFasesPct(t,calc);
-  var fasesHtml = fases.length ? ('<div class="crono-fases"><div class="cf-tit">Progresso por fase</div>'
-    + fases.map(function(f){ return '<div class="cf-fase"><span class="cf-fase-n">'+escapeHtml(f.nome)+'</span><span class="cf-fase-bar"><span style="width:'+f.pct+'%"></span></span><b>'+f.pct+'%</b></div>'; }).join('')
-    + '</div>') : '';
+  var headHoje='<div class="g-hoje g-hoje-top" style="left:'+posHoje+'%;"><span class="g-hoje-lbl">Hoje</span></div>';
   var nomeProj = _obraTemCronograma() ? (DB.obraCronograma[obraAtual].projeto||obraAtual) : CRONOGRAMA_PROJETO;
   main.innerHTML=
     '<div class="crono-topo"><div><h2>📅 Cronograma da Obra</h2><div style="font-size:12px;color:#555;">'+escapeHtml(nomeProj)+'</div></div>'
       +'<button type="button" class="secundario" onclick="trocarModo(\'workspace\')">‹ Voltar</button></div>'
-    + dash + proxHtml + fasesHtml
-    + '<div class="crono-legenda"><span><i class="lg st-concluida"></i>Concluída</span><span><i class="lg st-pendente_aprov"></i>⏳ Pendente de Aprovação</span><span><i class="lg st-andamento"></i>Em andamento</span><span><i class="lg st-atrasada"></i>Atrasada</span><span><i class="lg st-futura"></i>Futura</span><span><i class="lg lg-marco">◆</i>Marco</span></div>'
+    + dash + proxCard
+    + '<div class="crono-legenda"><span><i class="lg st-concluida"></i>Concluída</span><span><i class="lg st-pendente_aprov"></i>⏱ Pendente</span><span><i class="lg st-andamento"></i>Em andamento</span><span><i class="lg st-atrasada"></i>Atrasada</span><span><i class="lg st-futura"></i>Futura</span><span><i class="lg lg-marco">◆</i>Marco</span></div>'
     + '<div class="gantt">'
-      + '<div class="g-row g-head"><div class="g-name g-name-head">Serviço / Atividade</div><div class="g-time g-time-head" style="width:'+W+'px;">'+meses+headHoje+'</div></div>'
+      + '<div class="g-row g-head"><div class="g-name g-name-head">Serviço / Atividade</div><div class="g-time g-time-head" style="min-width:'+Wmin+'px;">'+meses+headHoje+'</div></div>'
       + linhas
     + '</div>';
+  _animarContadores();
 }
+
+// Animação suave (count-up) dos cards superiores
+function _animarContadores(){
+  var els=document.querySelectorAll(".crono-dash .cd-num[data-count]");
+  els.forEach(function(el){
+    var target=parseInt(el.getAttribute("data-count"),10)||0, suf=el.getAttribute("data-suf")||"";
+    if(target<=0){ el.textContent="0"+suf; return; }
+    var t0=null, dur=650;
+    function step(now){ if(!t0)t0=now; var p=Math.min(1,(now-t0)/dur); var e=1-Math.pow(1-p,3); el.textContent=Math.round(target*e)+suf; if(p<1) requestAnimationFrame(step); }
+    requestAnimationFrame(step);
+  });
+}
+
+// ===== Tooltip rico do cronograma =====
+var _cronoTipEl=null;
+function _cronoTipBox(){ if(!_cronoTipEl){ _cronoTipEl=document.createElement("div"); _cronoTipEl.className="crono-tip"; _cronoTipEl.style.display="none"; document.body.appendChild(_cronoTipEl); } return _cronoTipEl; }
+function cronoTip(e, id){
+  var t=_cronoTcache, calc=_cronoCalcCache; if(!t||!calc) return;
+  var x=null; for(var i=0;i<t.length;i++){ if(t[i].id===id){x=t[i];break;} } if(!x) return;
+  var st=calc.st[x.id], pct=calc.pct[x.id]||0, info=_CRONO_ST_INFO[st]||_CRONO_ST_INFO.futura;
+  var anc=_cronoAncestrais(t,x);
+  var ligs=(!x.temFilhos)?_fichasDaAtividade(x.id):[];
+  var pend=0; ligs.forEach(function(l){ if(l.est&&l.est.aprovacao&&l.est.aprovacao.status==="submetido") pend++; });
+  var fin=_finalizacao(x.id); if(fin&&fin.status==="pendente") pend++;
+  function lin(ic,k,v){ return '<div class="ct-l"><span>'+ic+' '+k+'</span><b>'+v+'</b></div>'; }
+  var html='<div class="ct-h" style="border-color:'+info.cor+';"><span class="ct-badge" style="color:'+info.cor+';background:'+info.bg+';">'+info.ic+' '+info.lbl.replace(/s$/,'')+'</span><div class="ct-nome">'+escapeHtml(x.nome)+'</div></div>';
+  if(anc.fase&&anc.fase!=="—") html+=lin("📁","Fase", escapeHtml(anc.fase));
+  html+=lin("📅","Início", x.ini?_fmtBR(x.ini):"—");
+  html+=lin("🏁","Término", x.fim?_fmtBR(x.fim):"—");
+  html+=lin("⏱","Duração", (x.dur||0)+" dia(s)");
+  html+=lin("📈","Progresso", pct+"%");
+  if(x.pred) html+=lin("🔗","Predecessoras", escapeHtml(x.pred));
+  if(!x.temFilhos){ html+=lin("📄","Fichas vinculadas", ligs.length); if(pend>0) html+=lin("🟡","Aprovações pendentes", pend); }
+  var el=_cronoTipBox(); el.innerHTML=html; el.style.display="block"; cronoTipMove(e);
+}
+function cronoTipMove(e){
+  if(!_cronoTipEl||_cronoTipEl.style.display==="none") return;
+  var w=_cronoTipEl.offsetWidth, h=_cronoTipEl.offsetHeight;
+  var x=e.clientX+16, y=e.clientY+16;
+  if(x+w>window.innerWidth-8) x=e.clientX-w-16; if(x<8) x=8;
+  if(y+h>window.innerHeight-8) y=window.innerHeight-h-8; if(y<8) y=8;
+  _cronoTipEl.style.left=x+"px"; _cronoTipEl.style.top=y+"px";
+}
+function cronoTipHide(){ if(_cronoTipEl) _cronoTipEl.style.display="none"; }
 
 function _setBreadcrumb(txt){
   var el=document.getElementById("bcPagina"), sep=document.getElementById("bcSep2");
