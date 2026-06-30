@@ -521,7 +521,7 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .gn-grupo .gn-nome{font-weight:bold;color:#3a4659;}
 .g-time{position:relative;height:40px;flex:1 1 auto;}
 .g-row.g-head .g-time{height:30px;}
-.gc-mes{position:absolute;top:0;height:100%;box-sizing:border-box;font-size:10.5px;font-weight:600;color:#8a93a0;border-left:1px solid #eef0f3;padding:8px 0 0 5px;}
+.gc-sem{position:absolute;top:0;height:100%;box-sizing:border-box;font-size:9.5px;font-weight:600;color:#9aa3b0;border-left:1px solid #e6e9ee;padding:8px 0 0 3px;white-space:nowrap;}
 .gbar{position:absolute;top:50%;transform:translateY(-50%);height:16px;border-radius:6px;cursor:pointer;overflow:hidden;box-shadow:0 1px 2px rgba(20,28,40,.10);min-width:5px;}
 .gbar-fill{position:absolute;left:0;top:0;height:100%;border-radius:6px 0 0 6px;}
 .gbar-pct{position:absolute;right:6px;top:0;line-height:16px;font-size:9.5px;font-weight:700;color:#1b2a3a;}
@@ -2534,15 +2534,33 @@ function _normHdr(s){
 }
 // Duração: "55 dias" / 55 / "1 dia" → número de dias
 function _mspDur(s){ if(typeof s==="number") return Math.round(s); var m=String(s||"").match(/(\d+(?:[.,]\d+)?)/); return m?Math.round(parseFloat(m[1].replace(",","."))):0; }
+// Ano de referência p/ recuperar datas com ano truncado pelo export (ex.: "15/07/2" → 2026)
+var _xlsxRefYear=0;
 // Data pt-BR do MS Project: "Ter 30/06/26" (dd/mm/yy) ou Date do Excel → ISO yyyy-mm-dd
 function _xlsxData(v){
   if(v==null || v==="") return "";
   if(v instanceof Date && !isNaN(v)) return v.getFullYear()+"-"+String(v.getMonth()+1).padStart(2,"0")+"-"+String(v.getDate()).padStart(2,"0");
-  var m=String(v).replace(/^[A-Za-zÀ-ú]{2,4}\.?\s+/,'').match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); // dd/mm/yy
+  var m=String(v).replace(/^[A-Za-zÀ-ú]{2,4}\.?\s+/,'').match(/(\d{1,2})\/(\d{1,2})\/(\d{1,4})/); // dd/mm/yy (ano 1–4 díg.)
   if(!m) return "";
-  var dd=+m[1], mm=+m[2], yy=+m[3]; if(yy<100) yy+=2000;
+  var dd=+m[1], mm=+m[2], ys=m[3], yy=+ys;
+  if(ys.length<=1){ yy = _xlsxRefYear || (2000+yy); }   // ano truncado → usa o ano de referência da planilha
+  else if(yy<100){ yy+=2000; }
   if(mm<1||mm>12||dd<1||dd>31) return "";
   return yy+"-"+String(mm).padStart(2,"0")+"-"+String(dd).padStart(2,"0");
+}
+// Descobre o ano predominante (2–4 díg.) nas colunas de data, para corrigir anos truncados
+function _xlsxDetectarAno(aoa, map, linhaIni){
+  var cont={};
+  for(var r=linhaIni; r<aoa.length; r++){
+    var row=aoa[r]||[];
+    [map.ini,map.fim].forEach(function(ci){
+      if(ci==null) return; var c=row[ci]; if(c==null) return;
+      var m=String(c).match(/\d{1,2}\/\d{1,2}\/(\d{2,4})/);
+      if(m){ var y=+m[1]; if(y<100) y+=2000; cont[y]=(cont[y]||0)+1; }
+    });
+  }
+  var best=0,bn=-1; Object.keys(cont).forEach(function(y){ if(cont[y]>bn){ bn=cont[y]; best=+y; } });
+  return best || (new Date().getFullYear());
 }
 // Percentual concluído: aceita 0..1 (fração do Excel) ou 0..100 ou "50%"
 function _xlsxPct(v){
@@ -2592,17 +2610,21 @@ function parseCronogramaXLSX(arrayBuffer){
     Object.keys(_XLSX_COLS).forEach(function(k){ if(_XLSX_COLS[k].req && cab.map[k]==null) faltando.push(_XLSX_COLS[k].rotulo); });
     if(faltando.length){ reject({tipo:"colunas", faltando:faltando, encontradas:cab.headers}); return; }
     var temFase = cab.map.fase!=null;
+    _xlsxRefYear = _xlsxDetectarAno(aoa, cab.map, cab.linha+1);  // corrige anos truncados pelo export
     // Lê as linhas de dados
     var brutos=[];
     for(var r=cab.linha+1; r<aoa.length; r++){
       var row=aoa[r]||[];
       var nome=row[cab.map.tarefa]; if(nome==null || !String(nome).trim()) continue; // ignora linhas vazias
       var ini=_xlsxData(row[cab.map.ini]);
+      var fim=_xlsxData(row[cab.map.fim]);
+      var dur=_mspDur(row[cab.map.dur]);
+      if(!dur && ini && fim){ var dd=_cDias(_cdISO(ini),_cdISO(fim)); if(dd>0) dur=dd; } // duração ausente → calcula por início/término
       brutos.push({
         nome:String(nome).trim(),
-        dur:_mspDur(row[cab.map.dur]),
+        dur:dur,
         ini:ini,
-        fim:_xlsxData(row[cab.map.fim]),
+        fim:fim,
         pred:(row[cab.map.pred]!=null?String(row[cab.map.pred]).trim():""),
         pct:_xlsxPct(row[cab.map.pct]),
         fase: temFase ? (row[cab.map.fase]!=null && String(row[cab.map.fase]).trim() ? String(row[cab.map.fase]).trim() : "") : ""
@@ -4104,9 +4126,22 @@ function renderCronograma(){
   var proxCard='<div class="crono-prox-card"><div class="px-tit">⏭ Próximas atividades</div><div class="px-lista">'+proxItens+'</div></div>'
     + (foraPrazo?'<div class="crono-aviso">⚠️ Hoje ('+_fmtBR(hojeISO)+') é posterior ao término planejado ('+_fmtBR(maxISO)+').</div>':'');
 
-  // ----- Cabeçalho de meses (posições em %) -----
-  var meses=''; var dm=new Date(min.getFullYear(),min.getMonth(),1);
-  while(dm<=max){ var d2=(dm<min?min:dm); var mx=pos(d2.getFullYear()+"-"+String(d2.getMonth()+1).padStart(2,"0")+"-"+String(d2.getDate()).padStart(2,"0")); meses+='<div class="gc-mes" style="left:'+mx+'%;">'+_MESES_PT[dm.getMonth()]+'/'+String(dm.getFullYear()).slice(2)+'</div>'; dm=new Date(dm.getFullYear(),dm.getMonth()+1,1); }
+  // ----- Cabeçalho por SEMANAS (posições em %) + grade semanal -----
+  var weekPct=7/span*100;
+  var nSem=Math.floor(span/7)+1;
+  var labelEvery = nSem>32 ? 4 : (nSem>16 ? 2 : 1);
+  var meses=''; var mesAtual=-1;
+  for(var k=0;k<=Math.ceil(span/7);k++){
+    var wd=new Date(min.getFullYear(),min.getMonth(),min.getDate()+k*7);
+    if(wd>max && k>0) break;
+    var leftp=Math.min(k*weekPct,100);
+    var dia=String(wd.getDate()).padStart(2,"0");
+    var mesMudou=(wd.getMonth()!==mesAtual); mesAtual=wd.getMonth();
+    var lbl = (k%labelEvery===0) ? (dia+'/'+(mesMudou?_MESES_PT[wd.getMonth()]:String(wd.getMonth()+1).padStart(2,"0"))) : '';
+    meses+='<div class="gc-sem" style="left:'+leftp+'%;">'+lbl+'</div>';
+  }
+  // grade semanal de fundo (linhas verticais alinhadas às semanas)
+  var gridBg='background:repeating-linear-gradient(90deg,#eef0f3 0,#eef0f3 1px,transparent 1px,transparent '+weekPct+'%);';
 
   // ----- Linhas -----
   var vis=_cronoVisiveis(t);
@@ -4117,7 +4152,7 @@ function renderCronograma(){
     var L=pos(x.ini), R=pos(_fe), wb=Math.max(R-L,0.4);
     var indent=(x.lv)*15;
     var caret = x.temFilhos ? '<span class="gn-caret" onclick="event.stopPropagation();toggleCronoGrupo('+x.id+')">'+(_cronoColapsado[x.id]?'▶':'▼')+'</span>' : '<span class="gn-caret gn-vazio"></span>';
-    var marco = !x.temFilhos && (x.dur===0 || x.ini===_fe);
+    var marco = !x.temFilhos && x.ini===_fe;   // marco só quando início = término (duração pode vir vazia na planilha)
     var barra, metaTxt, nomeCls;
     if(x.temFilhos){
       nomeCls = x.lv<=1?"gn-fase":"gn-grupo";
@@ -4138,7 +4173,7 @@ function renderCronograma(){
     linhas+='<div class="g-row" data-tid="'+x.id+'" onclick="cronoDetalhe('+x.id+')" onmouseenter="cronoTip(event,'+x.id+')" onmousemove="cronoTipMove(event)" onmouseleave="cronoTipHide()">'
       +'<div class="g-name '+nomeCls+'" style="padding-left:'+indent+'px;">'+caret
         +'<span class="gn-main"><span class="gn-l1"><span class="gn-dot st-'+st+'"></span><span class="gn-nome">'+escapeHtml(x.nome)+'</span></span>'+metaTxt+'</span></div>'
-      +'<div class="g-time" style="min-width:'+Wmin+'px;">'+barra+'<div class="g-hoje" style="left:'+posHoje+'%;"></div></div>'
+      +'<div class="g-time" style="min-width:'+Wmin+'px;'+gridBg+'">'+barra+'<div class="g-hoje" style="left:'+posHoje+'%;"></div></div>'
       +'</div>';
   });
 
@@ -4150,7 +4185,7 @@ function renderCronograma(){
     + dash + proxCard
     + '<div class="crono-legenda"><span><i class="lg st-concluida"></i>Concluída</span><span><i class="lg st-pendente_aprov"></i>⏱ Pendente</span><span><i class="lg st-andamento"></i>Em andamento</span><span><i class="lg st-atrasada"></i>Atrasada</span><span><i class="lg st-futura"></i>Futura</span><span><i class="lg lg-marco">◆</i>Marco</span></div>'
     + '<div class="gantt">'
-      + '<div class="g-row g-head"><div class="g-name g-name-head">Serviço / Atividade</div><div class="g-time g-time-head" style="min-width:'+Wmin+'px;">'+meses+headHoje+'</div></div>'
+      + '<div class="g-row g-head"><div class="g-name g-name-head">Serviço / Atividade</div><div class="g-time g-time-head" style="min-width:'+Wmin+'px;'+gridBg+'">'+meses+headHoje+'</div></div>'
       + linhas
     + '</div>';
   _animarContadores();
