@@ -4093,7 +4093,8 @@ function renderCronoPanel(id){
   if(temForm && podeEditar()) foot+='<button type="button" class="cp-btn cp-btn-sec" onclick="novaFichaCronoAbrir('+id+')">📝 Nova ficha</button>';
   if(ligs.length===1) foot+='<button type="button" class="cp-btn cp-btn-sec" onclick="cronoAbrirFichaLigada(\''+lig.key+'\')">📄 Abrir Ficha</button>';
   // Atividade SEM formulário: submissão direta no cronograma (Finalização de Serviço)
-  if(!x.temFilhos && !temForm && podeEditar() && !(fin && (fin.status==="pendente"||fin.status==="aprovado"))){
+  // "Submeter ao gestor" só para quem edita mas NÃO aprova (inspetor). Gestor/admin usam "Marcar como concluído".
+  if(!x.temFilhos && !temForm && podeEditar() && !podeAprovar() && !(fin && (fin.status==="pendente"||fin.status==="aprovado"))){
     foot+='<button type="button" class="cp-btn cp-btn-pri" onclick="fecharCronoPanel();formFinalizacao('+id+')">📨 Submeter ao gestor</button>';
   }
   if(fin && fin.status==="pendente" && ehAdmin()){
@@ -4145,6 +4146,11 @@ function renderCronograma(){
   t.forEach(function(x){ if(!x.temFilhos===false && !x.ini) return; if(x.ini && (!minISO||x.ini<minISO)) minISO=x.ini; var fe=_cronoFimEf(x); if(fe && (!maxISO||fe>maxISO)) maxISO=fe; });
   if(!minISO) minISO=_hojeISO(); if(!maxISO||maxISO<minISO) maxISO=minISO;
   var min=_cdISO(minISO), max=_cdISO(maxISO);
+  // Folga (padding) nas bordas p/ não colar barras/marcos na lateral (ex.: tarefa de 1 dia começando hoje)
+  var spanBruto=Math.max(_cDias(min,max),1);
+  var pad=Math.min(Math.max(Math.round(spanBruto*0.06),3),10); // 3 a 10 dias
+  min=new Date(min.getFullYear(),min.getMonth(),min.getDate()-pad);
+  max=new Date(max.getFullYear(),max.getMonth(),max.getDate()+pad);
   var span=Math.max(_cDias(min,max),1);
   function pos(iso){ if(!iso) return 0; var p=_cDias(min,_cdISO(iso))/span*100; return Math.max(0,Math.min(100,p)); }
   var Wmin=Math.max(Math.round(span*7),520); // px mínimos da timeline (responsivo: scroll em telas pequenas)
