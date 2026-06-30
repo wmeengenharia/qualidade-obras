@@ -381,6 +381,9 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .cp-atv .cp-nome{font-weight:600;color:#1b1b1b;line-height:1.3;}
 .cp-atv .cp-datas{font-size:11px;color:#777;margin-top:2px;}
 .cp-atv .cp-cont{color:#e65100;font-size:11px;font-weight:bold;margin-top:1px;}
+.cp-atv-off{cursor:default;opacity:.7;background:#fafafa;border-style:dashed;}
+.cp-atv-off:hover{border-color:#e0e0e0;background:#fafafa;}
+.cp-semform{color:#9a7b00 !important;font-style:italic;}
 /* Ficha genérica de cronograma */
 .cf-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
 .cf-grid label,.cf-lbl{font-size:12px;font-weight:bold;color:#444;display:block;margin-bottom:3px;}
@@ -544,6 +547,14 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .cp-indisp{display:inline-block;font-size:11px;font-weight:700;color:#8a6d00;background:#fff8e1;border:1px solid #ffe082;border-radius:14px;padding:2px 9px;}
 .cp-count{display:inline-block;min-width:18px;text-align:center;font-size:11px;font-weight:700;color:#1565c0;background:#e3f2fd;border-radius:10px;padding:1px 7px;margin-left:4px;}
 .cp-addficha{margin-bottom:10px;width:100%;}
+.cp-subtit{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8b94a7;margin:12px 0 8px;}
+.cp-coments{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;max-height:260px;overflow-y:auto;}
+.cp-coment{border:1px solid #ece9f5;background:#faf9ff;border-radius:9px;padding:8px 10px;}
+.cp-coment-h{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:#8b94a7;margin-bottom:3px;}
+.cp-coment-h b{color:#4a3a6b;font-weight:700;}
+.cp-coment-txt{font-size:12.5px;color:#1f2a3d;line-height:1.4;white-space:pre-wrap;word-break:break-word;}
+.cp-coment-add{display:flex;flex-direction:column;gap:7px;}
+.cp-coment-add textarea{width:100%;box-sizing:border-box;border:1px solid #d4dae4;border-radius:8px;padding:8px;font-size:12.5px;font-family:inherit;resize:vertical;}
 .cp-fichas{display:flex;flex-direction:column;gap:9px;max-height:300px;overflow-y:auto;}
 .cp-ficha{border:1px solid #e6eaf1;border-radius:10px;padding:10px 11px;background:#fbfcfe;}
 .cp-ficha-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;}
@@ -1567,6 +1578,45 @@ function registrarLog(acao, extra){
   DB.log.push(entry);
   if(DB.log.length>2000) DB.log=DB.log.slice(-2000);
 }
+
+// ===================================================================
+// AUDITORIA (EVENT LOG) — histórico estruturado de eventos da obra.
+// Base para timeline, auditoria e futuras funcionalidades do módulo Cronograma.
+// Registro: {id, ts, usuario, usuarioId, obra, tipo, entidade, entidadeId,
+//            antes, depois, origem, detalhe}
+// ===================================================================
+function _novoEventoId(){ return "EV"+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function registrarEvento(tipo, opts){
+  opts=opts||{};
+  if(!DB.auditoria) DB.auditoria=[];
+  var ev={
+    id:_novoEventoId(),
+    ts:new Date().toISOString(),
+    usuario: sessao?sessao.nome:"?",
+    usuarioId: sessao?sessao.id:"",
+    obra: (opts.obra!==undefined?opts.obra:obraAtual)||"",
+    tipo: tipo,
+    entidade: opts.entidade||"",          // "obra" | "ficha" | "cronograma" | "atividade" | "finalizacao" | "usuario"
+    entidadeId: (opts.entidadeId!=null?String(opts.entidadeId):""),
+    antes: (opts.antes!==undefined?opts.antes:null),
+    depois: (opts.depois!==undefined?opts.depois:null),
+    origem: opts.origem||"app",            // "app" | "cronograma" | "ficha" | "wizard" | "sync" | "import"
+    detalhe: opts.detalhe||""
+  };
+  DB.auditoria.push(ev);
+  if(DB.auditoria.length>5000) DB.auditoria=DB.auditoria.slice(-5000);
+  return ev;
+}
+// Eventos de uma obra (mais recentes primeiro) — opcionalmente filtrados por entidade/id
+function eventosDaObra(obra, filtro){
+  obra=obra||obraAtual; filtro=filtro||{};
+  return (DB.auditoria||[]).filter(function(e){
+    if(e.obra!==obra) return false;
+    if(filtro.entidade && e.entidade!==filtro.entidade) return false;
+    if(filtro.entidadeId!=null && String(e.entidadeId)!==String(filtro.entidadeId)) return false;
+    return true;
+  }).sort(function(a,b){ return b.ts.localeCompare(a.ts); });
+}
 function registrarHistorico(fichaId, acao, detalhe){
   if(!obraAtual||!DB.fichas||!DB.fichas[obraAtual]) return;
   var est=DB.fichas[obraAtual][fichaId]; if(!est) return;
@@ -1756,6 +1806,7 @@ function enviarFinalizacao(taskId){
     fase:_cronoFaseDe(tarefas,idx), servicoNome:t.nome
   };
   registrarLog("finalizacao-submetida",{obra:obraAtual,tarefa:taskId});
+  registrarEvento("finalizacao_submetida",{entidade:"finalizacao",entidadeId:taskId,origem:"cronograma",depois:{status:"pendente",servico:t.nome},detalhe:"Submissão direta no cronograma: "+t.nome});
   salvarDB(); atualizarBadgePendencias();
   abrirModal("✅ Enviado!","<p style='font-size:13px;'>Finalização de <b>"+escapeHtml(t.nome)+"</b> enviada.<br>O serviço ficará <b>🟡 Pendente de Aprovação</b> até a decisão do administrador.</p>",
     '<button type="button" onclick="fecharModalForce();trocarModo(\'workspace\')">OK</button>');
@@ -1763,8 +1814,10 @@ function enviarFinalizacao(taskId){
 function _setFinStatus(obra,taskId,status){
   if(!ehAdmin()){ alert("Apenas administradores podem aprovar/rejeitar finalizações."); return false; }
   var fo=DB.finalizacoes&&DB.finalizacoes[obra]; var fin=fo&&fo[taskId]; if(!fin) return false;
+  var _antes={status:fin._statusAnterior||"pendente"};
   fin.status=status; fin.aprovadoPor=(sessao?sessao.nome:""); fin.aprovadoData=new Date().toLocaleDateString("pt-BR");
   registrarLog("finalizacao-"+status,{obra:obra,tarefa:taskId});
+  registrarEvento(status==="aprovado"?"finalizacao_aprovada":"finalizacao_rejeitada",{obra:obra,entidade:"finalizacao",entidadeId:taskId,origem:"cronograma",antes:_antes,depois:{status:status,por:fin.aprovadoPor},detalhe:"Finalização "+(status==="aprovado"?"aprovada":"rejeitada")+": "+(fin.servicoNome||taskId)});
   salvarDB(); atualizarBadgePendencias();
   return true;
 }
@@ -1970,6 +2023,8 @@ function migrarDB(){
   if(!DB.cronogramaPct) DB.cronogramaPct = {}; // {obra:{taskId:pct}} — progresso manual das atividades do cronograma
   if(!DB.obraCronograma) DB.obraCronograma = {}; // {obra:{projeto,tarefas:[...],importadoEm}} — cronograma importado por obra (fonte de verdade)
   if(!DB.finalizacoes) DB.finalizacoes = {};   // {obra:{taskId:{status,por,porId,data,observacoes,comentarios,fase,servicoNome,aprovadoPor,aprovadoData}}} — fluxo de finalização de serviço
+  if(!DB.auditoria) DB.auditoria = [];          // event log estruturado (auditoria) — ver registrarEvento()
+  if(!DB.cronogramaDados) DB.cronogramaDados = {}; // {obra:{taskId:{realIni,realFim,comentarios:[{por,porId,ts,texto}]}}} — módulo Cronograma (dados próprios, sem depender de ficha)
   // Carimba servicoId/tipo nas fichas (suporta várias fichas por serviço via chave de instância "servicoId#xxxx")
   Object.keys(DB.fichas).forEach(function(obra){
     var of = DB.fichas[obra]; if(!of || typeof of!=="object") return;
@@ -2434,6 +2489,51 @@ function _mspData(s){
   return yy+"-"+String(mm).padStart(2,"0")+"-"+String(dd).padStart(2,"0");
 }
 function _mspDur(s){ var m=String(s).match(/(\d+(?:[.,]\d+)?)/); return m?Math.round(parseFloat(m[1].replace(",","."))):0; }
+
+// ===== Detecção de cabeçalhos do MS Project — PT e EN, resiliente ao idioma =====
+// Remove acentos e normaliza para comparação tolerante.
+function _normHdr(s){
+  return String(s||"").toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g,"") // tira acentos
+    .replace(/\s+/g," ").trim();
+}
+// Sinônimos por coluna (PT + EN). A ordem importa: nome/dur/pred antes de start/finish.
+var _CRONO_HDR = {
+  nome:   ["nome da tarefa","nome da atividade","task name","nome","tarefa","atividade"],
+  dur:    ["duration","duracao","duração","dur"],
+  pred:   ["predecessors","predecessoras","predecessor","predecessora"],
+  start:  ["planned start","data de inicio","data inicio","inicio planejado","inicio","start date","start","comeco","comeco planejado"],
+  finish: ["planned finish","data de termino","data termino","termino planejado","termino","fim","finish date","finish","end date","end","conclusao","data de conclusao"]
+};
+// Retorna a chave de coluna (nome/dur/pred/start/finish/id) para um texto de cabeçalho, ou null.
+// Usa IGUALDADE EXATA (normalizada) — é como o MS Project imprime os cabeçalhos — para
+// nunca confundir uma célula de dados (ex.: nome contendo "fim"/"início") com cabeçalho.
+function _mapHeader(txtOriginal){
+  var t=_normHdr(txtOriginal);
+  if(!t) return null;
+  if(t==="id" || t==="#") return "id";
+  // ordem: nome/dur/pred primeiro
+  if(_CRONO_HDR.nome.indexOf(t)>=0) return "nome";
+  if(_CRONO_HDR.dur.indexOf(t)>=0) return "dur";
+  if(_CRONO_HDR.pred.indexOf(t)>=0) return "pred";
+  var ehStart=_CRONO_HDR.start.indexOf(t)>=0;
+  var ehFinish=_CRONO_HDR.finish.indexOf(t)>=0;
+  if(ehStart && !ehFinish) return "start";
+  if(ehFinish && !ehStart) return "finish";
+  return null;
+}
+// É um texto de cabeçalho/rodapé a ser ignorado ao montar as linhas de dados?
+function _ehCabecalhoCrono(txtOriginal){
+  var t=_normHdr(txtOriginal);
+  if(!t) return false;
+  if(_mapHeader(txtOriginal)!=null) return true;                 // cabeçalho de coluna (match exato)
+  if(t==="task mode" || t==="modo da tarefa" || t==="modo de tarefa") return true;
+  if(t==="resource names" || t==="nomes dos recursos" || t==="recursos") return true;
+  // rodapés/metadados (estes podem ter texto adicional → indexOf é seguro pois são frases próprias)
+  if(t.indexOf("project:")>=0 || t.indexOf("projeto:")>=0 || t.indexOf("date:")>=0 || t.indexOf("pagina")>=0) return true;
+  return false;
+}
+
 function parseCronogramaPDF(typedarray){
   return new Promise(function(resolve,reject){
     if(typeof pdfjsLib==="undefined"){ reject(new Error("O leitor de PDF (pdf.js) não carregou. Verifique sua internet e tente novamente.")); return; }
@@ -2451,17 +2551,14 @@ function parseCronogramaPDF(typedarray){
         if(colX) return;
         var h={};
         items.forEach(function(o){
-          var t=o.s.toLowerCase();
-          if(o.s==="ID" && h.id==null) h.id=o.x;
-          if(t.indexOf("nome da tarefa")>=0||t==="task name") h.nome=o.x;
-          if(t==="duration"||t.indexOf("dura")===0) h.dur=o.x;
-          if(t==="start"||t.indexOf("in")===0&&t.indexOf("cio")>=0) h.start=o.x;
-          if(t==="finish"||t.indexOf("rmino")>=0) h.finish=o.x;
-          if(t.indexOf("predecessor")>=0) h.pred=o.x;
+          var c=_mapHeader(o.s);              // PT/EN, tolerante a acentos e variações
+          if(!c) return;
+          // primeira ocorrência de cada coluna vence (cabeçalho aparece uma vez por página)
+          if(h[c]==null) h[c]=o.x;
         });
         if(h.nome!=null && h.dur!=null && h.start!=null && h.finish!=null) colX=h;
       });
-      if(!colX){ reject(new Error("Não encontrei a tabela do MS Project (colunas Nome da Tarefa / Duration / Start / Finish). Exporte o cronograma do Project com essas colunas visíveis.")); return; }
+      if(!colX){ reject(new Error("Não encontrei a tabela do cronograma. Exporte o MS Project com as colunas Nome da Tarefa / Duração / Início / Término (ou Task Name / Duration / Start / Finish) visíveis.")); return; }
       var cols=[
         {k:"id",x:colX.id!=null?colX.id:-99999},
         {k:"nome",x:colX.nome},
@@ -2475,8 +2572,7 @@ function parseCronogramaPDF(typedarray){
       paginas.forEach(function(items, pi){
         var byY=[];
         items.forEach(function(o){
-          var t=o.s.toLowerCase();
-          if(t.indexOf("nome da tarefa")>=0||t==="duration"||t==="start"||t==="finish"||t.indexOf("predecessor")>=0||o.s==="ID"||t.indexOf("task mode")>=0||t.indexOf("resource names")>=0||t.indexOf("project:")>=0||t.indexOf("date:")>=0||t.indexOf("página")>=0) return;
+          if(_ehCabecalhoCrono(o.s)) return;   // pula textos de cabeçalho/rodapé (PT/EN)
           var g=null; for(var i=0;i<byY.length;i++){ if(Math.abs(byY[i].y-o.y)<=3){ g=byY[i]; break; } }
           if(!g){ g={y:o.y, its:[]}; byY.push(g); }
           g.its.push(o);
@@ -2605,6 +2701,8 @@ function wizFinalizar(){
   // Acesso definido no passo 4 (sem etapa de seleção de serviços/fichas — ocultada nesta fase)
   if(_wiz.acessoLivre){ delete DB.obraAcessos[nome]; } else { DB.obraAcessos[nome]=_wiz.usuariosSel.slice(); }
   registrarLog("criar-obra-cronograma",{obra:nome, tarefas:_wiz.parsed.tarefas.length});
+  registrarEvento("obra_criada",{obra:nome,entidade:"obra",entidadeId:nome,origem:"wizard",depois:{nome:nome,tarefas:_wiz.parsed.tarefas.length},detalhe:"Obra criada com cronograma ("+_wiz.parsed.tarefas.length+" tarefas)"});
+  registrarEvento("cronograma_importado",{obra:nome,entidade:"cronograma",entidadeId:nome,origem:"import",depois:{tarefas:_wiz.parsed.tarefas.length},detalhe:"Cronograma importado"});
   salvarDB();
   _wiz=null;
   fecharModalForce();
@@ -2949,6 +3047,7 @@ function confirmarEditarObra(nomeAntigo){
   }
 
   registrarLog("editar-obra",{de:nomeAntigo, para:nomeNovo});
+  registrarEvento("obra_alterada",{obra:nomeNovo,entidade:"obra",entidadeId:nomeNovo,origem:"app",antes:{nome:nomeAntigo},depois:{nome:nomeNovo},detalhe:(nomeAntigo!==nomeNovo?("Renomeada: "+nomeAntigo+" → "+nomeNovo):"Dados da obra alterados")});
   salvarDB();
   fecharModalForce();
   _editObraLogoNovo = null;
@@ -2977,6 +3076,7 @@ function confirmarExcluirObra(nome){
   if(DB.obraLogos) delete DB.obraLogos[nome];
   if(DB.obraServicos) delete DB.obraServicos[nome];
   registrarLog("excluir-obra",{obra:nome});
+  registrarEvento("obra_excluida",{obra:nome,entidade:"obra",entidadeId:nome,origem:"app",antes:{nome:nome},detalhe:"Obra excluída permanentemente"});
   salvarDB();
   fecharModalForce();
   if(obraAtual===nome){ obraAtual=null; }
@@ -3051,21 +3151,32 @@ function _cronoContagemFichas(servicoId){ // quantas fichas já existem p/ esta 
 function novaFichaCrono(){
   var tarefas=_cronoTemFilhos(_cronoTarefasObra());
   if(!tarefas.length){ abrirModal("➕ Nova ficha","<p style=\"font-size:13px;\">O cronograma desta obra não tem atividades.</p>",'<button type="button" class="secundario" onclick="fecharModalForce()">Fechar</button>'); return; }
-  var corpo='<p style="font-size:13px;margin:0 0 12px;color:#555;">Escolha a <b>atividade do cronograma</b> para criar a ficha de verificação. (As atividades vêm exclusivamente do cronograma importado.)</p>'
+  var corpo='<p style="font-size:13px;margin:0 0 12px;color:#555;">Escolha a <b>atividade do cronograma</b> para criar a ficha de verificação. Apenas atividades com <b>formulário de inspeção correspondente</b> aparecem habilitadas. Atividades sem formulário são controladas direto no cronograma (Finalização de Serviço).</p>'
     +'<div class="crono-pick">';
+  var algumComForm=false;
   tarefas.forEach(function(t,i){
     if(t.temFilhos){
       corpo+='<div class="cp-grupo" style="padding-left:'+(t.nivel*12)+'px;">'+escapeHtml(t.nome)+'</div>';
     } else {
+      var form=_formularioDaAtividade(t.nome);
       var n=_cronoContagemFichas(t.id);
       var jaTem = n>0 ? ' <span class="cp-cont">'+n+' ficha(s)</span>' : '';
-      corpo+='<button type="button" class="cp-atv" style="padding-left:'+(t.nivel*12+10)+'px;" onclick="novaFichaCronoAbrir('+t.id+')">'
-        +'<span class="cp-ic">📝</span>'
-        +'<span class="cp-info"><span class="cp-nome">'+escapeHtml(t.nome)+'</span>'
-        +'<span class="cp-datas">'+(t.ini?_fmtBR(t.ini):'')+(t.fim?' → '+_fmtBR(t.fim):'')+'</span>'+jaTem+'</span></button>';
+      if(form){
+        algumComForm=true;
+        corpo+='<button type="button" class="cp-atv" style="padding-left:'+(t.nivel*12+10)+'px;" onclick="novaFichaCronoAbrir('+t.id+')">'
+          +'<span class="cp-ic">📝</span>'
+          +'<span class="cp-info"><span class="cp-nome">'+escapeHtml(t.nome)+'</span>'
+          +'<span class="cp-datas">📄 '+escapeHtml((form.tipo==="servico"?"FVS ":"FVM ")+form.id+" — "+form.titulo)+'</span>'+jaTem+'</span></button>';
+      } else {
+        corpo+='<div class="cp-atv cp-atv-off" style="padding-left:'+(t.nivel*12+10)+'px;" title="Sem formulário de inspeção — controlada pelo cronograma">'
+          +'<span class="cp-ic">📅</span>'
+          +'<span class="cp-info"><span class="cp-nome">'+escapeHtml(t.nome)+'</span>'
+          +'<span class="cp-datas cp-semform">Sem formulário · controle pelo cronograma</span></span></div>';
+      }
     }
   });
   corpo+='</div>';
+  if(!algumComForm) corpo+='<p style="font-size:12px;color:#999;margin-top:8px;">Nenhuma atividade desta obra possui formulário de inspeção correspondente. A aprovação dessas atividades é feita pelo cronograma (Finalização de Serviço).</p>';
   document.getElementById("modal-box").classList.add("modal-wide");
   abrirModal("➕ Nova ficha — cronograma", corpo, '<button type="button" class="secundario" onclick="fecharModalForce()">Cancelar</button>');
 }
@@ -3073,6 +3184,7 @@ function novaFichaCronoAbrir(taskId){
   var tarefas=_cronoTemFilhos(_cronoTarefasObra());
   var t=null,idx=-1; for(var i=0;i<tarefas.length;i++){ if(tarefas[i].id===taskId){ t=tarefas[i]; idx=i; break; } }
   if(!t){ fecharModalForce(); alert("Atividade não encontrada no cronograma."); return; }
+  if(!_atividadeTemFormulario(t.nome)){ fecharModalForce(); alert("Esta atividade não possui formulário de inspeção correspondente.\nA aprovação é feita direto no cronograma (Finalização de Serviço)."); return; }
   if(!DB.fichas) DB.fichas={}; if(!DB.fichas[obraAtual]) DB.fichas[obraAtual]={};
   var key="C"+taskId+"#"+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
   DB.fichas[obraAtual][key]={
@@ -3085,6 +3197,7 @@ function novaFichaCronoAbrir(taskId){
     criadoPor: sessao?sessao.id:""
   };
   registrarHistorico(key,"criou ficha (cronograma): "+t.nome);
+  registrarEvento("ficha_criada",{entidade:"ficha",entidadeId:key,origem:"cronograma",depois:{codigo:DB.fichas[obraAtual][key].codigo,nome:t.nome,cronogramaId:taskId},detalhe:"Ficha criada para a atividade: "+t.nome});
   salvarDB();
   fecharModalForce();
   abrirFichaSalva("cronograma", key);
@@ -3193,6 +3306,7 @@ function novaFichaAbrir(tipo, servicoId){
   of[key].tipo = tipo;
   of[key].obra = obraAtual;
   if(sessao) of[key].criadoPor = sessao.id;
+  registrarEvento("ficha_criada",{entidade:"ficha",entidadeId:key,origem:"ficha",depois:{tipo:tipo,servicoId:servicoId,nome:(cat.titulo||cat.material||"")},detalhe:"Ficha criada: "+(cat.titulo||cat.material||servicoId)});
   salvarDB();
   fecharModalForce();
   abrirFichaSalva(tipo, key);
@@ -3211,8 +3325,10 @@ function setCronoPct(id,val){
   val=Math.max(0,Math.min(100,parseInt(val,10)||0));
   if(!DB.cronogramaPct) DB.cronogramaPct={};
   if(!DB.cronogramaPct[obraAtual]) DB.cronogramaPct[obraAtual]={};
+  var _antes=DB.cronogramaPct[obraAtual][id];
   DB.cronogramaPct[obraAtual][id]=val;
   registrarLog("crono-progresso",{obra:obraAtual,tarefa:id,pct:val});
+  registrarEvento("atividade_alterada",{entidade:"atividade",entidadeId:id,origem:"cronograma",antes:{pct:(_antes||0)},depois:{pct:val},detalhe:"Progresso manual alterado para "+val+"%"});
   salvarDB();
   renderCronograma();
 }
@@ -3235,16 +3351,93 @@ function _cronoTarefas(){
   });
   return t;
 }
+// ===================================================================
+// VÍNCULO CRONOGRAMA ↔ FORMULÁRIOS (APP2)
+// Regra (#3): se a atividade casa com um formulário (match>0) → fluxo de Ficha.
+//             se NÃO casa (match=0) → sem formulário de inspeção; aprovação
+//             acontece direto no Cronograma (Finalização de Serviço).
+// Lista ordenada do mais específico para o mais genérico (1ª regra que casa vence).
+// ===================================================================
+var _MAPA_FORMS = [
+  {kw:["instalacao eletrica","instalacoes eletricas","instalacao eletrica predial"], tipo:"servico", id:"09", conf:"Alta"},
+  {kw:["instalacao hidraulica","instalacoes hidraulicas"], tipo:"servico", id:"10", conf:"Alta"},
+  {kw:["tubulacao","tubulacoes","pead","rede de esgoto","tubo"], tipo:"servico", id:"10", conf:"Media"},
+  {kw:["alvenaria estrutural"], tipo:"servico", id:"04", conf:"Alta"},
+  {kw:["alvenaria nao estrutural","alvenaria de vedacao","alvenaria"], tipo:"servico", id:"05", conf:"Alta"},
+  {kw:["montagem de armadura","armadura","armacao de aco"], tipo:"servico", id:"06", conf:"Media"},
+  {kw:["forma","formas","escoramento"], tipo:"servico", id:"07", conf:"Media"},
+  {kw:["concretagem","concreto"], tipo:"servico", id:"08", conf:"Alta"},
+  {kw:["impermeabilizacao","reboco impermeabilizante","manta","mcdrain","geotextil"], tipo:"servico", id:"11", conf:"Media"},
+  {kw:["montagem de pecas pre-moldadas","pre-moldad","pre moldad","premoldad","peca pre"], tipo:"servico", id:"34", conf:"Media"},
+  {kw:["reaterro","compactacao de aterro","compactacao","aterro"], tipo:"servico", id:"03", conf:"Media"},
+  {kw:["locacao da obra","locacao topografica","locacao"], tipo:"servico", id:"01", conf:"Alta"},
+  {kw:["fundacao","sapata","estaca","bloco de fundacao"], tipo:"servico", id:"02", conf:"Media"},
+  {kw:["revestimento interno de area umida"], tipo:"servico", id:"12", conf:"Media"},
+  {kw:["revestimento interno de area seca"], tipo:"servico", id:"13", conf:"Media"},
+  {kw:["revestimento externo"], tipo:"servico", id:"14", conf:"Media"},
+  {kw:["chapisco","reboco","emboco"], tipo:"servico", id:"14", conf:"Baixa"},
+  {kw:["contrapiso"], tipo:"servico", id:"15", conf:"Alta"},
+  {kw:["telha metalica","cobertura metalica"], tipo:"servico", id:"19.2", conf:"Media"},
+  {kw:["cobertura","telha ceramica","telhado"], tipo:"servico", id:"19.1", conf:"Media"},
+  {kw:["forro","gesso"], tipo:"servico", id:"20", conf:"Media"},
+  {kw:["batente","colocacao de porta","porta"], tipo:"servico", id:"21", conf:"Media"},
+  {kw:["janela","esquadria","caixilho"], tipo:"servico", id:"22", conf:"Media"},
+  {kw:["pintura externa"], tipo:"servico", id:"24", conf:"Alta"},
+  {kw:["pintura"], tipo:"servico", id:"23", conf:"Alta"},
+  {kw:["louca","metais sanitarios","bancada"], tipo:"servico", id:"25", conf:"Media"},
+  {kw:["reforco de subleito","subleito"], tipo:"servico", id:"27", conf:"Media"},
+  {kw:["sub base","sub-base","solo brita"], tipo:"servico", id:"28", conf:"Media"},
+  {kw:["bgs","base de bgs"], tipo:"servico", id:"29", conf:"Media"},
+  {kw:["cauq","imprimacao de ligacao"], tipo:"servico", id:"30", conf:"Media"},
+  {kw:["guarda-corpo","guarda corpo"], tipo:"servico", id:"31", conf:"Media"},
+  {kw:["instalacao de gas"], tipo:"servico", id:"32", conf:"Media"},
+  {kw:["drywall","parede de drywall"], tipo:"servico", id:"33", conf:"Alta"},
+  {kw:["calha","instalacao de calhas"], tipo:"servico", id:"35", conf:"Media"}
+];
+// Casa o nome da atividade com um formulário (match>0). Retorna {tipo,id,titulo,conf} ou null.
+function _formularioDaAtividade(nome){
+  var t=_normHdr(nome); if(!t) return null;
+  for(var i=0;i<_MAPA_FORMS.length;i++){
+    var m=_MAPA_FORMS[i];
+    for(var j=0;j<m.kw.length;j++){
+      var k=m.kw[j];
+      // fronteira só no INÍCIO da palavra (permite stem/plural: "pre moldad" casa "pré moldadas")
+      var re=new RegExp("(^|[^a-z0-9])"+k.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"));
+      if(re.test(t)){
+        var lista=(m.tipo==="servico"?SERVICOS:MATERIAIS);
+        var cat=lista.find(function(x){return x.id===m.id;});
+        return {tipo:m.tipo, id:m.id, titulo:cat?(cat.titulo||cat.material||m.id):m.id, conf:m.conf};
+      }
+    }
+  }
+  return null;
+}
+// true se a atividade tem formulário de inspeção correspondente (fluxo de Ficha)
+function _atividadeTemFormulario(nome){ return _formularioDaAtividade(nome)!=null; }
+
 // REGRA (fonte de verdade = cronograma importado):
-// Finish preenchido  => Concluída / 100% / verde.
-// Finish vazio       => Não iniciada (futura) / Em andamento / Atrasada conforme as datas.
+// Atividade COM formulário → status vem das Fichas (todas aprovadas = concluída).
+// Atividade SEM formulário → status vem da Finalização de Serviço (aprovação no cronograma).
+// Em ambos, Finish preenchido => Concluída; senão datas (futura/andamento/atrasada).
 function _cronoStatus(tar){
-  // Governança: finalização sobrepõe o status base
-  var fin=_finalizacao(tar.id);
-  if(fin){
-    if(fin.status==="pendente") return "pendente_aprov";   // aguardando aprovação do admin
-    if(fin.status==="aprovado") return "concluida";
-    // rejeitado → segue regra normal (volta a poder ser finalizado)
+  if(_atividadeTemFormulario(tar.nome)){
+    // Fluxo de Ficha: aprovação da ficha atualiza o cronograma
+    var fs=_fichasDaAtividade(tar.id);
+    if(fs.length){
+      var algSub=false, todasAprov=true;
+      fs.forEach(function(f){ var s=f.est&&f.est.aprovacao&&f.est.aprovacao.status; if(s==="submetido") algSub=true; if(s!=="aprovado") todasAprov=false; });
+      if(todasAprov) return "concluida";
+      if(algSub) return "pendente_aprov";
+      // ficha em preenchimento → cai para a regra base (Finish/datas)
+    }
+  } else {
+    // Sem formulário: governança via Finalização de Serviço (aprovação direta no cronograma)
+    var fin=_finalizacao(tar.id);
+    if(fin){
+      if(fin.status==="pendente") return "pendente_aprov";
+      if(fin.status==="aprovado") return "concluida";
+      // rejeitado → segue regra normal
+    }
   }
   if(tar.fim) return "concluida";
   var hoje=_hojeISO();
@@ -3257,9 +3450,53 @@ function _cronoStatus(tar){
 }
 // Finalização de serviço (governança): submissão por atividade do cronograma
 function _finalizacao(taskId, obra){ obra=obra||obraAtual; var o=DB.finalizacoes&&DB.finalizacoes[obra]; return (o&&o[taskId])||null; }
+
+// ===== MÓDULO CRONOGRAMA — dados próprios por atividade (sem depender de ficha) =====
+function _cronoDados(taskId, obra){
+  obra=obra||obraAtual;
+  if(!DB.cronogramaDados) DB.cronogramaDados={};
+  if(!DB.cronogramaDados[obra]) DB.cronogramaDados[obra]={};
+  if(!DB.cronogramaDados[obra][taskId]) DB.cronogramaDados[obra][taskId]={comentarios:[]};
+  if(!DB.cronogramaDados[obra][taskId].comentarios) DB.cronogramaDados[obra][taskId].comentarios=[];
+  return DB.cronogramaDados[obra][taskId];
+}
+function _comentariosCrono(taskId, obra){ var d=DB.cronogramaDados&&DB.cronogramaDados[obra||obraAtual]&&DB.cronogramaDados[obra||obraAtual][taskId]; return (d&&d.comentarios)||[]; }
+function addComentarioCrono(taskId){
+  if(!podeEditar()){ alert("Sem permissão para comentar."); return; }
+  var el=document.getElementById("cp-coment-input");
+  var txt=el?(el.value||"").trim():"";
+  if(!txt){ if(el) el.focus(); return; }
+  var d=_cronoDados(taskId);
+  d.comentarios.push({por:(sessao?sessao.nome:"?"), porId:(sessao?sessao.id:""), ts:new Date().toISOString(), texto:txt});
+  registrarEvento("comentario",{entidade:"atividade",entidadeId:taskId,origem:"cronograma",depois:{texto:txt},detalhe:"Comentário: "+txt});
+  salvarDB();
+  renderCronoPanel(taskId);
+}
+// Eventos de auditoria relacionados a uma atividade (a própria atividade + suas fichas)
+function _eventosDaAtividade(taskId, ligs){
+  var keys={}; keys[String(taskId)]=1; (ligs||[]).forEach(function(l){ keys[String(l.key)]=1; });
+  return (DB.auditoria||[]).filter(function(e){ return e.obra===obraAtual && keys[String(e.entidadeId)]; })
+    .sort(function(a,b){ return b.ts.localeCompare(a.ts); });
+}
+var _EV_INFO={
+  obra_criada:{ic:"🟢",cor:"#2e7d32"}, obra_alterada:{ic:"✏️",cor:"#1565c0"}, obra_excluida:{ic:"🗑️",cor:"#c62828"},
+  cronograma_importado:{ic:"🟢",cor:"#2e7d32"},
+  ficha_criada:{ic:"📝",cor:"#1565c0"}, ficha_submetida:{ic:"🟡",cor:"#f9a825"}, ficha_aprovada:{ic:"🟢",cor:"#2e7d32"}, ficha_reprovada:{ic:"🔴",cor:"#c62828"}, ficha_excluida:{ic:"🗑️",cor:"#c62828"},
+  finalizacao_submetida:{ic:"🟡",cor:"#f9a825"}, finalizacao_aprovada:{ic:"🟢",cor:"#2e7d32"}, finalizacao_rejeitada:{ic:"🔴",cor:"#c62828"},
+  atividade_alterada:{ic:"✏️",cor:"#1565c0"}, comentario:{ic:"💬",cor:"#6a1b9a"}
+};
 function _cronoPctTarefa(tar){
-  var fin=_finalizacao(tar.id);
-  if(fin){ if(fin.status==="aprovado") return 100; if(fin.status==="pendente") return 0; } // pendente não conta como concluído
+  if(_atividadeTemFormulario(tar.nome)){
+    var fs=_fichasDaAtividade(tar.id);
+    if(fs.length){
+      var todasAprov=fs.every(function(f){ return f.est&&f.est.aprovacao&&f.est.aprovacao.status==="aprovado"; });
+      if(todasAprov) return 100;
+      // alguma ainda não aprovada → não conta como concluído (segue base)
+    }
+  } else {
+    var fin=_finalizacao(tar.id);
+    if(fin){ if(fin.status==="aprovado") return 100; if(fin.status==="pendente") return 0; }
+  }
   return tar.fim ? 100 : (_cronoPct(tar.id)||0);
 }
 function _cronoCalc(t){
@@ -3502,6 +3739,8 @@ function renderCronoPanel(id){
   var fin=_finalizacao(id);
   var ligs=_fichasDaAtividade(id);   // relação 1:N — TODAS as fichas da atividade
   var lig=ligs.length?ligs[0]:null;  // primeira (para o rodapé / atalho rápido)
+  var form=(!x.temFilhos)?_formularioDaAtividade(x.nome):null;  // formulário correspondente (match>0) ou null
+  var temForm=!!form;
 
   // ----- Planejado / Real / Diferença -----
   var realISO = (fin&&fin.status==="aprovado"&&fin.aprovadoData)? paraISO(fin.aprovadoData) : (x.fim||"");
@@ -3566,52 +3805,98 @@ function renderCronoPanel(id){
     +'<div class="cp-status-big" style="color:'+info.cor+';background:'+info.bg+';border:1px solid '+info.cor+'33;">'+info.ic+' '+stLblFull+'</div>'
     +'<div class="cp-status-expl">'+stExpl+'</div></div>';
 
-  // ===== CARD FICHAS VINCULADAS (1:N) =====
-  html+='<div class="cp-card"><div class="cp-card-tit">Fichas vinculadas <span class="cp-count">'+ligs.length+'</span></div>';
-  if(ligs.length){
-    if(!x.temFilhos && podeEditar()) html+='<button type="button" class="cp-btn cp-btn-sec cp-addficha" onclick="novaFichaCronoAbrir('+id+')">➕ Nova ficha</button>';
-    html+='<div class="cp-fichas">';
-    ligs.forEach(function(l){
-      var si=_fichaStatusInfo(l.est);
-      html+='<div class="cp-ficha">'
-        +'<div class="cp-ficha-top"><span class="cp-ficha-cod">'+escapeHtml(l.est.codigo||"FIC")+'</span>'
-          +'<span class="cp-ficha-badge" style="color:'+si.cor+';background:'+si.bg+';">'+si.ic+' '+si.lbl+'</span></div>'
-        +'<div class="cp-ficha-nome">'+escapeHtml(l.est.nome||x.nome)+'</div>'
-        +'<div class="cp-ficha-meta">👤 '+escapeHtml(l.est.respInsp||"—")+' &nbsp;·&nbsp; 📅 '+escapeHtml(l.est.data||"—")+'</div>'
-        +'<button type="button" class="cp-btn cp-btn-sec cp-ficha-abrir" onclick="cronoAbrirFichaLigada(\''+l.key+'\')">Abrir ›</button>'
-      +'</div>';
-    });
-    html+='</div>';
-  } else {
-    html+='<div class="cp-rel-l"><span class="cp-i-ic">📄</span><div class="cp-i-txt"><div class="cp-i-val"><span class="cp-indisp">🟡 Nenhuma ficha vinculada</span></div></div>'
-      +(!x.temFilhos && podeEditar()?'<button type="button" class="cp-btn cp-btn-sec cp-rel-act" onclick="novaFichaCronoAbrir('+id+')">➕ Criar ficha</button>':'')+'</div>';
-  }
-  html+='</div>';
-
-  // ===== CARD FINALIZAÇÃO / APROVAÇÃO =====
   var finLbl={pendente:"🟡 Pendente de Aprovação",aprovado:"🟢 Aprovada",rejeitado:"🔴 Rejeitada"}[(fin&&fin.status)]||"—";
-  html+='<div class="cp-card"><div class="cp-card-tit">Finalização de Serviço</div><div class="cp-rel">';
-  html+=_cpLinha("✔","Status", finLbl);
-  if(fin){
+
+  // ===== CARD: FORMULÁRIO + FICHAS (atividade COM formulário) =====
+  if(temForm){
+    html+='<div class="cp-card"><div class="cp-card-tit">Formulário de inspeção</div>';
+    html+=_cpLinha("📄","Formulário", escapeHtml((form.tipo==="servico"?"FVS ":"FVM ")+form.id+" — "+form.titulo));
+    html+='<div class="cp-subtit">Fichas vinculadas <span class="cp-count">'+ligs.length+'</span></div>';
+    if(podeEditar()) html+='<button type="button" class="cp-btn cp-btn-sec cp-addficha" onclick="novaFichaCronoAbrir('+id+')">➕ Nova ficha</button>';
+    if(ligs.length){
+      html+='<div class="cp-fichas">';
+      ligs.forEach(function(l){
+        var si=_fichaStatusInfo(l.est);
+        html+='<div class="cp-ficha">'
+          +'<div class="cp-ficha-top"><span class="cp-ficha-cod">'+escapeHtml(l.est.codigo||"FIC")+'</span>'
+            +'<span class="cp-ficha-badge" style="color:'+si.cor+';background:'+si.bg+';">'+si.ic+' '+si.lbl+'</span></div>'
+          +'<div class="cp-ficha-nome">'+escapeHtml(l.est.nome||x.nome)+'</div>'
+          +'<div class="cp-ficha-meta">👤 '+escapeHtml(l.est.respInsp||"—")+' &nbsp;·&nbsp; 📅 '+escapeHtml(l.est.data||"—")+'</div>'
+          +'<button type="button" class="cp-btn cp-btn-sec cp-ficha-abrir" onclick="cronoAbrirFichaLigada(\''+l.key+'\')">Abrir ›</button>'
+        +'</div>';
+      });
+      html+='</div>';
+    } else {
+      html+='<div class="cp-nota">Nenhuma ficha criada ainda para esta atividade.</div>';
+    }
+    html+='</div>';
+  }
+
+  // ===== CARD: CONTROLE PELO CRONOGRAMA (atividade SEM formulário) =====
+  if(!x.temFilhos && !temForm){
+    html+='<div class="cp-card"><div class="cp-card-tit">Aprovação pelo Cronograma</div>';
+    html+='<div class="cp-nota">Esta atividade não possui formulário de inspeção correspondente. A conclusão é submetida e aprovada diretamente pelo gestor no cronograma (Finalização de Serviço).</div>';
+    html+='<div class="cp-rel" style="margin-top:8px;">';
+    html+=_cpLinha("✔","Status", finLbl);
+    if(fin){
+      html+=_cpLinha("👤","Usuário responsável", escapeHtml(fin.por||"—"));
+      html+=_cpLinha("📅","Data da submissão", escapeHtml(fin.data||"—"));
+      if(fin.status==="aprovado"&&fin.aprovadoPor) html+=_cpLinha("🟢","Aprovado por", escapeHtml(fin.aprovadoPor)+(fin.aprovadoData?" · "+escapeHtml(fin.aprovadoData):""));
+      if(fin.observacoes) html+=_cpLinha("📝","Observações", escapeHtml(fin.observacoes));
+    }
+    html+='</div></div>';
+  }
+
+  // ===== CARD FINALIZAÇÃO (legado: existe submissão mesmo com formulário) =====
+  if(temForm && fin){
+    html+='<div class="cp-card"><div class="cp-card-tit">Finalização de Serviço</div><div class="cp-rel">';
+    html+=_cpLinha("✔","Status", finLbl);
     html+=_cpLinha("👤","Usuário responsável", escapeHtml(fin.por||"—"));
     html+=_cpLinha("📅","Data da submissão", escapeHtml(fin.data||"—"));
     if(fin.status==="aprovado"&&fin.aprovadoPor) html+=_cpLinha("🟢","Aprovado por", escapeHtml(fin.aprovadoPor)+(fin.aprovadoData?" · "+escapeHtml(fin.aprovadoData):""));
     if(fin.observacoes) html+=_cpLinha("📝","Observações", escapeHtml(fin.observacoes));
-  } else {
-    html+='<div class="cp-nota">Nenhuma submissão de finalização para esta atividade.</div>';
+    html+='</div></div>';
   }
-  html+='</div></div>';
 
-  // ===== CARD HISTÓRICO =====
-  var ev=[];
-  var imp=DB.obraCronograma&&DB.obraCronograma[obraAtual]&&DB.obraCronograma[obraAtual].importadoEm;
-  if(imp){ var di=new Date(imp); ev.push({ic:"🟢",cor:"#2e7d32",txt:"Cronograma importado",dt:di.toLocaleDateString("pt-BR")}); }
-  if(fin){
-    ev.push({ic:"🟡",cor:"#f9a825",txt:"Serviço enviado para aprovação"+(fin.por?" por "+fin.por:""),dt:fin.data||""});
-    if(fin.status==="aprovado") ev.push({ic:"🟢",cor:"#2e7d32",txt:"Gestor aprovou a finalização"+(fin.aprovadoPor?" ("+fin.aprovadoPor+")":""),dt:fin.aprovadoData||""});
-    else if(fin.status==="rejeitado") ev.push({ic:"🔴",cor:"#c62828",txt:"Gestor rejeitou a finalização"+(fin.aprovadoPor?" ("+fin.aprovadoPor+")":""),dt:fin.aprovadoData||""});
+  // ===== CARD COMENTÁRIOS (ação direta no cronograma, sem ficha) =====
+  var coments=_comentariosCrono(id);
+  html+='<div class="cp-card"><div class="cp-card-tit">Comentários <span class="cp-count">'+coments.length+'</span></div>';
+  if(coments.length){
+    html+='<div class="cp-coments">';
+    coments.slice().reverse().forEach(function(c){
+      var dt=""; try{ dt=new Date(c.ts).toLocaleString("pt-BR"); }catch(e){ dt=c.ts||""; }
+      html+='<div class="cp-coment"><div class="cp-coment-h"><b>'+escapeHtml(c.por||"?")+'</b><span>'+escapeHtml(dt)+'</span></div>'
+        +'<div class="cp-coment-txt">'+escapeHtml(c.texto||"")+'</div></div>';
+    });
+    html+='</div>';
+  } else { html+='<div class="cp-nota">Nenhum comentário ainda.</div>'; }
+  if(podeEditar()){
+    html+='<div class="cp-coment-add"><textarea id="cp-coment-input" rows="2" placeholder="Escreva um comentário..."></textarea>'
+      +'<button type="button" class="cp-btn cp-btn-pri" onclick="addComentarioCrono('+id+')">Comentar</button></div>';
   }
-  if(x.fim && !(fin&&fin.status==="aprovado")) ev.push({ic:"🟢",cor:"#2e7d32",txt:"Concluído pelo cronograma (data Finish)",dt:_fmtBR(x.fim)});
+  html+='</div>';
+
+  // ===== CARD HISTÓRICO (auditoria estruturada) =====
+  var evAudit=_eventosDaAtividade(id, ligs);
+  var ev=[];
+  if(evAudit.length){
+    // Usa o event log estruturado (preciso) + marco de importação do cronograma
+    evAudit.forEach(function(e){
+      var info=_EV_INFO[e.tipo]||{ic:"•",cor:"#616161"};
+      var dt=""; try{ dt=new Date(e.ts).toLocaleString("pt-BR"); }catch(_e){ dt=e.ts||""; }
+      ev.push({ic:info.ic, cor:info.cor, txt:(e.detalhe||e.tipo)+" — "+e.usuario, dt:dt});
+    });
+  } else {
+    // Fallback (dados antigos sem auditoria): histórico sintetizado
+    var imp=DB.obraCronograma&&DB.obraCronograma[obraAtual]&&DB.obraCronograma[obraAtual].importadoEm;
+    if(imp){ var di=new Date(imp); ev.push({ic:"🟢",cor:"#2e7d32",txt:"Cronograma importado",dt:di.toLocaleDateString("pt-BR")}); }
+    if(fin){
+      ev.push({ic:"🟡",cor:"#f9a825",txt:"Serviço enviado para aprovação"+(fin.por?" por "+fin.por:""),dt:fin.data||""});
+      if(fin.status==="aprovado") ev.push({ic:"🟢",cor:"#2e7d32",txt:"Gestor aprovou a finalização"+(fin.aprovadoPor?" ("+fin.aprovadoPor+")":""),dt:fin.aprovadoData||""});
+      else if(fin.status==="rejeitado") ev.push({ic:"🔴",cor:"#c62828",txt:"Gestor rejeitou a finalização"+(fin.aprovadoPor?" ("+fin.aprovadoPor+")":""),dt:fin.aprovadoData||""});
+    }
+    if(x.fim && !(fin&&fin.status==="aprovado")) ev.push({ic:"🟢",cor:"#2e7d32",txt:"Concluído pelo cronograma (data Finish)",dt:_fmtBR(x.fim)});
+  }
   html+='<div class="cp-card"><div class="cp-card-tit">Histórico</div>';
   if(ev.length){
     html+='<div class="cp-timeline">';
@@ -3625,8 +3910,12 @@ function renderCronoPanel(id){
 
   // ===== RODAPÉ =====
   var foot='<div class="cp-foot">';
+  if(temForm && podeEditar()) foot+='<button type="button" class="cp-btn cp-btn-sec" onclick="novaFichaCronoAbrir('+id+')">📝 Nova ficha</button>';
   if(ligs.length===1) foot+='<button type="button" class="cp-btn cp-btn-sec" onclick="cronoAbrirFichaLigada(\''+lig.key+'\')">📄 Abrir Ficha</button>';
-  if(fin) foot+='<button type="button" class="cp-btn cp-btn-sec" onclick="fecharCronoPanel();abrirFinalizacao()">📨 Abrir Submissão</button>';
+  // Atividade SEM formulário: submissão direta no cronograma (Finalização de Serviço)
+  if(!x.temFilhos && !temForm && podeEditar() && !(fin && (fin.status==="pendente"||fin.status==="aprovado"))){
+    foot+='<button type="button" class="cp-btn cp-btn-pri" onclick="fecharCronoPanel();formFinalizacao('+id+')">📨 Submeter ao gestor</button>';
+  }
   if(fin && fin.status==="pendente" && ehAdmin()){
     foot+='<button type="button" class="cp-btn cp-btn-rej" onclick="rejeitarFinalizacao('+id+')">✖ Rejeitar</button>'
       +'<button type="button" class="cp-btn cp-btn-apr" onclick="aprovarFinalizacao('+id+')">✔ Aprovar</button>';
@@ -4832,6 +5121,7 @@ function confirmarAprovacao(acao){
   const fichaId = _fichaIdAtual();
   registrarHistorico(fichaId, acao==="aprovar"?"aprovação":"reprovação", obs.trim()||"");
   registrarLog(acao==="aprovar"?"aprovacao":"reprovacao", {fichaId:fichaId, obra:obraAtual});
+  registrarEvento(acao==="aprovar"?"ficha_aprovada":"ficha_reprovada",{entidade:"ficha",entidadeId:fichaId,origem:"ficha",antes:{status:"submetido"},depois:{status:est.aprovacao.status,por:est.aprovacao.por},detalhe:(est.codigo?est.codigo+" — ":"")+(est.nome||"")+(obs.trim()?(" · "+obs.trim()):"")});
   salvarDB();
   fecharModalForce();
   renderAtual();
@@ -4897,6 +5187,7 @@ function confirmarSubmissao(){
   const fichaId = _fichaIdAtual();
   registrarHistorico(fichaId, "submeteu para aprovação");
   registrarLog("submissao",{fichaId:fichaId,obra:obraAtual});
+  registrarEvento("ficha_submetida",{entidade:"ficha",entidadeId:fichaId,origem:"ficha",antes:{status:"pendente"},depois:{status:"submetido",por:est.aprovacao.por},detalhe:(est.codigo?est.codigo+" — ":"")+(est.nome||"")});
   salvarDB(); fecharModalForce(); renderAtual();
 }
 
@@ -5113,8 +5404,10 @@ function excluirFichaSalva(tipo, id){
 
 function confirmarExclusao(tipo, id){
   if(!ehAdmin()){ fecharModalForce(); return; }
+  var _exc=DB.fichas&&DB.fichas[obraAtual]&&DB.fichas[obraAtual][id];
   if(DB.fichas && DB.fichas[obraAtual]) delete DB.fichas[obraAtual][id];
   registrarLog("excluir-ficha",{fichaId:id,tipo:tipo,obra:obraAtual});
+  registrarEvento("ficha_excluida",{entidade:"ficha",entidadeId:id,origem:"ficha",antes:{codigo:(_exc&&_exc.codigo)||"",nome:(_exc&&_exc.nome)||""},detalhe:"Ficha excluída"+(_exc&&_exc.codigo?(" ("+_exc.codigo+")"):"")});
   salvarDB();
   fecharModalForce();
   renderFichasSalvas();
