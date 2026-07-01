@@ -2537,16 +2537,28 @@ function _mspDur(s){ if(typeof s==="number") return Math.round(s); var m=String(
 // Ano de referência p/ recuperar datas com ano truncado pelo export (ex.: "15/07/2" → 2026)
 var _xlsxRefYear=0;
 // Data pt-BR do MS Project: "Ter 30/06/26" (dd/mm/yy) ou Date do Excel → ISO yyyy-mm-dd
+var _XLSX_MESES={janeiro:1,fevereiro:2,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12,
+  jan:1,fev:2,mar:3,abr:4,mai:5,jun:6,jul:7,ago:8,set:9,out:10,nov:11,dez:12};
 function _xlsxData(v){
   if(v==null || v==="") return "";
   if(v instanceof Date && !isNaN(v)) return v.getFullYear()+"-"+String(v.getMonth()+1).padStart(2,"0")+"-"+String(v.getDate()).padStart(2,"0");
-  var m=String(v).replace(/^[A-Za-zÀ-ú]{2,4}\.?\s+/,'').match(/(\d{1,2})\/(\d{1,2})\/(\d{1,4})/); // dd/mm/yy (ano 1–4 díg.)
-  if(!m) return "";
-  var dd=+m[1], mm=+m[2], ys=m[3], yy=+ys;
-  if(ys.length<=1){ yy = _xlsxRefYear || (2000+yy); }   // ano truncado → usa o ano de referência da planilha
-  else if(yy<100){ yy+=2000; }
-  if(mm<1||mm>12||dd<1||dd>31) return "";
-  return yy+"-"+String(mm).padStart(2,"0")+"-"+String(dd).padStart(2,"0");
+  var s=String(v);
+  // Formato dd/mm/aa (ex.: "Ter 30/06/26")
+  var m=s.replace(/^[A-Za-zÀ-ú]{2,4}\.?\s+/,'').match(/(\d{1,2})\/(\d{1,2})\/(\d{1,4})/);
+  if(m){
+    var dd=+m[1], mm=+m[2], ys=m[3], yy=+ys;
+    if(ys.length<=1){ yy = _xlsxRefYear || (2000+yy); }
+    else if(yy<100){ yy+=2000; }
+    if(mm<1||mm>12||dd<1||dd>31) return "";
+    return yy+"-"+String(mm).padStart(2,"0")+"-"+String(dd).padStart(2,"0");
+  }
+  // Formato "30 Junho 2026 09:00" (dia + nome do mês em PT + ano, hora opcional)
+  var mn=s.match(/(\d{1,2})\s+([A-Za-zçÇÀ-ú]{3,})\.?\s+(\d{4})/);
+  if(mn){
+    var mes=_XLSX_MESES[_normHdr(mn[2])];
+    if(mes){ var d2=+mn[1], y2=+mn[3]; if(d2>=1&&d2<=31) return y2+"-"+String(mes).padStart(2,"0")+"-"+String(d2).padStart(2,"0"); }
+  }
+  return "";
 }
 // Descobre o ano predominante (2–4 díg.) nas colunas de data, para corrigir anos truncados
 function _xlsxDetectarAno(aoa, map, linhaIni){
@@ -3280,28 +3292,24 @@ function _cronoContagemFichas(servicoId){ // quantas fichas já existem p/ esta 
 function novaFichaCrono(){
   var tarefas=_cronoTemFilhos(_cronoTarefasObra());
   if(!tarefas.length){ abrirModal("➕ Nova ficha","<p style=\"font-size:13px;\">O cronograma desta obra não tem atividades.</p>",'<button type="button" class="secundario" onclick="fecharModalForce()">Fechar</button>'); return; }
-  var corpo='<p style="font-size:13px;margin:0 0 12px;color:#555;">Escolha a <b>atividade do cronograma</b> para criar a ficha de verificação. Apenas atividades com <b>formulário de inspeção correspondente</b> aparecem habilitadas. Atividades sem formulário são controladas direto no cronograma (Finalização de Serviço).</p>'
+  // só exibe FASE que tenha ao menos uma atividade com formulário identificado
+  function grupoTemForm(i){ var lv=tarefas[i].nivel; for(var j=i+1;j<tarefas.length;j++){ if(tarefas[j].nivel<=lv) break; if(!tarefas[j].temFilhos && _formularioDaAtividade(tarefas[j].nome)) return true; } return false; }
+  var corpo='<p style="font-size:13px;margin:0 0 12px;color:#555;">Escolha a <b>atividade do cronograma</b> para criar a ficha de verificação. Aparecem apenas as atividades com <b>formulário de inspeção identificado</b>. As demais são controladas direto no cronograma (Finalização de Serviço).</p>'
     +'<div class="crono-pick">';
   var algumComForm=false;
   tarefas.forEach(function(t,i){
     if(t.temFilhos){
-      corpo+='<div class="cp-grupo" style="padding-left:'+(t.nivel*12)+'px;">'+escapeHtml(t.nome)+'</div>';
+      if(grupoTemForm(i)) corpo+='<div class="cp-grupo" style="padding-left:'+(t.nivel*12)+'px;">'+escapeHtml(t.nome)+'</div>';
     } else {
       var form=_formularioDaAtividade(t.nome);
+      if(!form) return; // sem formulário → não aparece no seletor de fichas
+      algumComForm=true;
       var n=_cronoContagemFichas(t.id);
       var jaTem = n>0 ? ' <span class="cp-cont">'+n+' ficha(s)</span>' : '';
-      if(form){
-        algumComForm=true;
-        corpo+='<button type="button" class="cp-atv" style="padding-left:'+(t.nivel*12+10)+'px;" onclick="novaFichaCronoAbrir('+t.id+')">'
-          +'<span class="cp-ic">📝</span>'
-          +'<span class="cp-info"><span class="cp-nome">'+escapeHtml(t.nome)+'</span>'
-          +'<span class="cp-datas">📄 '+escapeHtml((form.tipo==="servico"?"FVS ":"FVM ")+form.id+" — "+form.titulo)+'</span>'+jaTem+'</span></button>';
-      } else {
-        corpo+='<div class="cp-atv cp-atv-off" style="padding-left:'+(t.nivel*12+10)+'px;" title="Sem formulário de inspeção — controlada pelo cronograma">'
-          +'<span class="cp-ic">📅</span>'
-          +'<span class="cp-info"><span class="cp-nome">'+escapeHtml(t.nome)+'</span>'
-          +'<span class="cp-datas cp-semform">Sem formulário · controle pelo cronograma</span></span></div>';
-      }
+      corpo+='<button type="button" class="cp-atv" style="padding-left:'+(t.nivel*12+10)+'px;" onclick="novaFichaCronoAbrir('+t.id+')">'
+        +'<span class="cp-ic">📝</span>'
+        +'<span class="cp-info"><span class="cp-nome">'+escapeHtml(t.nome)+'</span>'
+        +'<span class="cp-datas">📄 '+escapeHtml((form.tipo==="servico"?"FVS ":"FVM ")+form.id+" — "+form.titulo)+'</span>'+jaTem+'</span></button>';
     }
   });
   corpo+='</div>';
