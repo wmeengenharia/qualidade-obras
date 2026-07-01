@@ -606,6 +606,40 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .cp-evid{display:flex;flex-wrap:wrap;gap:6px;}
 .cp-evid-img{width:60px;height:60px;object-fit:cover;border-radius:8px;border:1px solid #e6eaf1;cursor:pointer;}
 .cp-evid-img:hover{filter:brightness(.95);}
+/* Barra de navegação do painel (lista → atividade) */
+.cp-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:#f4f6f9;border-bottom:1px solid #e3e7ee;}
+.cp-nav-back{background:none;border:none;font-size:12.5px;font-weight:700;color:#1565c0;cursor:pointer;padding:4px 2px;}
+.cp-nav-ir{display:flex;align-items:center;gap:8px;}
+.cp-nav-btn{width:28px;height:28px;border:1px solid #d4dae4;background:#fff;border-radius:8px;cursor:pointer;font-size:12px;color:#3a4659;}
+.cp-nav-btn:disabled{opacity:.35;cursor:default;}
+.cp-nav-pos{font-size:11.5px;color:#8b94a7;font-weight:600;}
+/* Lista de atividades por status */
+.sl-head .sl-count{display:inline-block;font-size:13px;font-weight:800;background:#fff;border-radius:12px;padding:0 9px;margin-left:4px;}
+.sl-body{padding:12px;display:flex;flex-direction:column;gap:9px;}
+.sl-item{border:1px solid #e6eaf1;border-radius:11px;padding:11px 12px;background:#fff;cursor:pointer;transition:border-color .12s,box-shadow .12s;}
+.sl-item:hover{border-color:#cfe0f5;box-shadow:0 3px 12px rgba(20,28,40,.07);}
+.sl-top{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.sl-nome{font-size:13.5px;font-weight:700;color:#1f2a3d;line-height:1.3;}
+.sl-pct{font-size:13px;font-weight:800;color:#1565c0;flex:0 0 auto;}
+.sl-meta{font-size:11.5px;color:#8b94a7;margin-top:3px;}
+.sl-datas{font-size:11.5px;color:#6a7484;margin-top:3px;}
+.sl-dif{font-weight:700;margin-left:4px;}
+.sl-dif.atras{color:#c62828;} .sl-dif.adiant{color:#2e7d32;} .sl-dif.ok{color:#2e7d32;}
+.sl-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;}
+.sl-fichas-chip{font-size:11px;font-weight:600;color:#3a4659;background:#eef1f6;border-radius:12px;padding:3px 9px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;}
+.sl-fdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:2px;}
+.sl-caret{color:#9aa3b0;}
+.sl-go{font-size:12px;font-weight:700;color:#1565c0;}
+.sl-fichas{margin-top:9px;border-top:1px dashed #e6eaf1;padding-top:8px;display:flex;flex-direction:column;gap:6px;}
+.sl-ficha{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:#fafbfc;border:1px solid #eef1f5;border-radius:8px;padding:7px 9px;cursor:pointer;}
+.sl-ficha:hover{background:#f1f6ff;}
+.sl-ficha-cod{font-size:11.5px;font-weight:700;color:#1565c0;flex:0 0 auto;}
+.sl-ficha-nome{font-size:11.5px;color:#1f2a3d;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sl-ficha-badge{font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;flex:0 0 auto;}
+.sl-semficha{font-size:11.5px;color:#8b94a7;font-style:italic;}
+.sl-vazio{font-size:13px;color:#8b94a7;text-align:center;padding:24px 8px;}
+.g-row.g-row-flash{animation:gRowFlash 1.4s ease;}
+@keyframes gRowFlash{0%{background:#fff3c4;}60%{background:#fff8e1;}100%{background:transparent;}}
 .cp-body{flex:1 1 auto;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px;}
 .cp-card{background:#fff;border:1px solid #e6eaf1;border-radius:12px;padding:14px;box-shadow:0 1px 3px rgba(20,28,40,.05);}
 .cp-card-tit{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#8b94a7;margin-bottom:10px;}
@@ -4283,10 +4317,11 @@ var _cronoSel=null, _cronoEscBound=false;
 // Compatibilidade: todos os antigos chamadores continuam funcionando
 function cronoDetalhe(id){ abrirCronoPanel(id); }
 
-function abrirCronoPanel(id){
-  if(!renderCronoPanel(id)) return;
+var _cronoNav=null;        // contexto de navegação por status: {status, ids:[...], index}
+var _cronoListaExp={};     // atividades expandidas (fichas) na lista de status
+function _painelAbrir(){
   var p=document.getElementById("cronoPanel"), ov=document.getElementById("cronoPanelOverlay");
-  if(p){ p.classList.add("aberto"); p.setAttribute("aria-hidden","false"); }
+  if(p){ p.classList.add("aberto"); p.setAttribute("aria-hidden","false"); p.scrollTop=0; }
   if(ov) ov.classList.add("aberto");
   if(!_cronoEscBound){
     _cronoEscBound=true;
@@ -4294,29 +4329,111 @@ function abrirCronoPanel(id){
       var pp=document.getElementById("cronoPanel");
       if((e.key==="Escape"||e.keyCode===27) && pp && pp.classList.contains("aberto")) fecharCronoPanel();
     });
-    // Clicar fora fecha — mas mantém a Timeline navegável (clicar numa atividade atualiza o painel)
     document.addEventListener("mousedown", function(e){
       var pp=document.getElementById("cronoPanel");
       if(!pp || !pp.classList.contains("aberto")) return;
-      if(pp.contains(e.target)) return;                 // clique dentro do painel
-      if(e.target.closest && e.target.closest(".g-row")) return; // clicou numa atividade → troca conteúdo
+      if(pp.contains(e.target)) return;
+      if(e.target.closest && (e.target.closest(".g-row")||e.target.closest(".cd-card"))) return; // atividade ou card de status
       fecharCronoPanel();
     });
   }
+}
+function abrirCronoPanel(id){
+  _cronoNav=null;                 // clique direto numa barra do gantt → sem contexto de lista
+  if(!renderCronoPanel(id)) return;
+  _painelAbrir();
 }
 function fecharCronoPanel(){
   var p=document.getElementById("cronoPanel"), ov=document.getElementById("cronoPanelOverlay");
   if(p){ p.classList.remove("aberto"); p.setAttribute("aria-hidden","true"); }
   if(ov) ov.classList.remove("aberto");
+  _cronoNav=null;
   _destacarLinhaCrono(null);
 }
 function _destacarLinhaCrono(id){
   _cronoSel=id;
-  var rows=document.querySelectorAll(".g-row.g-row-sel");
-  for(var i=0;i<rows.length;i++) rows[i].classList.remove("g-row-sel");
+  var rows=document.querySelectorAll(".g-row.g-row-sel,.g-row.g-row-flash");
+  for(var i=0;i<rows.length;i++) rows[i].classList.remove("g-row-sel","g-row-flash");
   if(id==null) return;
   var r=document.querySelector('.g-row[data-tid="'+id+'"]');
-  if(r){ r.classList.add("g-row-sel"); try{ r.scrollIntoView({block:"nearest"}); }catch(e){} }
+  if(r){ r.classList.add("g-row-sel"); try{ r.scrollIntoView({block:"center",behavior:"smooth"}); }catch(e){}
+    r.classList.add("g-row-flash"); setTimeout(function(){ if(r) r.classList.remove("g-row-flash"); }, 1400);
+  }
+}
+
+// ===== SIDE PANEL — LISTA DE ATIVIDADES POR STATUS =====
+function abrirCronoStatusLista(status){
+  _cronoNav={status:status, ids:[], index:-1};
+  _cronoListaExp={};
+  _cronoSel=null; _destacarLinhaCrono(null);
+  renderCronoStatusLista();
+  _painelAbrir();
+}
+function toggleCronoListaFicha(id){ _cronoListaExp[id]=!_cronoListaExp[id]; renderCronoStatusLista(); }
+function cronoAbrirDaLista(id){
+  if(_cronoNav){ var i=_cronoNav.ids.indexOf(id); _cronoNav.index=(i>=0?i:0); }
+  renderCronoPanel(id);
+  _destacarLinhaCrono(id);
+}
+function cronoVoltarLista(){ if(!_cronoNav){ fecharCronoPanel(); return; } renderCronoStatusLista(); var pb=document.getElementById("cronoPanel"); if(pb) pb.scrollTop=0; }
+function cronoNavIr(delta){
+  if(!_cronoNav||!_cronoNav.ids.length) return;
+  var i=_cronoNav.index+delta; if(i<0)i=0; if(i>=_cronoNav.ids.length) i=_cronoNav.ids.length-1;
+  _cronoNav.index=i; var id=_cronoNav.ids[i];
+  renderCronoPanel(id); _destacarLinhaCrono(id);
+  var pb=document.getElementById("cronoPanel"); if(pb) pb.scrollTop=0;
+}
+function renderCronoStatusLista(){
+  if(!_cronoNav) return;
+  var t=_cronoTarefas(), calc=_cronoCalc(t);
+  var status=_cronoNav.status, info=_CRONO_ST_INFO[status]||_CRONO_ST_INFO.futura;
+  var lista=t.filter(function(x){ return !x.temFilhos && calc.st[x.id]===status; });
+  _cronoNav.ids=lista.map(function(x){return x.id;});
+  var itensHtml=lista.map(function(x){
+    var id=x.id, pct=calc.pct[id]||0, sInfo=_CRONO_ST_INFO[status];
+    var anc=_cronoAncestrais(t,x); var marco=(anc.fase&&anc.fase!=="—")?anc.fase:"Geral";
+    var fin=_finalizacao(id); var ligs=_fichasDaAtividade(id);
+    var resp=(fin&&fin.por)||(ligs[0]&&ligs[0].est&&ligs[0].est.respInsp)||"—";
+    var cdat=(DB.cronogramaDados&&DB.cronogramaDados[obraAtual]&&DB.cronogramaDados[obraAtual][id])||{};
+    var planFim=(cdat.fimPlan!=null&&cdat.fimPlan!=="")?cdat.fimPlan:(x.fim||"");
+    var realFim=cdat.realFim||((fin&&fin.status==="aprovado"&&fin.aprovadoData)?paraISO(fin.aprovadoData):"");
+    // indicador atraso/adiantamento
+    var difHtml="";
+    if(planFim && realFim){ var dd=_cDias(_cdISO(planFim),_cdISO(realFim)); difHtml=dd>0?'<span class="sl-dif atras">🔴 +'+dd+'d</span>':(dd<0?'<span class="sl-dif adiant">🟢 '+(-dd)+'d</span>':'<span class="sl-dif ok">🟢 no prazo</span>'); }
+    else if(planFim && status!=="concluida" && _hojeISO()>planFim){ var da=_cDias(_cdISO(planFim),_cdISO(_hojeISO())); difHtml='<span class="sl-dif atras">🔴 +'+da+'d</span>'; }
+    // fichas: badges resumidas
+    var fichasResumo = ligs.length ? ligs.map(function(l){ var si=_fichaStatusInfo(l.est); return '<span class="sl-fdot" style="background:'+si.cor+';" title="'+escapeHtml((l.est.codigo||"FIC")+" — "+si.lbl)+'"></span>'; }).join('') : '';
+    var exp=_cronoListaExp[id];
+    var fichasBloco="";
+    if(exp){
+      if(ligs.length){
+        fichasBloco='<div class="sl-fichas">'+ligs.map(function(l){ var si=_fichaStatusInfo(l.est);
+          return '<button type="button" class="sl-ficha" onclick="event.stopPropagation();cronoAbrirFichaLigada(\''+l.key+'\')">'
+            +'<span class="sl-ficha-cod">'+escapeHtml(l.est.codigo||"FIC")+'</span>'
+            +'<span class="sl-ficha-nome">'+escapeHtml(l.est.nome||x.nome)+'</span>'
+            +'<span class="sl-ficha-badge" style="color:'+si.cor+';background:'+si.bg+';">'+si.ic+' '+si.lbl+'</span></button>'; }).join('')+'</div>';
+      } else {
+        fichasBloco='<div class="sl-fichas"><div class="sl-semficha">'+(_atividadeIsentaFicha(x.nome)?"Esta atividade não exige ficha de verificação.":"Nenhuma ficha vinculada.")+'</div></div>';
+      }
+    }
+    var fichasChip = '<span class="sl-fichas-chip" onclick="event.stopPropagation();toggleCronoListaFicha('+id+')">'+(ligs.length?('📄 '+ligs.length+' ficha(s) '+fichasResumo):'📄 0')+' <span class="sl-caret">'+(exp?'▴':'▾')+'</span></span>';
+    return '<div class="sl-item" onclick="cronoAbrirDaLista('+id+')">'
+      +'<div class="sl-top"><span class="sl-nome">'+escapeHtml(x.nome)+'</span><span class="sl-pct">'+pct+'%</span></div>'
+      +'<div class="sl-meta">📁 '+escapeHtml(marco)+' · 👤 '+escapeHtml(resp)+'</div>'
+      +'<div class="sl-datas">📅 Plan.: '+(planFim?_fmtBR(planFim):"—")+(realFim?' · ✅ Real: '+_fmtBR(realFim):'')+' '+difHtml+'</div>'
+      +'<div class="sl-foot">'+fichasChip+'<span class="sl-go">Abrir ›</span></div>'
+      +fichasBloco
+      +'</div>';
+  }).join('');
+  if(!lista.length) itensHtml='<div class="sl-vazio">Nenhuma atividade neste status.</div>';
+  var html='<div class="cp-head sl-head" style="background:'+info.bg+';">'
+    +'<button type="button" class="cp-x" onclick="fecharCronoPanel()" aria-label="Fechar">✖</button>'
+    +'<div class="cp-h-nome" style="color:'+info.cor+';">'+info.ic+' '+info.lbl+' <span class="sl-count">'+lista.length+'</span></div>'
+    +'<div class="cp-h-meta"><span class="cp-badge" style="color:'+info.cor+';background:#fff;border:1px solid '+info.cor+'33;">Lista de atividades</span></div>'
+    +'</div>'
+    +'<div class="cp-body sl-body">'+itensHtml+'</div>';
+  var body=document.getElementById("cronoPanelBody");
+  if(body) body.innerHTML=html;
 }
 
 function _cpLinha(ic,tit,val,cor){
@@ -4366,8 +4483,22 @@ function renderCronoPanel(id){
   var ultEv=evTask.length?evTask[0]:null;
   var ultData=""; if(ultEv){ try{ ultData=new Date(ultEv.ts).toLocaleString("pt-BR"); }catch(e){ ultData=ultEv.ts||""; } }
 
+  // ===== BARRA DE NAVEGAÇÃO (quando aberto a partir de uma lista de status) =====
+  var html="";
+  if(_cronoNav && _cronoNav.index>=0 && _cronoNav.ids.length){
+    var pos=_cronoNav.index+1, tot=_cronoNav.ids.length;
+    var nInfo=_CRONO_ST_INFO[_cronoNav.status]||_CRONO_ST_INFO.futura;
+    html+='<div class="cp-nav">'
+      +'<button type="button" class="cp-nav-back" onclick="cronoVoltarLista()">‹ '+nInfo.ic+' '+nInfo.lbl+'</button>'
+      +'<div class="cp-nav-ir">'
+        +'<button type="button" class="cp-nav-btn" onclick="cronoNavIr(-1)"'+(_cronoNav.index<=0?' disabled':'')+' title="Atividade anterior">◀</button>'
+        +'<span class="cp-nav-pos">'+pos+' / '+tot+'</span>'
+        +'<button type="button" class="cp-nav-btn" onclick="cronoNavIr(1)"'+(_cronoNav.index>=tot-1?' disabled':'')+' title="Próxima atividade">▶</button>'
+      +'</div></div>';
+  }
+
   // ===== HEADER =====
-  var html='<div class="cp-head" style="background:'+info.bg+';">'
+  html+='<div class="cp-head" style="background:'+info.bg+';">'
     +'<button type="button" class="cp-x" onclick="fecharCronoPanel()" aria-label="Fechar">✖</button>'
     +'<div class="cp-h-nome">📌 '+escapeHtml(x.nome)+'</div>'
     +'<div class="cp-h-meta">'
@@ -4627,11 +4758,11 @@ function renderCronograma(){
   var dash='<div class="crono-dash">'
     +'<div class="cd-card cd-geral"><div class="cd-num" data-count="'+calc.geral+'" data-suf="%">0%</div><div class="cd-lbl">Conclusão geral</div>'
       +'<div class="cd-bar"><div class="cd-bar-fill" style="width:'+calc.geral+'%"></div></div></div>'
-    +'<div class="cd-card cd-click" onclick="abrirCronoDrill(\'concluida\')"><div class="cd-num cd-verde" data-count="'+c.concluida+'">0</div><div class="cd-lbl">🟢 Concluídas</div></div>'
-    +'<div class="cd-card cd-click'+(c.pendente_aprov?' cd-pend':'')+'" onclick="abrirCronoDrill(\'pendente_aprov\')"><div class="cd-num cd-amarelo" data-count="'+c.pendente_aprov+'">0</div><div class="cd-lbl">🟡 Pend. aprovação</div></div>'
-    +'<div class="cd-card cd-click" onclick="abrirCronoDrill(\'andamento\')"><div class="cd-num cd-azul" data-count="'+c.andamento+'">0</div><div class="cd-lbl">🔵 Em andamento</div></div>'
-    +'<div class="cd-card cd-click" onclick="abrirCronoDrill(\'atrasada\')"><div class="cd-num cd-vermelho" data-count="'+c.atrasada+'">0</div><div class="cd-lbl">🔴 Atrasadas</div></div>'
-    +'<div class="cd-card cd-click" onclick="abrirCronoDrill(\'futura\')"><div class="cd-num cd-cinza" data-count="'+c.futura+'">0</div><div class="cd-lbl">⚪ Futuras</div></div>'
+    +'<div class="cd-card cd-click" onclick="abrirCronoStatusLista(\'concluida\')"><div class="cd-num cd-verde" data-count="'+c.concluida+'">0</div><div class="cd-lbl">🟢 Concluídas</div></div>'
+    +'<div class="cd-card cd-click'+(c.pendente_aprov?' cd-pend':'')+'" onclick="abrirCronoStatusLista(\'pendente_aprov\')"><div class="cd-num cd-amarelo" data-count="'+c.pendente_aprov+'">0</div><div class="cd-lbl">🟡 Pend. aprovação</div></div>'
+    +'<div class="cd-card cd-click" onclick="abrirCronoStatusLista(\'andamento\')"><div class="cd-num cd-azul" data-count="'+c.andamento+'">0</div><div class="cd-lbl">🔵 Em andamento</div></div>'
+    +'<div class="cd-card cd-click" onclick="abrirCronoStatusLista(\'atrasada\')"><div class="cd-num cd-vermelho" data-count="'+c.atrasada+'">0</div><div class="cd-lbl">🔴 Atrasadas</div></div>'
+    +'<div class="cd-card cd-click" onclick="abrirCronoStatusLista(\'futura\')"><div class="cd-num cd-cinza" data-count="'+c.futura+'">0</div><div class="cd-lbl">⚪ Futuras</div></div>'
     +'<div class="cd-card cd-prev"><div class="cd-num cd-data">'+_fmtBR(maxISO)+'</div><div class="cd-lbl">📅 Previsão de término</div></div>'
     +'</div>';
 
