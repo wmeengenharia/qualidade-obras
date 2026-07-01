@@ -495,6 +495,30 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .px-meta{font-size:11px;color:#8b94a7;margin-top:1px;}
 .px-go{color:#b0b8c4;font-size:18px;font-weight:bold;flex:0 0 auto;}
 .px-vazio{font-size:12.5px;color:#2e7d32;padding:6px 2px;}
+.px-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;}
+.px-head .px-tit{margin-bottom:0;}
+.px-sel{font-size:12px;padding:5px 8px;border:1px solid #d4dae4;border-radius:8px;background:#fff;color:#3a4659;cursor:pointer;}
+.px-tags{display:flex;gap:6px;margin-top:3px;flex-wrap:wrap;}
+.px-badge{font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;}
+.px-ficha{font-size:10px;font-weight:600;padding:1px 7px;border-radius:10px;}
+.px-ficha.sim{color:#2e7d32;background:#e8f5e9;} .px-ficha.nao{color:#8a93a0;background:#eef1f5;}
+.crono-topo-acoes{display:flex;gap:6px;flex-wrap:wrap;}
+/* Curva S */
+.cs-wrap{display:flex;flex-direction:column;gap:12px;}
+.cs-leg{display:flex;gap:16px;font-size:11.5px;color:#555;justify-content:center;}
+.cs-leg i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle;}
+.cs-ind{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.cs-card{background:#fafbfc;border:1px solid #eef1f5;border-radius:10px;padding:10px;text-align:center;}
+.cs-num{font-size:20px;font-weight:bold;line-height:1.1;}
+.cs-lbl{font-size:10.5px;color:#8b94a7;margin-top:3px;}
+@media(max-width:620px){ .cs-ind{grid-template-columns:repeat(2,1fr);} }
+/* Histórico do cronograma */
+.hist-crono{max-height:60vh;overflow-y:auto;display:flex;flex-direction:column;gap:2px;}
+.hc-item{display:flex;gap:10px;padding:8px 4px;border-bottom:1px solid #f2f4f7;}
+.hc-dot{flex:0 0 auto;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;}
+.hc-txt{min-width:0;}
+.hc-ev{font-size:12.5px;color:#1f2a3d;line-height:1.35;}
+.hc-meta{font-size:10.5px;color:#9aa3b0;margin-top:1px;}
 .crono-aviso{font-size:12px;color:#b26a00;background:#fff8e1;border:1px solid #ffcc80;border-radius:6px;padding:7px 11px;margin-bottom:8px;}
 .crono-legenda{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:#555;margin:6px 0 10px;}
 .crono-legenda i.lg{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:middle;}
@@ -893,6 +917,7 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 </div>
 <input type="file" id="nfFileInput" accept=".pdf" style="display:none;">
 <input type="file" id="cronoFileInput" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none;">
+<input type="file" id="cronoReuploadInput" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none;">
 <input type="file" id="logoFileInput" accept="image/*" style="display:none;">
 
 <div id="modal-overlay" onclick="fecharModal(event)">
@@ -1834,27 +1859,47 @@ function formFinalizacao(taskId){
     +'<label class="wiz-campo-lbl">Observações</label><textarea id="fin-obs" class="wiz-input" rows="3" placeholder="Descreva a execução / evidências..."></textarea>'
     +'<label class="wiz-campo-lbl" style="margin-top:10px;">Comentários finais</label><textarea id="fin-com" class="wiz-input" rows="2"></textarea>';
   document.getElementById("modal-box").classList.add("modal-wide");
+  var btnFin = podeAprovar()
+    ? '<button type="button" class="btn-aprovar" onclick="enviarFinalizacao('+taskId+')">✔ Concluir serviço</button>'
+    : '<button type="button" class="btn-submeter" onclick="enviarFinalizacao('+taskId+')">📤 Enviar para aprovação</button>';
   abrirModal("✔️ Finalizar serviço", corpo,
-    '<button type="button" class="secundario" onclick="abrirFinalizacao()">‹ Voltar</button>'
-    +'<button type="button" class="btn-submeter" onclick="enviarFinalizacao('+taskId+')">📤 Enviar para aprovação</button>');
+    '<button type="button" class="secundario" onclick="abrirFinalizacao()">‹ Voltar</button>'+btnFin);
 }
 function enviarFinalizacao(taskId){
   var tarefas=_cronoTemFilhos(_cronoTarefasObra());
   var t=null,idx=-1; for(var i=0;i<tarefas.length;i++){ if(tarefas[i].id===taskId){t=tarefas[i];idx=i;break;} }
   if(!t) return;
+  if(!_podeConcluirDireto(taskId, t.nome)){ abrirModal("Ficha obrigatória","<p style='font-size:13px;'>⚠️ "+escapeHtml(_MSG_FICHA_OBRIG).replace(/\n/g,"<br>")+"</p>",'<button type="button" class="secundario" onclick="fecharModalForce()">Fechar</button>'); return; }
   var obs=((document.getElementById("fin-obs")||{}).value||"").trim();
   var com=((document.getElementById("fin-com")||{}).value||"").trim();
   if(!DB.finalizacoes) DB.finalizacoes={}; if(!DB.finalizacoes[obraAtual]) DB.finalizacoes[obraAtual]={};
+  var hoje=new Date().toLocaleDateString("pt-BR");
+  var direto=podeAprovar(); // admin/gestor não precisam de aprovação: concluem direto
   DB.finalizacoes[obraAtual][taskId]={
-    status:"pendente", por:(sessao?sessao.nome:""), porId:(sessao?sessao.id:""),
-    data:new Date().toLocaleDateString("pt-BR"), observacoes:obs, comentarios:com,
-    fase:_cronoFaseDe(tarefas,idx), servicoNome:t.nome
+    status: direto?"aprovado":"pendente", por:(sessao?sessao.nome:""), porId:(sessao?sessao.id:""),
+    data:hoje, observacoes:obs, comentarios:com,
+    fase:_cronoFaseDe(tarefas,idx), servicoNome:t.nome,
+    aprovadoPor: direto?(sessao?sessao.nome:""):"", aprovadoData: direto?hoje:"", manual: direto
   };
-  registrarLog("finalizacao-submetida",{obra:obraAtual,tarefa:taskId});
-  registrarEvento("finalizacao_submetida",{entidade:"finalizacao",entidadeId:taskId,origem:"cronograma",depois:{status:"pendente",servico:t.nome},detalhe:"Submissão direta no cronograma: "+t.nome});
+  if(direto) _setTerminoReal(taskId); // término real + Finish = hoje
+  registrarLog(direto?"finalizacao-aprovada":"finalizacao-submetida",{obra:obraAtual,tarefa:taskId});
+  registrarEvento(direto?"finalizacao_aprovada":"finalizacao_submetida",{entidade:"finalizacao",entidadeId:taskId,origem:"cronograma",depois:{status:(direto?"aprovado":"pendente"),servico:t.nome},detalhe:(direto?"Concluído direto pelo "+(ehAdmin()?"admin":"gestor")+": ":"Submissão no cronograma: ")+t.nome});
   salvarDB(); atualizarBadgePendencias();
-  abrirModal("✅ Enviado!","<p style='font-size:13px;'>Finalização de <b>"+escapeHtml(t.nome)+"</b> enviada.<br>O serviço ficará <b>🟡 Pendente de Aprovação</b> até a decisão do administrador.</p>",
-    '<button type="button" onclick="fecharModalForce();trocarModo(\'workspace\')">OK</button>');
+  if(direto){
+    abrirModal("✅ Concluído!","<p style='font-size:13px;'>Serviço <b>"+escapeHtml(t.nome)+"</b> marcado como <b>🟢 Concluído</b>.</p>",
+      '<button type="button" onclick="fecharModalForce();trocarModo(\'workspace\')">OK</button>');
+  } else {
+    abrirModal("✅ Enviado!","<p style='font-size:13px;'>Finalização de <b>"+escapeHtml(t.nome)+"</b> enviada.<br>O serviço ficará <b>🟡 Pendente de Aprovação</b> até a decisão do administrador.</p>",
+      '<button type="button" onclick="fecharModalForce();trocarModo(\'workspace\')">OK</button>');
+  }
+}
+// Marca término real + Finish = hoje (guarda o término planejado original)
+function _setTerminoReal(taskId){
+  var hojeISO=_hojeISO();
+  var d=_cronoDados(taskId);
+  var oc=DB.obraCronograma&&DB.obraCronograma[obraAtual];
+  if(oc&&oc.tarefas){ for(var k=0;k<oc.tarefas.length;k++){ if(oc.tarefas[k].id===taskId){ if(d.fimPlan==null) d.fimPlan=oc.tarefas[k].fim||""; oc.tarefas[k].fim=hojeISO; break; } } }
+  d.realFim=hojeISO;
 }
 function _setFinStatus(obra,taskId,status){
   if(!ehAdmin()){ alert("Apenas administradores podem aprovar/rejeitar finalizações."); return false; }
@@ -2589,7 +2634,7 @@ var _XLSX_COLS = {
   fim:    {req:true,  rotulo:"Término",               nomes:["termino","término","data de termino","fim"]},
   pred:   {req:true,  rotulo:"Predecessoras",         nomes:["predecessoras","predecessores","predecessora","predecessor"]},
   pct:    {req:true,  rotulo:"Percentual Concluído",  nomes:["percentual concluido","percentual concluído","% concluida","% concluída","% concluido","% concluído","percentual","percentual concluida"]},
-  fase:   {req:false, rotulo:"Fase",                  nomes:["fase"]}
+  fase:   {req:false, rotulo:"Marco",                 nomes:["marco","fase"]}
 };
 // Localiza, dentro das primeiras linhas, a linha de cabeçalho e mapeia coluna→índice.
 function _xlsxAcharCabecalho(aoa){
@@ -2645,9 +2690,9 @@ function parseCronogramaXLSX(arrayBuffer){
     // Mantém apenas atividades com data de início (necessária para a timeline)
     var ativ=brutos.filter(function(b){ return b.ini; });
     if(!ativ.length){ reject({tipo:"vazio", msg:"Nenhuma atividade com data de Início válida foi encontrada. Verifique a coluna Início (formato dd/mm/aa)."}); return; }
-    // Rótulo da fase: número → "Fase N"; texto → o próprio; vazio → "Geral"
-    function rotFase(v){ if(v==null||v==="") return "Geral"; if(/^\d+(\.0+)?$/.test(String(v))) return "Fase "+parseInt(v,10); return String(v); }
-    // Agrupa por fase (ordem de 1ª aparição). Sem coluna Fase → tudo em "Geral".
+    // Rótulo do marco: número → "Marco N"; texto → o próprio; vazio → "Geral"
+    function rotFase(v){ if(v==null||v==="") return "Geral"; if(/^\d+(\.0+)?$/.test(String(v))) return "Marco "+parseInt(v,10); return String(v); }
+    // Agrupa por marco (ordem de 1ª aparição). Sem coluna Marco → tudo em "Geral".
     var ordem=[], grupos={};
     ativ.forEach(function(b){
       var f = temFase ? rotFase(b.fase) : "Geral";
@@ -2695,7 +2740,7 @@ function renderWizard(){
     rodape='<button type="button" class="secundario" onclick="fecharModalForce()">Cancelar</button>'
       +'<button type="button" onclick="wizPasso1()">Avançar ›</button>';
   } else if(_wiz.step===2){
-    corpo+='<p class="wiz-txt">Envie o cronograma desta obra em <b>.xlsx</b> seguindo o <b>modelo oficial</b>.<br>Colunas obrigatórias: <b>Nome da Tarefa, Duração, Início, Término, Predecessoras, Percentual Concluído</b>. A coluna <b>Fase</b> é opcional. A obra só é criada após a validação com sucesso.</p>'
+    corpo+='<p class="wiz-txt">Envie o cronograma desta obra em <b>.xlsx</b> seguindo o <b>modelo oficial</b>.<br>Colunas obrigatórias: <b>Nome da Tarefa, Duração, Início, Término, Predecessoras, Percentual Concluído</b>. A coluna <b>Marco</b> é opcional. A obra só é criada após a validação com sucesso.</p>'
       +'<div class="wiz-up-acoes">'
       +'<button type="button" class="wiz-upload" onclick="document.getElementById(\'cronoFileInput\').click()">📊 Selecionar planilha (.xlsx)</button>'
       +'<button type="button" class="secundario wiz-modelo" onclick="baixarModeloCronograma()">⬇ Baixar Modelo (.xlsx)</button>'
@@ -2824,7 +2869,7 @@ function _wizErroHtml(){
 // Gera e baixa o MODELO OFICIAL (.xlsx) com aba de dados + aba de Instruções
 function baixarModeloCronograma(){
   if(typeof XLSX==="undefined"){ alert("O gerador de planilhas (XLSX) não carregou. Verifique sua internet e tente novamente."); return; }
-  var headers=["Nome da Tarefa","Duração","Início","Término","Predecessoras","Percentual Concluído","Fase"];
+  var headers=["Nome da Tarefa","Duração","Início","Término","Predecessoras","Percentual Concluído","Marco"];
   var exemplo=[
     ["Reunião de alinhamento","1 dia","Ter 30/06/26","Ter 30/06/26","","0","Serviços Preliminares"],
     ["Montagem de linha de vida","1 dia","Ter 14/07/26","Ter 14/07/26","","0","Linha 1"],
@@ -2849,11 +2894,11 @@ function baixarModeloCronograma(){
     ["• Percentual Concluído — 0 a 100 (ou 0 a 1). Define o avanço inicial"],
     [""],
     ["COLUNA OPCIONAL:"],
-    ["• Fase            — agrupa as atividades por fase. Se ausente, tudo entra em 'Geral'."],
+    ["• Marco           — agrupa as atividades por marco. Se ausente, tudo entra em 'Geral'."],
     [""],
     ["COMO EXPORTAR DO MICROSOFT PROJECT:"],
     ["1. Abra o cronograma no MS Project."],
-    ["2. Exiba/garanta as colunas: Nome da Tarefa, Duração, Início, Término, Predecessoras, % concluída e (opcional) Fase."],
+    ["2. Exiba/garanta as colunas: Nome da Tarefa, Duração, Início, Término, Predecessoras, % concluída e (opcional) Marco."],
     ["3. Selecione a tabela e copie para o Excel, OU use Arquivo > Salvar como > Pasta de Trabalho do Excel (.xlsx)."],
     ["4. Ajuste os cabeçalhos exatamente como nesta planilha modelo e salve em .xlsx."],
     [""],
@@ -2864,6 +2909,200 @@ function baixarModeloCronograma(){
   XLSX.utils.book_append_sheet(wb, ws, "Cronograma");
   XLSX.utils.book_append_sheet(wb, wsI, "Instruções");
   XLSX.writeFile(wb, "Modelo_Cronograma.xlsx");
+}
+
+// ===== ATUALIZAR CRONOGRAMA (reupload) — substitui as atividades preservando a obra =====
+// Info das atividades-folha com o marco (grupo) ao qual pertencem.
+function _cronoLeavesInfo(tarefas){
+  _cronoTemFilhos(tarefas);
+  var out=[];
+  tarefas.forEach(function(tk,i){
+    if(tk.temFilhos) return;
+    var marco="Geral";
+    for(var j=i-1;j>=0;j--){ if(tarefas[j].nivel<tk.nivel){ marco=tarefas[j].nome; break; } }
+    out.push({id:tk.id, nome:tk.nome, marco:marco, ini:tk.ini, fim:tk.fim, key:marco+"|"+tk.nome});
+  });
+  return out;
+}
+var _reupParsed=null;
+function atualizarCronogramaObra(){
+  if(!ehAdmin()){ alert("Apenas administradores podem atualizar o cronograma."); return; }
+  if(!_obraTemCronograma()){ alert("Esta obra não possui cronograma para atualizar."); return; }
+  document.getElementById("cronoReuploadInput").click();
+}
+function _reupErroHtml(err){
+  if(err && err.tipo==="colunas"){
+    var falt=(err.faltando||[]).map(function(c){return '<li>'+escapeHtml(c)+'</li>';}).join('');
+    var enc=(err.encontradas&&err.encontradas.length)?err.encontradas.map(function(c){return '<li>'+escapeHtml(c)+'</li>';}).join(''):'<li><i>(nenhuma reconhecida)</i></li>';
+    return '<div class="wiz-erro wiz-erro-estrut"><div class="we-tit">❌ Arquivo fora do padrão.</div>'
+      +'<div class="we-bloco"><b>Colunas obrigatórias não encontradas:</b><ul>'+falt+'</ul></div>'
+      +'<div class="we-bloco"><b>Colunas encontradas:</b><ul>'+enc+'</ul></div></div>';
+  }
+  return '<div class="wiz-erro">⚠️ '+escapeHtml((err&&err.msg)||(err&&err.message)||String(err))+'</div>';
+}
+function _reupPreview(parsed){
+  _reupParsed=parsed;
+  var oldT=(DB.obraCronograma[obraAtual].tarefas||[]).map(function(o){return {id:o.id,nivel:o.nivel,nome:o.nome,ini:o.ini,fim:o.fim};});
+  var oldL=_cronoLeavesInfo(oldT), newL=_cronoLeavesInfo(parsed.tarefas.map(function(o){return {id:o.id,nivel:o.nivel,nome:o.nome,ini:o.ini,fim:o.fim,temFilhos:o._fase};}));
+  var oldByKey={}; oldL.forEach(function(l){ if(oldByKey[l.key]==null) oldByKey[l.key]=l; });
+  var newByKey={}; newL.forEach(function(l){ if(newByKey[l.key]==null) newByKey[l.key]=l; });
+  var removed=oldL.filter(function(l){ return !newByKey[l.key]; });
+  var added=newL.filter(function(l){ return !oldByKey[l.key]; });
+  var changed=[]; oldL.forEach(function(ol){ var nl=newByKey[ol.key]; if(nl && (nl.ini!==ol.ini||nl.fim!==ol.fim)) changed.push(ol.nome); });
+  var r=parsed.resumo;
+  var corpo='<p style="font-size:13px;color:#555;margin:0 0 12px;">Confira as mudanças antes de aplicar. A obra, fichas, aprovações e histórico serão <b>preservados</b>.</p>'
+    +'<div class="wiz-rev">'
+    +'<div><span>📄 Novo cronograma</span><b>'+r.fases+' marco(s) · '+r.atividades+' atividade(s)</b></div>'
+    +'<div><span>🟢 Novas atividades</span><b>'+added.length+'</b></div>'
+    +'<div><span>🔴 Removidas</span><b>'+removed.length+'</b></div>'
+    +'<div><span>✏️ Datas alteradas</span><b>'+changed.length+'</b></div>'
+    +'</div>';
+  if(removed.length) corpo+='<div class="wiz-erro" style="background:#fff8e1;border-color:#ffcc80;color:#7a5c00;">⚠️ '+removed.length+' atividade(s) serão removidas: '+escapeHtml(removed.slice(0,6).map(function(x){return x.nome;}).join(", "))+(removed.length>6?"…":"")+'</div>';
+  document.getElementById("modal-box").classList.add("modal-wide");
+  abrirModal("🔄 Atualizar Cronograma", corpo,
+    '<button type="button" class="secundario" onclick="fecharModalForce()">Cancelar</button>'
+    +'<button type="button" class="btn-aprovar" onclick="aplicarReupload()">✔ Aplicar atualização</button>');
+}
+function aplicarReupload(){
+  if(!ehAdmin()||!_reupParsed){ fecharModalForce(); return; }
+  var obra=obraAtual, parsed=_reupParsed;
+  var oldT=(DB.obraCronograma[obra].tarefas||[]).map(function(o){return {id:o.id,nivel:o.nivel,nome:o.nome,ini:o.ini,fim:o.fim};});
+  var oldL=_cronoLeavesInfo(oldT);
+  var newTfull=parsed.tarefas;
+  var newL=_cronoLeavesInfo(newTfull.map(function(o){return {id:o.id,nivel:o.nivel,nome:o.nome,ini:o.ini,fim:o.fim,temFilhos:o._fase};}));
+  var oldByKey={}; oldL.forEach(function(l){ if(oldByKey[l.key]==null) oldByKey[l.key]=l; });
+  var newByKey={}; newL.forEach(function(l){ if(newByKey[l.key]==null) newByKey[l.key]=l; });
+  var remap={}; newL.forEach(function(nl){ var ol=oldByKey[nl.key]; if(ol) remap[String(ol.id)]=nl.id; });
+  var removed=oldL.filter(function(l){ return !newByKey[l.key]; });
+  var added=newL.filter(function(l){ return !oldByKey[l.key]; });
+  var changed=oldL.filter(function(ol){ var nl=newByKey[ol.key]; return nl && (nl.ini!==ol.ini||nl.fim!==ol.fim); });
+  function remapObj(o){ if(!o) return {}; var n={}; Object.keys(o).forEach(function(k){ if(remap[k]!=null) n[remap[k]]=o[k]; }); return n; }
+  if(DB.finalizacoes&&DB.finalizacoes[obra]) DB.finalizacoes[obra]=remapObj(DB.finalizacoes[obra]);
+  if(DB.cronogramaDados&&DB.cronogramaDados[obra]) DB.cronogramaDados[obra]=remapObj(DB.cronogramaDados[obra]);
+  var of=DB.fichas&&DB.fichas[obra]; if(of){ Object.keys(of).forEach(function(k){ var e=of[k]; if(e&&e.tipo==="cronograma"&&remap[String(e.cronogramaId)]!=null) e.cronogramaId=remap[String(e.cronogramaId)]; }); }
+  if(!DB.cronogramaPct) DB.cronogramaPct={}; DB.cronogramaPct[obra]={};
+  newTfull.forEach(function(tk){ if(!tk._fase && typeof tk.pct==="number") DB.cronogramaPct[obra][tk.id]=tk.pct; });
+  DB.obraCronograma[obra].tarefas=newTfull;
+  DB.obraCronograma[obra].temPercentual=!!parsed.temPercentual;
+  DB.obraCronograma[obra].importadoEm=Date.now();
+  registrarEvento("cronograma_reprocessado",{obra:obra,entidade:"cronograma",entidadeId:obra,origem:"import",antes:{atividades:oldL.length},depois:{atividades:newL.length,adicionadas:added.length,removidas:removed.length,alteradas:changed.length},detalhe:"Cronograma atualizado — "+newL.length+" atividades ("+added.length+" novas, "+removed.length+" removidas, "+changed.length+" com datas alteradas)"});
+  removed.forEach(function(rr){ registrarEvento("atividade_alterada",{obra:obra,entidade:"atividade",entidadeId:rr.id,origem:"import",antes:{nome:rr.nome,ini:rr.ini,fim:rr.fim},depois:{status:"removida"},detalhe:"Atividade removida no reprocessamento: "+rr.nome}); });
+  changed.forEach(function(cc){ var nl=newByKey[cc.key]; registrarEvento("datas_alteradas",{obra:obra,entidade:"atividade",entidadeId:(remap[String(cc.id)]||cc.id),origem:"import",antes:{ini:cc.ini,fim:cc.fim},depois:{ini:nl.ini,fim:nl.fim},detalhe:"Datas alteradas no reprocessamento: "+cc.nome}); });
+  _reupParsed=null;
+  salvarDB(); atualizarBadgePendencias();
+  fecharModalForce();
+  renderCronograma();
+  mostrarStatus("🔄 Cronograma atualizado ("+added.length+" novas, "+removed.length+" removidas)");
+}
+document.getElementById("cronoReuploadInput").addEventListener("change", function(e){
+  var file=e.target.files[0]; e.target.value="";
+  if(!file) return;
+  if(!/\.xlsx$/i.test(file.name||"")){ alert("Envie um arquivo .xlsx."); return; }
+  mostrarStatus("⏳ Lendo planilha…");
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    parseCronogramaXLSX(ev.target.result).then(function(res){ _reupPreview(res); })
+      .catch(function(err){ abrirModal("🔄 Atualizar Cronograma", _reupErroHtml(err), '<button type="button" class="secundario" onclick="fecharModalForce()">Fechar</button>'); });
+  };
+  reader.onerror=function(){ alert("Não consegui ler o arquivo."); };
+  reader.readAsArrayBuffer(file);
+});
+
+// ===== #3 EDIÇÃO MANUAL DE DATAS (admin) =====
+function editarDatasAtividade(id){
+  if(!ehAdmin()){ alert("Apenas administradores podem editar datas."); return; }
+  var oc=DB.obraCronograma&&DB.obraCronograma[obraAtual]; if(!oc||!oc.tarefas) return;
+  var tk=null; for(var i=0;i<oc.tarefas.length;i++){ if(oc.tarefas[i].id===id){ tk=oc.tarefas[i]; break; } } if(!tk) return;
+  var corpo='<div style="font-size:13px;margin-bottom:12px;"><b>'+escapeHtml(tk.nome)+'</b></div>'
+    +'<label class="wiz-campo-lbl">Data de início</label><input type="date" id="ed-ini" class="wiz-input" value="'+escapeHtml(tk.ini||"")+'">'
+    +'<label class="wiz-campo-lbl" style="margin-top:8px;">Data de término</label><input type="date" id="ed-fim" class="wiz-input" value="'+escapeHtml(tk.fim||"")+'">'
+    +'<label class="wiz-campo-lbl" style="margin-top:8px;">Motivo da alteração (opcional)</label><input type="text" id="ed-motivo" class="wiz-input" placeholder="Ex.: replanejamento, atraso de material…">'
+    +'<div style="font-size:11.5px;color:#888;margin-top:8px;">A alteração é registrada na auditoria (valor anterior → novo).</div>';
+  document.getElementById("modal-box").classList.add("modal-wide");
+  abrirModal("✏️ Editar datas da atividade", corpo,
+    '<button type="button" class="secundario" onclick="fecharModalForce()">Cancelar</button>'
+    +'<button type="button" class="btn-aprovar" onclick="salvarDatasAtividade('+id+')">💾 Salvar</button>');
+}
+function salvarDatasAtividade(id){
+  if(!ehAdmin()){ fecharModalForce(); return; }
+  var oc=DB.obraCronograma&&DB.obraCronograma[obraAtual]; if(!oc||!oc.tarefas) return;
+  var tk=null; for(var i=0;i<oc.tarefas.length;i++){ if(oc.tarefas[i].id===id){ tk=oc.tarefas[i]; break; } } if(!tk) return;
+  var ini=(document.getElementById("ed-ini")||{}).value||"";
+  var fim=(document.getElementById("ed-fim")||{}).value||"";
+  var motivo=((document.getElementById("ed-motivo")||{}).value||"").trim();
+  if(!ini){ alert("Informe a data de início."); return; }
+  if(fim && fim<ini){ alert("O término não pode ser anterior ao início."); return; }
+  var antes={ini:tk.ini||"", fim:tk.fim||""};
+  tk.ini=ini; tk.fim=fim;
+  registrarEvento("datas_alteradas",{entidade:"atividade",entidadeId:id,origem:"cronograma",antes:antes,depois:{ini:ini,fim:fim},
+    detalhe:"Datas alteradas manualmente ("+(antes.ini?_fmtBR(antes.ini):"—")+"→"+(ini?_fmtBR(ini):"—")+" / "+(antes.fim?_fmtBR(antes.fim):"—")+"→"+(fim?_fmtBR(fim):"—")+")"+(motivo?" — motivo: "+motivo:"")+": "+tk.nome});
+  salvarDB(); fecharModalForce();
+  if(modoAtual==="cronograma") renderCronograma();
+  renderCronoPanel(id);
+  mostrarStatus("📅 Datas atualizadas");
+}
+
+// ===== #4 HISTÓRICO DO CRONOGRAMA (auditoria) =====
+function abrirHistoricoCronograma(){
+  if(!podeAprovar()){ alert("Acesso restrito a gestores e administradores."); return; }
+  var evs=eventosDaObra(obraAtual).filter(function(e){ return ["cronograma","atividade","finalizacao","ficha","obra"].indexOf(e.entidade)>=0; });
+  var corpo = evs.length
+    ? '<div class="hist-crono">'+evs.slice(0,400).map(function(e){
+        var info=_EV_INFO[e.tipo]||{ic:"•",cor:"#616161"};
+        var dt=""; try{ dt=new Date(e.ts).toLocaleString("pt-BR"); }catch(_e){ dt=e.ts||""; }
+        return '<div class="hc-item"><span class="hc-dot" style="background:'+info.cor+';">'+info.ic+'</span>'
+          +'<div class="hc-txt"><div class="hc-ev">'+escapeHtml(e.detalhe||e.tipo)+'</div>'
+          +'<div class="hc-meta">'+escapeHtml(e.usuario||"?")+' · '+escapeHtml(dt)+'</div></div></div>';
+      }).join('')+'</div>'
+    : '<p style="font-size:13px;color:#888;">Nenhum evento registrado ainda.</p>';
+  document.getElementById("modal-box").classList.add("modal-wide");
+  abrirModal("📜 Histórico do Cronograma", corpo, '<button type="button" class="secundario" onclick="fecharModalForce()">Fechar</button>');
+}
+
+// ===== #5 PLANEJADO × REAL (Curva S) =====
+function abrirCurvaS(){
+  var t=_cronoTarefas(), calc=_cronoCalc(t);
+  var folhas=t.filter(function(x){ return !x.temFilhos; });
+  if(!folhas.length){ abrirModal("📈 Planejado × Real","<p style='font-size:13px;'>Sem atividades para comparar.</p>",'<button type="button" class="secundario" onclick="fecharModalForce()">Fechar</button>'); return; }
+  var totDur=0; folhas.forEach(function(f){ totDur+=Math.max(f.dur,0.5); });
+  var minISO=null,maxISO=null;
+  folhas.forEach(function(f){ if(f.ini&&(!minISO||f.ini<minISO))minISO=f.ini; var fe=_cronoFimEf(f); if(fe&&(!maxISO||fe>maxISO))maxISO=fe; });
+  if(!minISO){ minISO=_hojeISO(); } if(!maxISO||maxISO<minISO) maxISO=minISO;
+  var min=_cdISO(minISO), max=_cdISO(maxISO), span=Math.max(_cDias(min,max),1);
+  var hojeISO=_hojeISO();
+  function realTerm(f){ var d=(DB.cronogramaDados&&DB.cronogramaDados[obraAtual]&&DB.cronogramaDados[obraAtual][f.id])||{}; if(d.realFim) return d.realFim; var fin=_finalizacao(f.id); if(fin&&fin.status==="aprovado") return f.fim||f.ini; return null; }
+  function plannedAt(iso){ var acc=0; folhas.forEach(function(f){ var fe=_cronoFimEf(f); var w=Math.max(f.dur,0.5); if(!f.ini){return;} if(iso>=fe) acc+=w; else if(iso<=f.ini) acc+=0; else { var frac=_cDias(_cdISO(f.ini),_cdISO(iso))/Math.max(_cDias(_cdISO(f.ini),_cdISO(fe)),1); acc+=w*Math.max(0,Math.min(1,frac)); } }); return totDur?acc/totDur*100:0; }
+  function realAt(iso){ var acc=0; folhas.forEach(function(f){ var rt=realTerm(f); if(rt&&iso>=rt) acc+=Math.max(f.dur,0.5); }); return totDur?acc/totDur*100:0; }
+  // amostragem semanal
+  var pts=[]; for(var k=0;k<=Math.ceil(span/7);k++){ var d=new Date(min.getFullYear(),min.getMonth(),min.getDate()+k*7); if(d>max) d=max; var iso=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); pts.push(iso); if(d>=max) break; }
+  if(pts[pts.length-1]!==maxISO) pts.push(maxISO);
+  var W=560,H=240,padL=38,padB=28,padT=12,padR=12;
+  function X(iso){ return padL + _cDias(min,_cdISO(iso))/span*(W-padL-padR); }
+  function Y(p){ return padT + (100-p)/100*(H-padT-padB); }
+  function linha(fn, cor, ateHoje){ var dd=""; for(var i=0;i<pts.length;i++){ var iso=pts[i]; if(ateHoje && iso>hojeISO) break; dd+=(i===0?"M":"L")+X(iso).toFixed(1)+","+Y(fn(iso)).toFixed(1)+" "; } return dd?'<path d="'+dd+'" fill="none" stroke="'+cor+'" stroke-width="2.5" stroke-linejoin="round"/>':''; }
+  var grid=''; for(var g=0;g<=100;g+=25){ grid+='<line x1="'+padL+'" y1="'+Y(g)+'" x2="'+(W-padR)+'" y2="'+Y(g)+'" stroke="#eef0f3"/><text x="'+(padL-6)+'" y="'+(Y(g)+3)+'" font-size="9" fill="#9aa3b0" text-anchor="end">'+g+'%</text>'; }
+  var xh=X(hojeISO); var hojeLine=(hojeISO>=minISO&&hojeISO<=maxISO)?'<line x1="'+xh+'" y1="'+padT+'" x2="'+xh+'" y2="'+(H-padB)+'" stroke="#e53935" stroke-dasharray="4 3"/><text x="'+xh+'" y="'+(padT+8)+'" font-size="9" fill="#e53935" text-anchor="middle">Hoje</text>':'';
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:'+W+'px;">'+grid+hojeLine
+    +linha(plannedAt,"#1565c0",false)+linha(realAt,"#2e7d32",true)
+    +'<text x="'+padL+'" y="'+(H-8)+'" font-size="9" fill="#9aa3b0">'+_fmtBR(minISO)+'</text>'
+    +'<text x="'+(W-padR)+'" y="'+(H-8)+'" font-size="9" fill="#9aa3b0" text-anchor="end">'+_fmtBR(maxISO)+'</text></svg>';
+  // indicadores
+  var plNow=plannedAt(hojeISO>maxISO?maxISO:hojeISO), reNow=calc.geral, desvio=Math.round((reNow-plNow)*10)/10;
+  // dias de desvio: data em que o planejado atinge reNow
+  var diaDesvio=0, achou=false;
+  for(var k2=0;k2<=span;k2++){ var d2=new Date(min.getFullYear(),min.getMonth(),min.getDate()+k2); var iso2=d2.getFullYear()+"-"+String(d2.getMonth()+1).padStart(2,"0")+"-"+String(d2.getDate()).padStart(2,"0"); if(plannedAt(iso2)>=reNow){ diaDesvio=_cDias(_cdISO(iso2),_cdISO(hojeISO)); achou=true; break; } }
+  if(!achou) diaDesvio=_cDias(max,_cdISO(hojeISO));
+  var atraso = diaDesvio>0, statusTxt = diaDesvio===0?"No prazo":(atraso?(diaDesvio+" dia(s) atrasado"):((-diaDesvio)+" dia(s) adiantado"));
+  var statusCor = diaDesvio===0?"#2e7d32":(atraso?"#c62828":"#2e7d32");
+  var cards='<div class="cs-ind">'
+    +'<div class="cs-card"><div class="cs-num" style="color:#1565c0;">'+Math.round(plNow)+'%</div><div class="cs-lbl">Planejado (hoje)</div></div>'
+    +'<div class="cs-card"><div class="cs-num" style="color:#2e7d32;">'+reNow+'%</div><div class="cs-lbl">Realizado</div></div>'
+    +'<div class="cs-card"><div class="cs-num" style="color:'+(desvio<0?"#c62828":"#2e7d32")+';">'+(desvio>0?"+":"")+desvio+'%</div><div class="cs-lbl">Desvio acumulado</div></div>'
+    +'<div class="cs-card"><div class="cs-num" style="color:'+statusCor+';font-size:15px;">'+statusTxt+'</div><div class="cs-lbl">Cronograma</div></div>'
+    +'</div>';
+  var leg='<div class="cs-leg"><span><i style="background:#1565c0;"></i>Planejado</span><span><i style="background:#2e7d32;"></i>Realizado</span></div>';
+  document.getElementById("modal-box").classList.add("modal-wide");
+  abrirModal("📈 Planejado × Real (Curva S)", '<div class="cs-wrap">'+svg+leg+cards+'</div>', '<button type="button" class="secundario" onclick="fecharModalForce()">Fechar</button>');
 }
 
 function confirmarNovaObra(){
@@ -3451,6 +3690,8 @@ function novaFichaAbrir(tipo, servicoId){
 
 // ===================== CRONOGRAMA / GANTT =====================
 var _cronoColapsado = {};   // {taskId:true} grupos recolhidos
+var _cronoProxPeriodo = 0;  // filtro do card "Próximas atividades": 0=próximas | dias
+function setCronoProxPeriodo(v){ v=parseInt(v,10)||0; if(v===-1){ var n=parseInt(window.prompt("Mostrar próximas atividades em quantos dias?","45"),10); if(!n||n<=0) return; v=n; } _cronoProxPeriodo=v; renderCronograma(); }
 const _MESES_PT = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
 function _cdISO(iso){ var p=String(iso).split("-"); return new Date(+p[0],+p[1]-1,+p[2]); }
 function _cDias(a,b){ return Math.round((b-a)/86400000); }
@@ -3551,6 +3792,13 @@ function _formularioDaAtividade(nome){
 }
 // true se a atividade tem formulário de inspeção correspondente (fluxo de Ficha)
 function _atividadeTemFormulario(nome){ return _formularioDaAtividade(nome)!=null; }
+// REGRA (#7): atividade com formulário obrigatório só pode ser concluída com >=1 ficha APROVADA.
+// Vale para todos os perfis (inclusive admin/gestor). Sem formulário → conclusão direta permitida.
+function _podeConcluirDireto(taskId, nome){
+  if(!_atividadeTemFormulario(nome)) return true;
+  return _fichasDaAtividade(taskId).some(function(f){ return f.est&&f.est.aprovacao&&f.est.aprovacao.status==="aprovado"; });
+}
+var _MSG_FICHA_OBRIG="Esta atividade possui ficha de verificação obrigatória.\nConclua e aprove a ficha antes de finalizar o serviço.";
 
 // REGRA (fonte de verdade = cronograma importado):
 // Atividade COM formulário → status vem das Fichas (todas aprovadas = concluída).
@@ -3619,7 +3867,8 @@ function addComentarioCrono(taskId){
 function marcarConcluidoManual(taskId){
   if(!podeAprovar()){ alert("Apenas Gestores e Administradores podem concluir serviços manualmente."); return; }
   var t=_cronoTarefas(), x=null; for(var i=0;i<t.length;i++){ if(t[i].id===taskId){ x=t[i]; break; } }
-  if(x && x.temFilhos){ alert("Selecione uma atividade (não uma fase)."); return; }
+  if(x && x.temFilhos){ alert("Selecione uma atividade (não um marco/grupo)."); return; }
+  if(x && !_podeConcluirDireto(taskId, x.nome)){ alert("⚠️ "+_MSG_FICHA_OBRIG); return; }
   var anc = x?_cronoAncestrais(t,x):{fase:""};
   var nome = x?x.nome:("Atividade "+taskId);
   var hojeISO=_hojeISO(), hoje=new Date().toLocaleDateString("pt-BR");
@@ -3630,11 +3879,7 @@ function marcarConcluidoManual(taskId){
     fase:(anc.fase&&anc.fase!=="—"?anc.fase:""), servicoNome:nome,
     aprovadoPor:(sessao?sessao.nome:""), aprovadoData:hoje, manual:true
   };
-  // Real término + Finish = hoje (guarda o término planejado original para poder reabrir)
-  var d=_cronoDados(taskId);
-  var oc=DB.obraCronograma&&DB.obraCronograma[obraAtual];
-  if(oc&&oc.tarefas){ for(var k=0;k<oc.tarefas.length;k++){ if(oc.tarefas[k].id===taskId){ if(d.fimPlan==null) d.fimPlan=oc.tarefas[k].fim||""; oc.tarefas[k].fim=hojeISO; break; } } }
-  d.realFim=hojeISO;
+  _setTerminoReal(taskId); // Real término + Finish = hoje (guarda o término planejado original para reabrir)
   registrarEvento("finalizacao_aprovada",{entidade:"finalizacao",entidadeId:taskId,origem:"cronograma",depois:{status:"aprovado",manual:true,realFim:hojeISO,finish:hojeISO},detalhe:"Concluído manualmente pelo gestor (término real "+hoje+"): "+nome});
   salvarDB(); atualizarBadgePendencias();
   if(modoAtual==="cronograma") renderCronograma();
@@ -3667,7 +3912,8 @@ var _EV_INFO={
   cronograma_importado:{ic:"🟢",cor:"#2e7d32"},
   ficha_criada:{ic:"📝",cor:"#1565c0"}, ficha_submetida:{ic:"🟡",cor:"#f9a825"}, ficha_aprovada:{ic:"🟢",cor:"#2e7d32"}, ficha_reprovada:{ic:"🔴",cor:"#c62828"}, ficha_excluida:{ic:"🗑️",cor:"#c62828"},
   finalizacao_submetida:{ic:"🟡",cor:"#f9a825"}, finalizacao_aprovada:{ic:"🟢",cor:"#2e7d32"}, finalizacao_rejeitada:{ic:"🔴",cor:"#c62828"},
-  atividade_alterada:{ic:"✏️",cor:"#1565c0"}, comentario:{ic:"💬",cor:"#6a1b9a"}
+  atividade_alterada:{ic:"✏️",cor:"#1565c0"}, comentario:{ic:"💬",cor:"#6a1b9a"},
+  cronograma_reprocessado:{ic:"🔄",cor:"#6a1b9a"}, datas_alteradas:{ic:"📅",cor:"#1565c0"}
 };
 function _cronoPctTarefa(tar){
   // Override: finalização aprovada (inclui conclusão manual do gestor) = 100%; pendente = 0%
@@ -3814,7 +4060,7 @@ function renderCronoDrill(){
   var iniIdx=(d.pagina-1)*perPage, pageItens=fs.slice(iniIdx,iniIdx+perPage);
   var fases=d.itens.map(function(i){return i.fase;}).filter(function(v,i,a){return a.indexOf(v)===i;}).sort();
   var servs=d.itens.map(function(i){return i.servico;}).filter(function(v,i,a){return a.indexOf(v)===i;}).sort();
-  var optFase='<option value="">Todas as fases</option>'+fases.map(function(f){return '<option value="'+escapeHtml(f)+'"'+(d.fase===f?' selected':'')+'>'+escapeHtml(f)+'</option>';}).join("");
+  var optFase='<option value="">Todos os marcos</option>'+fases.map(function(f){return '<option value="'+escapeHtml(f)+'"'+(d.fase===f?' selected':'')+'>'+escapeHtml(f)+'</option>';}).join("");
   var optServ='<option value="">Todos os serviços</option>'+servs.map(function(s){return '<option value="'+escapeHtml(s)+'"'+(d.servico===s?' selected':'')+'>'+escapeHtml(s)+'</option>';}).join("");
   var stLbl=info.lbl.replace(/s$/,'').replace("Concluída","Concluída");
   var rows=pageItens.map(function(it){
@@ -3846,7 +4092,7 @@ function renderCronoDrill(){
       +'<button type="button" class="dr-export" onclick="cronoDrillExport()">📥 Exportar</button>'
     +'</div>'
     +'<div class="dr-tbwrap"><table class="dr-tabela"><thead><tr>'
-      +'<th>Ficha</th><th>Nome</th><th>Serviço</th><th>Fase</th><th>Status</th><th>%</th><th>Ação</th>'
+      +'<th>Ficha</th><th>Nome</th><th>Serviço</th><th>Marco</th><th>Status</th><th>%</th><th>Ação</th>'
     +'</tr></thead><tbody>'+rows+'</tbody></table></div>'
     +'<div class="dr-rodape"><span>Mostrando '+(fs.length?iniIdx+1:0)+'–'+Math.min(iniIdx+perPage,fs.length)+' de '+fs.length+' ficha(s)</span><span class="dr-pags">'+pag+'</span></div>';
   document.getElementById("modal-box").classList.add("modal-xl");
@@ -3856,7 +4102,7 @@ function cronoDrillVerDetalhe(id){ fecharModalForce(); abrirCronoPanel(id); }
 function cronoDrillExport(){
   var d=_cronoDrill; if(!d) return;
   var fs=_cronoDrillFiltrados();
-  var sep=";", head=["Ficha","Nome","Serviço","Fase","Status","%","Ficha vinculada"];
+  var sep=";", head=["Ficha","Nome","Serviço","Marco","Status","%","Ficha vinculada"];
   function esc(v){ v=String(v==null?"":v); return (v.indexOf('"')>=0||v.indexOf(sep)>=0||v.indexOf("\n")>=0) ? '"'+v.replace(/"/g,'""')+'"' : v; }
   var lbl=_CRONO_ST_INFO[d.status].lbl;
   var linhas=[head.join(sep)].concat(fs.map(function(it){ return [it.codigo,it.nome,it.servico,it.fase,lbl,it.pct+"%",(it.fichaKey?"Sim":"Não")].map(esc).join(sep); }));
@@ -4109,14 +4355,19 @@ function renderCronoPanel(id){
     foot+='<button type="button" class="cp-btn cp-btn-rej" onclick="rejeitarFinalizacao('+id+')">✖ Rejeitar</button>'
       +'<button type="button" class="cp-btn cp-btn-apr" onclick="aprovarFinalizacao('+id+')">✔ Aprovar</button>';
   }
-  // Conclusão manual pelo gestor/admin (atalho direto, sem precisar de ficha/submissão)
+  // Conclusão manual pelo gestor/admin (atalho direto). Regra #7: atividade com ficha obrigatória exige ficha aprovada.
   if(!x.temFilhos && podeAprovar()){
     if(fin && fin.status==="aprovado"){
       foot+='<button type="button" class="cp-btn cp-btn-sec" onclick="reabrirConcluidoManual('+id+')">↩ Reabrir conclusão</button>';
     } else if(st!=="concluida" && !(fin && fin.status==="pendente")){
-      foot+='<button type="button" class="cp-btn cp-btn-apr" onclick="marcarConcluidoManual('+id+')">✔ Marcar como concluído</button>';
+      if(_podeConcluirDireto(id, x.nome)){
+        foot+='<button type="button" class="cp-btn cp-btn-apr" onclick="marcarConcluidoManual('+id+')">✔ Marcar como concluído</button>';
+      } else {
+        foot+='<button type="button" class="cp-btn" disabled title="Conclua e aprove a ficha obrigatória antes de finalizar.">🔒 Requer ficha aprovada</button>';
+      }
     }
   }
+  if(!x.temFilhos && ehAdmin()) foot+='<button type="button" class="cp-btn cp-btn-sec" onclick="editarDatasAtividade('+id+')">✏️ Editar datas</button>';
   foot+='<button type="button" class="cp-btn" onclick="fecharCronoPanel()">Fechar</button>';
   foot+='</div>';
 
@@ -4177,19 +4428,35 @@ function renderCronograma(){
     +'<div class="cd-card cd-prev"><div class="cd-num cd-data">'+_fmtBR(maxISO)+'</div><div class="cd-lbl">📅 Previsão de término</div></div>'
     +'</div>';
 
-  // ----- Card "Próximas atividades" -----
-  var futuras = t.filter(function(x){ return !x.temFilhos && calc.st[x.id]==="futura"; }).sort(function(a,b){ return a.ini.localeCompare(b.ini); });
-  var atrasadas = t.filter(function(x){ return !x.temFilhos && calc.st[x.id]==="atrasada"; }).sort(function(a,b){ return a.ini.localeCompare(b.ini); });
-  var prox=(atrasadas.concat(futuras)).slice(0,5);
+  // ----- Card "Próximas atividades" (com filtro de período) -----
+  var per=_cronoProxPeriodo; // 0 = próximas (por data) | 7/15/30/N = janela em dias a partir de hoje
+  var pendentes = t.filter(function(x){ return !x.temFilhos && calc.st[x.id]!=="concluida"; });
+  var prox;
+  if(per>0){
+    var dl=_cdISO(hojeISO); dl.setDate(dl.getDate()+per); var limISO=dl.getFullYear()+"-"+String(dl.getMonth()+1).padStart(2,"0")+"-"+String(dl.getDate()).padStart(2,"0");
+    prox=pendentes.filter(function(x){ return x.ini && x.ini<=limISO; }).sort(function(a,b){ return a.ini.localeCompare(b.ini); });
+  } else {
+    var atrasadas=pendentes.filter(function(x){return calc.st[x.id]==="atrasada";}).sort(function(a,b){return a.ini.localeCompare(b.ini);});
+    var futuras=pendentes.filter(function(x){return calc.st[x.id]==="futura"||calc.st[x.id]==="andamento";}).sort(function(a,b){return a.ini.localeCompare(b.ini);});
+    prox=atrasadas.concat(futuras).slice(0,6);
+  }
+  function _perOpt(v,lbl){ return '<option value="'+v+'"'+(per===v?" selected":"")+'>'+lbl+'</option>'; }
+  var filtro='<select class="px-sel" onchange="setCronoProxPeriodo(this.value)">'+_perOpt(0,"Próximas")+_perOpt(7,"7 dias")+_perOpt(15,"15 dias")+_perOpt(30,"30 dias")+_perOpt(-1,"Personalizado…")+'</select>';
   var proxItens = prox.length ? prox.map(function(p){
     var st=calc.st[p.id], info=_CRONO_ST_INFO[st]||_CRONO_ST_INFO.futura;
+    var anc=_cronoAncestrais(t,p); var marco=(anc.fase&&anc.fase!=="—")?anc.fase:"Geral";
+    var fin=_finalizacao(p.id); var ligs=_fichasDaAtividade(p.id);
+    var resp=(fin&&fin.por)||(ligs[0]&&ligs[0].est.respInsp)||"—";
+    var temFicha=ligs.length>0;
     return '<button type="button" class="px-item" onclick="cronoDetalhe('+p.id+')">'
       +'<span class="px-dot st-'+st+'"></span>'
       +'<span class="px-info"><span class="px-nome">'+escapeHtml(p.nome)+'</span>'
-      +'<span class="px-meta">'+_fmtBR(p.ini)+' · '+info.lbl.replace(/s$/,'').replace("Concluída","Concluída")+'</span></span>'
+      +'<span class="px-meta">📁 '+escapeHtml(marco)+' · 📅 '+(p.ini?_fmtBR(p.ini):"—")+' · 👤 '+escapeHtml(resp)+'</span>'
+      +'<span class="px-tags"><span class="px-badge" style="color:'+info.cor+';background:'+info.bg+';">'+info.ic+' '+info.lbl.replace(/s$/,'')+'</span>'
+        +'<span class="px-ficha '+(temFicha?"sim":"nao")+'">'+(temFicha?"📄 Com ficha":"— Sem ficha")+'</span></span></span>'
       +'<span class="px-go">›</span></button>';
-  }).join('') : '<div class="px-vazio">🎉 Sem próximas atividades pendentes.</div>';
-  var proxCard='<div class="crono-prox-card"><div class="px-tit">⏭ Próximas atividades</div><div class="px-lista">'+proxItens+'</div></div>'
+  }).join('') : '<div class="px-vazio">🎉 Nenhuma atividade '+(per>0?"nos próximos "+per+" dias":"pendente")+'.</div>';
+  var proxCard='<div class="crono-prox-card"><div class="px-head"><div class="px-tit">⏭ Próximas atividades</div>'+filtro+'</div><div class="px-lista">'+proxItens+'</div></div>'
     + (foraPrazo?'<div class="crono-aviso">⚠️ Hoje ('+_fmtBR(hojeISO)+') é posterior ao término planejado ('+_fmtBR(maxISO)+').</div>':'');
 
   // ----- Cabeçalho por SEMANAS (posições em %) + grade semanal -----
@@ -4247,7 +4514,12 @@ function renderCronograma(){
   var nomeProj = _obraTemCronograma() ? (DB.obraCronograma[obraAtual].projeto||obraAtual) : CRONOGRAMA_PROJETO;
   main.innerHTML=
     '<div class="crono-topo"><div><h2>📅 Cronograma da Obra</h2><div style="font-size:12px;color:#555;">'+escapeHtml(nomeProj)+'</div></div>'
-      +'<button type="button" class="secundario" onclick="trocarModo(\'workspace\')">‹ Voltar</button></div>'
+      +'<div class="crono-topo-acoes">'
+        +'<button type="button" class="secundario" onclick="abrirCurvaS()">📈 Planejado × Real</button>'
+        +(podeAprovar()?'<button type="button" class="secundario" onclick="abrirHistoricoCronograma()">📜 Histórico</button>':'')
+        +(ehAdmin()?'<button type="button" class="secundario" onclick="atualizarCronogramaObra()">🔄 Atualizar Cronograma</button>':'')
+        +'<button type="button" class="secundario" onclick="trocarModo(\'workspace\')">‹ Voltar</button>'
+      +'</div></div>'
     + dash + proxCard
     + '<div class="crono-legenda"><span><i class="lg st-concluida"></i>Concluída</span><span><i class="lg st-pendente_aprov"></i>⏱ Pendente</span><span><i class="lg st-andamento"></i>Em andamento</span><span><i class="lg st-atrasada"></i>Atrasada</span><span><i class="lg st-futura"></i>Futura</span><span><i class="lg lg-marco">◆</i>Marco</span></div>'
     + '<div class="gantt">'
@@ -4282,7 +4554,7 @@ function cronoTip(e, id){
   var fin=_finalizacao(x.id); if(fin&&fin.status==="pendente") pend++;
   function lin(ic,k,v){ return '<div class="ct-l"><span>'+ic+' '+k+'</span><b>'+v+'</b></div>'; }
   var html='<div class="ct-h" style="border-color:'+info.cor+';"><span class="ct-badge" style="color:'+info.cor+';background:'+info.bg+';">'+info.ic+' '+info.lbl.replace(/s$/,'')+'</span><div class="ct-nome">'+escapeHtml(x.nome)+'</div></div>';
-  if(anc.fase&&anc.fase!=="—") html+=lin("📁","Fase", escapeHtml(anc.fase));
+  if(anc.fase&&anc.fase!=="—") html+=lin("📁","Marco", escapeHtml(anc.fase));
   html+=lin("📅","Início", x.ini?_fmtBR(x.ini):"—");
   html+=lin("🏁","Término", x.fim?_fmtBR(x.fim):"—");
   html+=lin("⏱","Duração", (x.dur||0)+" dia(s)");
