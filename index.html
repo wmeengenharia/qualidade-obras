@@ -593,6 +593,19 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .cp-h-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .cp-badge{font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;}
 .cp-fase{font-size:11px;font-weight:600;color:#5a6478;background:#eef1f6;border:1px solid #dde2ea;border-radius:6px;padding:2px 8px;letter-spacing:.3px;}
+.cp-h-resp{font-size:12px;color:#3a4659;margin-top:7px;font-weight:600;}
+/* Datas Planejado × Real */
+.cp-datas2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.cp-dcol{border:1px solid #e6eaf1;border-radius:9px;padding:9px 10px;background:#fbfcfe;}
+.cp-dcol-t{font-size:11px;font-weight:700;margin-bottom:6px;}
+.cp-dcol-plan{color:#1565c0;} .cp-dcol-real{color:#2e7d32;}
+.cp-drow{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#6a7484;padding:2px 0;}
+.cp-drow b{color:#1f2a3d;font-weight:600;}
+.cp-dif{margin-top:9px;text-align:center;font-size:12.5px;font-weight:700;}
+.cp-isenta{font-size:12.5px;font-weight:600;color:#2e7d32;background:#e8f5e9;border:1px solid #b8e0bd;border-radius:8px;padding:9px 11px;}
+.cp-evid{display:flex;flex-wrap:wrap;gap:6px;}
+.cp-evid-img{width:60px;height:60px;object-fit:cover;border-radius:8px;border:1px solid #e6eaf1;cursor:pointer;}
+.cp-evid-img:hover{filter:brightness(.95);}
 .cp-body{flex:1 1 auto;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px;}
 .cp-card{background:#fff;border:1px solid #e6eaf1;border-radius:12px;padding:14px;box-shadow:0 1px 3px rgba(20,28,40,.05);}
 .cp-card-tit{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#8b94a7;margin-bottom:10px;}
@@ -3830,8 +3843,10 @@ function setCronoPct(id,val){
   var _antes=DB.cronogramaPct[obraAtual][id]||0;
   if(_antes===val) return true;
   DB.cronogramaPct[obraAtual][id]=val;
-  // Alimenta a Curva S (Realizado): registra/limpa a data real de conclusão.
+  // Alimenta a Curva S (Realizado): registra início/término reais da execução.
   var d=_cronoDados(id);
+  if(_antes===0 && val>0 && !d.realIni) d.realIni=_hojeISO();  // início real na 1ª execução
+  if(val===0) delete d.realIni;
   if(val>=100){ if(!d.realFim) d.realFim=_hojeISO(); } else if(d.realFim){ delete d.realFim; }
   registrarLog("crono-progresso",{obra:obraAtual,tarefa:id,pct:val});
   registrarEvento("atividade_alterada",{entidade:"atividade",entidadeId:id,origem:"cronograma",antes:{pct:_antes},depois:{pct:val},detalhe:"Progresso alterado de "+_antes+"% para "+val+"%"+(nome?": "+nome:"")});
@@ -4390,11 +4405,18 @@ function renderCronoPanel(id){
   html+='</div>';
 
   // ===== CARD CRONOGRAMA =====
-  html+='<div class="cp-card"><div class="cp-card-tit">Cronograma</div><div class="cp-grid">'
-    +_cpLinha("🗓","Planejado", (x.ini?_fmtBR(x.ini):"—")+" → "+(planFim?_fmtBR(planFim):"—"))
-    +_cpLinha("✅","Real (término)", realISO?_fmtBR(realISO):"—")
-    +_cpLinha("📊","Diferença", difTxt, difCor)
-  +'</div></div>';
+  var realIni = cdat.realIni||"";
+  html+='<div class="cp-card"><div class="cp-card-tit">Datas — Planejado × Real</div>'
+    +'<div class="cp-datas2">'
+      +'<div class="cp-dcol"><div class="cp-dcol-t cp-dcol-plan">📐 Planejado</div>'
+        +'<div class="cp-drow"><span>Início</span><b>'+(x.ini?_fmtBR(x.ini):"—")+'</b></div>'
+        +'<div class="cp-drow"><span>Término</span><b>'+(planFim?_fmtBR(planFim):"—")+'</b></div></div>'
+      +'<div class="cp-dcol"><div class="cp-dcol-t cp-dcol-real">🏗 Real</div>'
+        +'<div class="cp-drow"><span>Início</span><b>'+(realIni?_fmtBR(realIni):"—")+'</b></div>'
+        +'<div class="cp-drow"><span>Término</span><b>'+(realISO&&(cdat.realFim||(fin&&fin.status==="aprovado"))?_fmtBR(realISO):"—")+'</b></div></div>'
+    +'</div>'
+    +'<div class="cp-dif" style="color:'+difCor+';">'+difTxt+'</div>'
+  +'</div>';
 
   // ===== CARD STATUS =====
   html+='<div class="cp-card"><div class="cp-card-tit">Status</div>'
@@ -4430,8 +4452,12 @@ function renderCronoPanel(id){
 
   // ===== CARD: CONTROLE PELO CRONOGRAMA (atividade SEM formulário) =====
   if(!x.temFilhos && !temForm){
-    html+='<div class="cp-card"><div class="cp-card-tit">Aprovação pelo Cronograma</div>';
-    html+='<div class="cp-nota">Esta atividade não possui formulário de inspeção correspondente. A conclusão é submetida e aprovada diretamente pelo gestor no cronograma (Finalização de Serviço).</div>';
+    html+='<div class="cp-card"><div class="cp-card-tit">Fichas vinculadas <span class="cp-count">0</span></div>';
+    if(isenta){
+      html+='<div class="cp-isenta">✓ Esta atividade não exige ficha de verificação.</div>';
+    } else {
+      html+='<div class="cp-nota">Nenhuma ficha vinculada. Esta atividade não possui formulário de inspeção correspondente e a conclusão é aprovada diretamente pelo gestor no cronograma (Finalização de Serviço).</div>';
+    }
     html+='<div class="cp-rel" style="margin-top:8px;">';
     html+=_cpLinha("✔","Status", finLbl);
     if(fin){
@@ -4452,6 +4478,25 @@ function renderCronoPanel(id){
     if(fin.status==="aprovado"&&fin.aprovadoPor) html+=_cpLinha("🟢","Aprovado por", escapeHtml(fin.aprovadoPor)+(fin.aprovadoData?" · "+escapeHtml(fin.aprovadoData):""));
     if(fin.observacoes) html+=_cpLinha("📝","Observações", escapeHtml(fin.observacoes));
     html+='</div></div>';
+  }
+
+  // ===== CARD EVIDÊNCIAS (fotos/anexos das fichas vinculadas) =====
+  if(!x.temFilhos){
+    var totFotos=0; ligs.forEach(function(l){ totFotos+=((l.est&&l.est.fotos)?l.est.fotos.length:0); });
+    html+='<div class="cp-card"><div class="cp-card-tit">Evidências <span class="cp-count">'+totFotos+'</span></div>';
+    if(totFotos>0){
+      html+='<div class="cp-evid">';
+      ligs.forEach(function(l){
+        var fs=(l.est&&l.est.fotos)||[]; if(!fs.length) return;
+        fs.slice(0,8).forEach(function(fo){ var src=(fo&&(fo.dataUrl||fo.url||fo.src))||(typeof fo==="string"?fo:""); if(src) html+='<img class="cp-evid-img" src="'+escapeHtml(src)+'" alt="evidência" onclick="cronoAbrirFichaLigada(\''+l.key+'\')">'; });
+      });
+      html+='</div><div class="cp-nota" style="margin-top:6px;">Anexos gerenciados pelas fichas vinculadas — clique para abrir a ficha.</div>';
+    } else if(ligs.length){
+      html+='<div class="cp-nota">Nenhuma evidência anexada. Abra a ficha vinculada para anexar fotos/documentos.</div>';
+    } else {
+      html+='<div class="cp-nota">Nenhuma evidência anexada'+(isenta?" (atividade isenta de ficha)":"")+'.</div>';
+    }
+    html+='</div>';
   }
 
   // ===== CARD COMENTÁRIOS (ação direta no cronograma, sem ficha) =====
