@@ -674,6 +674,21 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 #appLoading{position:fixed;inset:0;z-index:99999;background:var(--verde-escuro);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:#fff;}
 #appLoading .spin{width:42px;height:42px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:appSpin .9s linear infinite;}
 #appLoading .lt{font-size:14px;font-weight:bold;letter-spacing:.5px;opacity:.95;}
+/* Overlay de consulta ao banco (bloqueia interação) */
+#queryLoading{position:fixed;inset:0;z-index:99990;background:rgba(255,255,255,.62);backdrop-filter:blur(1.5px);display:none;align-items:center;justify-content:center;}
+#queryLoading.on{display:flex;}
+#queryLoading .ql-box{display:flex;flex-direction:column;align-items:center;gap:12px;background:#fff;border:1px solid #e6eaf1;border-radius:14px;padding:22px 30px;box-shadow:0 10px 34px rgba(20,28,40,.18);}
+#queryLoading .ql-spin{width:34px;height:34px;border:4px solid #e0e6ee;border-top-color:var(--verde-escuro);border-radius:50%;animation:appSpin .8s linear infinite;}
+#queryLoading .ql-txt{font-size:13px;font-weight:600;color:#3a4659;}
+/* Toast de feedback */
+#appToast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);z-index:99995;background:#1f2a3d;color:#fff;font-size:13px;font-weight:600;padding:11px 18px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;}
+#appToast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+#appToast.erro{background:#b71c1c;}
+/* Botão Salvar global (contexto editável) */
+#btnSalvarGlobal{position:fixed;right:18px;bottom:20px;z-index:9000;display:none;align-items:center;gap:6px;background:var(--verde-escuro);color:#fff;border:none;border-radius:24px;padding:11px 20px;font-size:14px;font-weight:bold;cursor:pointer;box-shadow:0 6px 20px rgba(27,94,32,.35);}
+#btnSalvarGlobal.on{display:inline-flex;}
+#btnSalvarGlobal:hover{filter:brightness(1.06);}
+@media(max-width:680px){ #btnSalvarGlobal{right:12px;bottom:14px;padding:10px 16px;font-size:13px;} }
 @keyframes appSpin{to{transform:rotate(360deg);}}
 .nova-ficha-opt{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:14px;text-align:left;margin-bottom:10px;transition:all .12s;}
 .nova-ficha-opt:hover{border-color:var(--verde);background:#f1f8e9;}
@@ -863,6 +878,8 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 <body>
 
 <div id="appLoading"><div class="spin"></div><div class="lt">WME ENGENHARIA · carregando…</div></div>
+<div id="queryLoading"><div class="ql-box"><div class="ql-spin"></div><div class="ql-txt">Carregando…</div></div></div>
+<button type="button" id="btnSalvarGlobal" onclick="salvarComFeedback()" title="Salvar alterações no banco">💾 Salvar</button>
 
 <header>
   <div>
@@ -1621,6 +1638,27 @@ let _jbOk = false;
 function mostrarStatus(txt){ const el=document.getElementById("statusConexao"); if(el) el.textContent=txt; }
 function _jbConfigurado(){ return JSONBIN.BIN_ID && !JSONBIN.BIN_ID.includes("COLE"); }
 
+// ===== LOADING (overlay que bloqueia interação durante consultas ao banco) =====
+function mostrarLoading(msg){
+  var el=document.getElementById("queryLoading"); if(!el) return;
+  var t=el.querySelector(".ql-txt"); if(t) t.textContent=msg||"Carregando…";
+  el.classList.add("on");
+}
+function esconderLoading(){ var el=document.getElementById("queryLoading"); if(el) el.classList.remove("on"); }
+// Garante o loading visível por no mínimo ~500ms (evita "piscar") antes de chamar cb.
+function _finLoading(t0, cb){
+  var wait=Math.max(0, 500-(Date.now()-t0));
+  setTimeout(function(){ esconderLoading(); if(cb) cb(); }, wait);
+}
+// Toast de feedback rápido (✓ salvo, etc.)
+var _toastTimer=null;
+function mostrarToast(msg, erro){
+  var el=document.getElementById("appToast");
+  if(!el){ el=document.createElement("div"); el.id="appToast"; document.body.appendChild(el); }
+  el.textContent=msg; el.className="on"+(erro?" erro":"");
+  clearTimeout(_toastTimer); _toastTimer=setTimeout(function(){ el.className=""; }, 2600);
+}
+
 // ===================================================================
 // AUTENTICAÇÃO / SESSÃO
 // ===================================================================
@@ -1822,14 +1860,11 @@ function abrirPendencias(){
 
 function irParaPendencia(obra,tipo,id){
   fecharModalForce();
-  selecionarObra(obra);
-  abrirFichaSalva(tipo,id);
+  selecionarObra(obra, function(){ abrirFichaSalva(tipo,id); });
 }
 function irParaFinalizacao(obra,taskId){
   fecharModalForce();
-  selecionarObra(obra);
-  abrirCronograma();
-  setTimeout(function(){ cronoDetalhe(taskId); }, 60);
+  selecionarObra(obra, function(){ abrirCronograma(); setTimeout(function(){ cronoDetalhe(taskId); }, 60); });
 }
 
 // ===== FLUXO DE FINALIZAÇÃO DE SERVIÇO (governança) =====
@@ -1999,7 +2034,8 @@ function tentarLogin(){
   salvarSessaoStorage();
   salvarDB();
   atualizarHeaderUsuario();
-  trocarModo(modoAtual);
+  // Após login, recarrega o estado do banco (fonte de verdade) e monta a tela.
+  _recarregarDoBanco(function(){ atualizarHeaderUsuario(); trocarModo(modoAtual); });
 }
 
 // ===== GERENCIAR USUÁRIOS (Admin) =====
@@ -2186,6 +2222,8 @@ function _calcHash(obj){ try{ var s=JSON.stringify(obj); return s.length+"_"+s.s
 
 function sincronizarDB(manual){
   if(!_jbConfigurado()) return;
+  // Sincronização manual com dados pendentes → EMPURRA para o banco (não perde alterações locais)
+  if(manual && _localDirty){ mostrarStatus("🔄 Enviando…"); salvarDBAgora().then(function(ok){ mostrarStatus(ok?"🟢 Enviado ao banco":"⚠️ Sem conexão"); }); return; }
   // Não sobrescrever dados locais não salvos ainda
   if(_localDirty && !manual) return;
   if(manual) mostrarStatus("🔄 Sincronizando...");
@@ -2232,33 +2270,70 @@ function _tentarReenviarTexto(){
   if(_localDirty && navigator.onLine && _jbConfigurado()) salvarDB();
 }
 
-function salvarDB(){
-  DB._ts = Date.now(); // timestamp para resolver conflitos localStorage vs nuvem
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
-  _localDirty = true; // marca que há dados locais não confirmados
-  if(!_jbConfigurado()) return;
-  clearTimeout(_saveTimer);
-  _saveTimer = null;
-  mostrarStatus("✏️ Editando...");
-  _saveTimer = setTimeout(function(){
-    _saveTimer = null; // timer disparou — limpa referência
-    var payload = JSON.stringify(_dbParaNuvem()); // fotos viram placeholder; base64 fica só local
-    fetch("https://api.jsonbin.io/v3/b/"+JSONBIN.BIN_ID, {
-      method:"PUT",
-      headers:{"Content-Type":"application/json","X-Master-Key":JSONBIN.BIN_KEY},
-      body: payload
-    }).then(function(r){ return r.json(); }).then(function(){
-      _jbOk = true;
-      _localDirty = false; // confirmado na nuvem
-      _ultimoHash = _calcHash(DB); // atualiza hash para sync não sobrescrever
-      mostrarStatus("🟢 Online — salvo na nuvem");
-      backupSupabase(); // espelha cópia de segurança no Supabase (best-effort)
-    }).catch(function(){
-      // Mantém _localDirty = true para não perder dados na próxima sync
-      mostrarStatus("⚠️ Salvo localmente (erro na nuvem)");
-    });
-  }, 1500);
+// ===================================================================
+// PERSISTÊNCIA — BANCO (JSONBin) = ÚNICA FONTE DE VERDADE.
+// localStorage é apenas cache/fallback offline (nunca a fonte oficial).
+// Fluxo: usuário altera → salva no banco → atualiza estado → atualiza UI → (cache).
+// ===================================================================
+var _JB_URL = "https://api.jsonbin.io/v3/b/"+JSONBIN.BIN_ID;
+// GET do banco (registro completo)
+function _cloudGet(){
+  return fetch(_JB_URL+"/latest",{headers:{"X-Master-Key":JSONBIN.BIN_KEY}})
+    .then(function(r){ return r.json(); }).then(function(d){ return d.record||{}; });
 }
+// PUT no banco (grava o estado). keepalive=true para descarga na saída da página.
+function _flushCloud(keepalive){
+  if(!_jbConfigurado()) return Promise.resolve(false);
+  var opt={method:"PUT",headers:{"Content-Type":"application/json","X-Master-Key":JSONBIN.BIN_KEY},body:JSON.stringify(_dbParaNuvem())};
+  if(keepalive) opt.keepalive=true;
+  return fetch(_JB_URL, opt).then(function(r){ return r.json(); }).then(function(){
+    _jbOk=true; _localDirty=false; _ultimoHash=_calcHash(DB);
+    if(!keepalive){ mostrarStatus("🟢 Salvo na nuvem"); try{ backupSupabase(); }catch(e){} }
+    return true;
+  }).catch(function(){ mostrarStatus("⚠️ Sem conexão — salvo localmente"); return false; });
+}
+// Auto-save: grava cache imediatamente e agenda descarga no banco (debounce curto).
+function salvarDB(){
+  DB._ts = Date.now();
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(DB)); }catch(e){}
+  _localDirty = true;
+  if(!_jbConfigurado()) return;
+  mostrarStatus("✏️ Salvando…");
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(function(){ _saveTimer=null; _flushCloud(false); }, 700);
+}
+// Salva AGORA no banco (sem esperar o debounce). Retorna Promise<bool>.
+function salvarDBAgora(){
+  DB._ts = Date.now();
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(DB)); }catch(e){}
+  _localDirty = true;
+  clearTimeout(_saveTimer); _saveTimer=null;
+  if(!_jbConfigurado()) return Promise.resolve(false);
+  return _flushCloud(false);
+}
+// Botão "Salvar" — grava no banco imediatamente e mostra feedback.
+function salvarComFeedback(){
+  mostrarStatus("💾 Salvando…");
+  salvarDBAgora().then(function(ok){
+    if(ok) mostrarToast("✓ Alterações salvas com sucesso");
+    else mostrarToast("⚠️ Sem conexão — salvo localmente, será sincronizado");
+  });
+}
+// Recarrega TODO o estado do banco (fonte de verdade) e reconstrói a tela.
+function _recarregarDoBanco(cb){
+  if(!_jbConfigurado()){ if(cb) cb(); return; }
+  mostrarLoading("Carregando dados…");
+  var t0=Date.now();
+  var pre = _localDirty ? _flushCloud(false) : Promise.resolve();
+  pre.then(_cloudGet).then(function(nuvem){
+    var tsN=nuvem._ts||0, tsL=DB._ts||0;
+    if(tsN>=tsL){ DB=_restaurarFotos(nuvem, DB); migrarDB(); try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(DB)); }catch(e){} _localDirty=false; _ultimoHash=_calcHash(DB); _jbOk=true; }
+    _finLoading(t0, cb);
+  }).catch(function(){ _finLoading(t0, cb); });
+}
+// Descarga garantida ao sair/ocultar a página (evita perder dados no fechamento).
+window.addEventListener("visibilitychange", function(){ if(document.hidden && _localDirty && _jbConfigurado()) _flushCloud(true); });
+window.addEventListener("pagehide", function(){ if(_localDirty && _jbConfigurado()) _flushCloud(true); });
 function novoEstado(servico){
   return {
     obra:"", respInsp:"", data:"", locais:["Local 1","Local 2","Local 3"],
@@ -2429,12 +2504,18 @@ function atualizarToolbarBloqueio(){
   if(btnRmL)    btnRmL.style.display  = (modoAtual==="servico" && !bloq)?"":"none";
 }
 
+function _atualizarBotaoSalvar(){
+  var b=document.getElementById("btnSalvarGlobal"); if(!b) return;
+  var editavel = !!sessao && !!obraAtual && podeEditar() && ["servico","material","fichacrono","cronograma"].indexOf(modoAtual)>=0;
+  b.classList.toggle("on", editavel);
+}
 function renderAtual(){
   var _ld=document.getElementById("appLoading"); if(_ld) _ld.style.display="none"; // some a tela de carregamento na 1a renderizacao
-  if(!sessao){ atualizarHeaderUsuario(); renderLogin(); return; }
+  if(!sessao){ atualizarHeaderUsuario(); _atualizarBotaoSalvar(); renderLogin(); return; }
   atualizarHeaderUsuario();
-  if(!obraAtual){ renderSeletorObra(); return; }
+  if(!obraAtual){ _atualizarBotaoSalvar(); renderSeletorObra(); return; }
   _setBreadcrumb({workspace:"",cronograma:"Cronograma",salvas:"Fichas",servico:"Ficha",material:"Ficha",fichacrono:"Ficha"}[modoAtual]||"");
+  _atualizarBotaoSalvar();
   if(modoAtual==="workspace"){ renderWorkspace(); return; }
   if(modoAtual==="cronograma"){ renderCronograma(); return; }
   if(modoAtual==="fichacrono"){ if(servicoAtual) renderFichaCronograma(servicoAtual); else { modoAtual="salvas"; renderFichasSalvas(); } return; }
@@ -2500,7 +2581,11 @@ function renderSeletorObra(){
     +'</div>';
 }
 
-function selecionarObra(nome){
+// Abrir obra = reprocessar do BANCO (fonte de verdade), reconstruindo tudo (#12).
+function selecionarObra(nome, depois){
+  _recarregarDoBanco(function(){ _selecionarObraLocal(nome, depois); });
+}
+function _selecionarObraLocal(nome, depois){
   obraAtual = nome;
   if(!DB.fichas) DB.fichas = {};
   if(!DB.fichas[obraAtual]) DB.fichas[obraAtual] = {};
@@ -2511,8 +2596,8 @@ function selecionarObra(nome){
   var of = DB.fichas[obraAtual] || {};
   var temAguardando = Object.keys(of).some(function(k){ var e=of[k]; return e && e.aprovacao && e.aprovacao.status==="submetido"; });
   _filtroFichas = (temAguardando && podeAprovar()) ? "submetido" : "todos";
-  // Abre a landing/workspace da obra (menu: Cronograma | Fichas)
-  trocarModo("workspace");
+  // Abre a landing/workspace da obra (ou executa a navegação solicitada após carregar do banco)
+  if(depois) depois(); else trocarModo("workspace");
 }
 
 function mostrarSeletorObra(){
@@ -3072,7 +3157,16 @@ function abrirCurvaS(){
   var hojeISO=_hojeISO();
   function realTerm(f){ var d=(DB.cronogramaDados&&DB.cronogramaDados[obraAtual]&&DB.cronogramaDados[obraAtual][f.id])||{}; if(d.realFim) return d.realFim; var fin=_finalizacao(f.id); if(fin&&fin.status==="aprovado") return f.fim||f.ini; return null; }
   function plannedAt(iso){ var acc=0; folhas.forEach(function(f){ var fe=_cronoFimEf(f); var w=Math.max(f.dur,0.5); if(!f.ini){return;} if(iso>=fe) acc+=w; else if(iso<=f.ini) acc+=0; else { var frac=_cDias(_cdISO(f.ini),_cdISO(iso))/Math.max(_cDias(_cdISO(f.ini),_cdISO(fe)),1); acc+=w*Math.max(0,Math.min(1,frac)); } }); return totDur?acc/totDur*100:0; }
-  function realAt(iso){ var acc=0; folhas.forEach(function(f){ var rt=realTerm(f); if(rt&&iso>=rt) acc+=Math.max(f.dur,0.5); }); return totDur?acc/totDur*100:0; }
+  // Fração REAL executada de uma atividade até a data iso (baseada na execução efetiva):
+  //  - concluída (data real de conclusão) → 100% a partir da data real;
+  //  - em andamento → percentual efetivamente executado (atribuído a hoje, único ponto conhecido).
+  function realFrac(f, iso){
+    var rt=realTerm(f);
+    if(rt && iso>=rt) return 1;
+    if(!rt && iso>=hojeISO){ var p=_cronoPctTarefa(f)/100; return Math.max(0,Math.min(1,p)); }
+    return 0;
+  }
+  function realAt(iso){ var acc=0; folhas.forEach(function(f){ acc+=Math.max(f.dur,0.5)*realFrac(f,iso); }); return totDur?acc/totDur*100:0; }
   // amostragem semanal
   var pts=[]; for(var k=0;k<=Math.ceil(span/7);k++){ var d=new Date(min.getFullYear(),min.getMonth(),min.getDate()+k*7); if(d>max) d=max; var iso=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); pts.push(iso); if(d>=max) break; }
   if(pts[pts.length-1]!==maxISO) pts.push(maxISO);
@@ -3080,14 +3174,23 @@ function abrirCurvaS(){
   function X(iso){ return padL + _cDias(min,_cdISO(iso))/span*(W-padL-padR); }
   function Y(p){ return padT + (100-p)/100*(H-padT-padB); }
   function linha(fn, cor, ateHoje){ var dd=""; for(var i=0;i<pts.length;i++){ var iso=pts[i]; if(ateHoje && iso>hojeISO) break; dd+=(i===0?"M":"L")+X(iso).toFixed(1)+","+Y(fn(iso)).toFixed(1)+" "; } return dd?'<path d="'+dd+'" fill="none" stroke="'+cor+'" stroke-width="2.5" stroke-linejoin="round"/>':''; }
+  // Linha REALIZADO: pontos até hoje + ponto final exatamente em hoje (realizado atual).
+  function pathReal(){
+    var arr=[]; for(var i=0;i<pts.length;i++){ if(pts[i]<=hojeISO) arr.push(pts[i]); }
+    if(hojeISO>=minISO && hojeISO<=maxISO && (arr.length===0||arr[arr.length-1]!==hojeISO)) arr.push(hojeISO);
+    if(!arr.length) return "";
+    var dd=""; for(var j=0;j<arr.length;j++){ dd+=(j===0?"M":"L")+X(arr[j]).toFixed(1)+","+Y(realAt(arr[j])).toFixed(1)+" "; }
+    var lastX=X(arr[arr.length-1]).toFixed(1), lastY=Y(realAt(arr[arr.length-1])).toFixed(1);
+    return '<path d="'+dd+'" fill="none" stroke="#2e7d32" stroke-width="2.5" stroke-linejoin="round"/><circle cx="'+lastX+'" cy="'+lastY+'" r="3.5" fill="#2e7d32"/>';
+  }
   var grid=''; for(var g=0;g<=100;g+=25){ grid+='<line x1="'+padL+'" y1="'+Y(g)+'" x2="'+(W-padR)+'" y2="'+Y(g)+'" stroke="#eef0f3"/><text x="'+(padL-6)+'" y="'+(Y(g)+3)+'" font-size="9" fill="#9aa3b0" text-anchor="end">'+g+'%</text>'; }
   var xh=X(hojeISO); var hojeLine=(hojeISO>=minISO&&hojeISO<=maxISO)?'<line x1="'+xh+'" y1="'+padT+'" x2="'+xh+'" y2="'+(H-padB)+'" stroke="#e53935" stroke-dasharray="4 3"/><text x="'+xh+'" y="'+(padT+8)+'" font-size="9" fill="#e53935" text-anchor="middle">Hoje</text>':'';
   var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:'+W+'px;">'+grid+hojeLine
-    +linha(plannedAt,"#1565c0",false)+linha(realAt,"#2e7d32",true)
+    +linha(plannedAt,"#1565c0",false)+pathReal()
     +'<text x="'+padL+'" y="'+(H-8)+'" font-size="9" fill="#9aa3b0">'+_fmtBR(minISO)+'</text>'
     +'<text x="'+(W-padR)+'" y="'+(H-8)+'" font-size="9" fill="#9aa3b0" text-anchor="end">'+_fmtBR(maxISO)+'</text></svg>';
   // indicadores
-  var plNow=plannedAt(hojeISO>maxISO?maxISO:hojeISO), reNow=calc.geral, desvio=Math.round((reNow-plNow)*10)/10;
+  var plNow=plannedAt(hojeISO>maxISO?maxISO:hojeISO), reNow=Math.round(realAt(hojeISO>maxISO?maxISO:hojeISO)), desvio=Math.round((reNow-plNow)*10)/10;
   // dias de desvio: data em que o planejado atinge reNow
   var diaDesvio=0, achou=false;
   for(var k2=0;k2<=span;k2++){ var d2=new Date(min.getFullYear(),min.getMonth(),min.getDate()+k2); var iso2=d2.getFullYear()+"-"+String(d2.getMonth()+1).padStart(2,"0")+"-"+String(d2.getDate()).padStart(2,"0"); if(plannedAt(iso2)>=reNow){ diaDesvio=_cDias(_cdISO(iso2),_cdISO(hojeISO)); achou=true; break; } }
