@@ -508,6 +508,7 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .cs-leg{display:flex;gap:16px;font-size:11.5px;color:#555;justify-content:center;}
 .cs-leg i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle;}
 .cs-ind{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.cs-ind.cs-ind-3{grid-template-columns:repeat(3,1fr);}
 .cs-card{background:#fafbfc;border:1px solid #eef1f5;border-radius:10px;padding:10px;text-align:center;}
 .cs-num{font-size:20px;font-weight:bold;line-height:1.1;}
 .cs-lbl{font-size:10.5px;color:#8b94a7;margin-top:3px;}
@@ -604,8 +605,14 @@ main{max-width:1300px;margin:20px auto;padding:0 16px 60px;}
 .cp-nota{font-size:11.5px;color:#8b94a7;margin-top:8px;line-height:1.5;}
 .cp-pct-edit{margin-top:12px;border-top:1px solid #eef1f6;padding-top:10px;}
 .cp-pct-edit label{font-size:11.5px;font-weight:700;color:#5a6478;display:block;margin-bottom:6px;}
-.cp-pct-row{display:flex;align-items:center;gap:8px;}
-.cp-pct-row input[type=range]{flex:1 1 auto;}
+.cp-pct-row{display:flex;align-items:center;gap:10px;}
+.cp-pct-row input[type=range]{flex:1 1 auto;accent-color:var(--verde-escuro);height:6px;}
+.cp-pct-row b{font-size:15px;color:#1f2a3d;min-width:44px;text-align:right;}
+.cp-pct-presets{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0;}
+.cp-pct-chip{font-size:11px;font-weight:600;padding:4px 9px;border-radius:14px;border:1px solid #d4dae4;background:#fff;color:#3a4659;cursor:pointer;}
+.cp-pct-chip:hover{border-color:var(--verde);background:#f1f8e9;}
+.cp-pct-chip.on{background:var(--verde-escuro);border-color:var(--verde-escuro);color:#fff;}
+.cp-pct-save{width:100%;}
 .cp-status-big{font-size:15px;font-weight:700;padding:10px 14px;border-radius:10px;text-align:center;}
 .cp-status-expl{font-size:12px;color:#5a6478;line-height:1.55;margin-top:9px;}
 .cp-rel{display:flex;flex-direction:column;gap:11px;}
@@ -1919,22 +1926,23 @@ function enviarFinalizacao(taskId){
   if(direto) _setTerminoReal(taskId); // término real + Finish = hoje
   registrarLog(direto?"finalizacao-aprovada":"finalizacao-submetida",{obra:obraAtual,tarefa:taskId});
   registrarEvento(direto?"finalizacao_aprovada":"finalizacao_submetida",{entidade:"finalizacao",entidadeId:taskId,origem:"cronograma",depois:{status:(direto?"aprovado":"pendente"),servico:t.nome},detalhe:(direto?"Concluído direto pelo "+(ehAdmin()?"admin":"gestor")+": ":"Submissão no cronograma: ")+t.nome});
-  salvarDB(); atualizarBadgePendencias();
-  if(direto){
-    abrirModal("✅ Concluído!","<p style='font-size:13px;'>Serviço <b>"+escapeHtml(t.nome)+"</b> marcado como <b>🟢 Concluído</b>.</p>",
-      '<button type="button" onclick="fecharModalForce();trocarModo(\'workspace\')">OK</button>');
-  } else {
-    abrirModal("✅ Enviado!","<p style='font-size:13px;'>Finalização de <b>"+escapeHtml(t.nome)+"</b> enviada.<br>O serviço ficará <b>🟡 Pendente de Aprovação</b> até a decisão do administrador.</p>",
-      '<button type="button" onclick="fecharModalForce();trocarModo(\'workspace\')">OK</button>');
-  }
+  atualizarBadgePendencias();
+  _persistirUI(function(ok){ if(!ok) return;
+    if(direto){
+      abrirModal("✅ Concluído!","<p style='font-size:13px;'>Serviço <b>"+escapeHtml(t.nome)+"</b> marcado como <b>🟢 Concluído</b>.</p>",
+        '<button type="button" onclick="fecharModalForce();trocarModo(\'workspace\')">OK</button>');
+    } else {
+      abrirModal("✅ Enviado!","<p style='font-size:13px;'>Finalização de <b>"+escapeHtml(t.nome)+"</b> enviada.<br>O serviço ficará <b>🟡 Pendente de Aprovação</b> até a decisão do administrador.</p>",
+        '<button type="button" onclick="fecharModalForce();trocarModo(\'workspace\')">OK</button>');
+    }
+  }, direto?"✓ Serviço concluído":"✓ Enviado para aprovação");
 }
 // Marca término real + Finish = hoje (guarda o término planejado original)
+// Registra o TÉRMINO REAL da atividade (data efetiva de conclusão) SEM alterar o cronograma
+// planejado. O Planejado (datas do cronograma) permanece intacto — apenas o Realizado muda.
 function _setTerminoReal(taskId){
-  var hojeISO=_hojeISO();
   var d=_cronoDados(taskId);
-  var oc=DB.obraCronograma&&DB.obraCronograma[obraAtual];
-  if(oc&&oc.tarefas){ for(var k=0;k<oc.tarefas.length;k++){ if(oc.tarefas[k].id===taskId){ if(d.fimPlan==null) d.fimPlan=oc.tarefas[k].fim||""; oc.tarefas[k].fim=hojeISO; break; } } }
-  d.realFim=hojeISO;
+  d.realFim=_hojeISO();
 }
 function _setFinStatus(obra,taskId,status){
   if(!ehAdmin()){ alert("Apenas administradores podem aprovar/rejeitar finalizações."); return false; }
@@ -1946,8 +1954,8 @@ function _setFinStatus(obra,taskId,status){
   salvarDB(); atualizarBadgePendencias();
   return true;
 }
-function aprovarFinalizacao(taskId,obra){ if(_setFinStatus(obra||obraAtual,taskId,"aprovado")){ fecharModalForce(); fecharCronoPanel(); renderAtual(); } }
-function rejeitarFinalizacao(taskId,obra){ if(_setFinStatus(obra||obraAtual,taskId,"rejeitado")){ fecharModalForce(); fecharCronoPanel(); renderAtual(); } }
+function aprovarFinalizacao(taskId,obra){ if(_setFinStatus(obra||obraAtual,taskId,"aprovado")){ _persistirUI(function(){ fecharModalForce(); fecharCronoPanel(); renderAtual(); }, "✓ Finalização aprovada"); } }
+function rejeitarFinalizacao(taskId,obra){ if(_setFinStatus(obra||obraAtual,taskId,"rejeitado")){ _persistirUI(function(){ fecharModalForce(); fecharCronoPanel(); renderAtual(); }, "✓ Finalização rejeitada"); } }
 function aprovarFinalizacaoBell(obra,taskId){ if(_setFinStatus(obra,taskId,"aprovado")){ if(obra===obraAtual) renderAtual(); abrirPendencias(); } }
 function rejeitarFinalizacaoBell(obra,taskId){ if(_setFinStatus(obra,taskId,"rejeitado")){ if(obra===obraAtual) renderAtual(); abrirPendencias(); } }
 
@@ -2317,6 +2325,17 @@ function salvarComFeedback(){
   salvarDBAgora().then(function(ok){
     if(ok) mostrarToast("✓ Alterações salvas com sucesso");
     else mostrarToast("⚠️ Sem conexão — salvo localmente, será sincronizado");
+  });
+}
+// #15 — Após aplicar a mutação no DB, grava no banco com LOADING (bloqueia interação),
+// confirma a persistência e só então mostra sucesso e executa a navegação (depois).
+function _persistirUI(depois, okMsg){
+  mostrarLoading("Salvando…"); var t0=Date.now();
+  salvarDBAgora().then(function(ok){
+    _finLoading(t0, function(){
+      mostrarToast(ok?(okMsg||"✓ Alterações salvas com sucesso"):"⚠️ Não foi possível salvar. Tente novamente.", !ok);
+      if(depois) depois(ok);
+    });
   });
 }
 // Recarrega TODO o estado do banco (fonte de verdade) e reconstrói a tela.
@@ -2907,10 +2926,8 @@ function wizFinalizar(){
   registrarLog("criar-obra-cronograma",{obra:nome, tarefas:_wiz.parsed.tarefas.length});
   registrarEvento("obra_criada",{obra:nome,entidade:"obra",entidadeId:nome,origem:"wizard",depois:{nome:nome,tarefas:_wiz.parsed.tarefas.length},detalhe:"Obra criada com cronograma ("+_wiz.parsed.tarefas.length+" tarefas)"});
   registrarEvento("cronograma_importado",{obra:nome,entidade:"cronograma",entidadeId:nome,origem:"import",depois:{tarefas:_wiz.parsed.tarefas.length},detalhe:"Cronograma importado"});
-  salvarDB();
   _wiz=null;
-  fecharModalForce();
-  selecionarObra(nome);
+  _persistirUI(function(ok){ if(!ok) return; fecharModalForce(); selecionarObra(nome); }, "✓ Obra criada com sucesso");
 }
 
 document.getElementById("cronoFileInput").addEventListener("change", function(e){
@@ -3074,10 +3091,8 @@ function aplicarReupload(){
   removed.forEach(function(rr){ registrarEvento("atividade_alterada",{obra:obra,entidade:"atividade",entidadeId:rr.id,origem:"import",antes:{nome:rr.nome,ini:rr.ini,fim:rr.fim},depois:{status:"removida"},detalhe:"Atividade removida no reprocessamento: "+rr.nome}); });
   changed.forEach(function(cc){ var nl=newByKey[cc.key]; registrarEvento("datas_alteradas",{obra:obra,entidade:"atividade",entidadeId:(remap[String(cc.id)]||cc.id),origem:"import",antes:{ini:cc.ini,fim:cc.fim},depois:{ini:nl.ini,fim:nl.fim},detalhe:"Datas alteradas no reprocessamento: "+cc.nome}); });
   _reupParsed=null;
-  salvarDB(); atualizarBadgePendencias();
-  fecharModalForce();
-  renderCronograma();
-  mostrarStatus("🔄 Cronograma atualizado ("+added.length+" novas, "+removed.length+" removidas)");
+  atualizarBadgePendencias();
+  _persistirUI(function(){ fecharModalForce(); renderCronograma(); }, "✓ Cronograma atualizado ("+added.length+" novas, "+removed.length+" removidas)");
 }
 document.getElementById("cronoReuploadInput").addEventListener("change", function(e){
   var file=e.target.files[0]; e.target.value="";
@@ -3121,10 +3136,7 @@ function salvarDatasAtividade(id){
   tk.ini=ini; tk.fim=fim;
   registrarEvento("datas_alteradas",{entidade:"atividade",entidadeId:id,origem:"cronograma",antes:antes,depois:{ini:ini,fim:fim},
     detalhe:"Datas alteradas manualmente ("+(antes.ini?_fmtBR(antes.ini):"—")+"→"+(ini?_fmtBR(ini):"—")+" / "+(antes.fim?_fmtBR(antes.fim):"—")+"→"+(fim?_fmtBR(fim):"—")+")"+(motivo?" — motivo: "+motivo:"")+": "+tk.nome});
-  salvarDB(); fecharModalForce();
-  if(modoAtual==="cronograma") renderCronograma();
-  renderCronoPanel(id);
-  mostrarStatus("📅 Datas atualizadas");
+  _persistirUI(function(){ fecharModalForce(); if(modoAtual==="cronograma") renderCronograma(); renderCronoPanel(id); }, "✓ Datas atualizadas");
 }
 
 // ===== #4 HISTÓRICO DO CRONOGRAMA (auditoria) =====
@@ -3150,13 +3162,18 @@ function abrirCurvaS(){
   var folhas=t.filter(function(x){ return !x.temFilhos; });
   if(!folhas.length){ abrirModal("📈 Planejado × Real","<p style='font-size:13px;'>Sem atividades para comparar.</p>",'<button type="button" class="secundario" onclick="fecharModalForce()">Fechar</button>'); return; }
   var totDur=0; folhas.forEach(function(f){ totDur+=Math.max(f.dur,0.5); });
+  // Datas PLANEJADAS (baseline do cronograma) — independentes da execução real.
+  function planIniDe(f){ return f.ini; }
+  function planFimDe(f){ var d=(DB.cronogramaDados&&DB.cronogramaDados[obraAtual]&&DB.cronogramaDados[obraAtual][f.id])||{}; var fp=(d.fimPlan!=null&&d.fimPlan!=="")?d.fimPlan:(f.fim||""); if(fp) return fp; if(f.ini&&f.dur>0){ var dd=_cdISO(f.ini); dd.setDate(dd.getDate()+f.dur); return dd.getFullYear()+"-"+String(dd.getMonth()+1).padStart(2,"0")+"-"+String(dd.getDate()).padStart(2,"0"); } return f.ini; }
   var minISO=null,maxISO=null;
-  folhas.forEach(function(f){ if(f.ini&&(!minISO||f.ini<minISO))minISO=f.ini; var fe=_cronoFimEf(f); if(fe&&(!maxISO||fe>maxISO))maxISO=fe; });
+  folhas.forEach(function(f){ var pi=planIniDe(f), pf=planFimDe(f); if(pi&&(!minISO||pi<minISO))minISO=pi; if(pf&&(!maxISO||pf>maxISO))maxISO=pf; });
   if(!minISO){ minISO=_hojeISO(); } if(!maxISO||maxISO<minISO) maxISO=minISO;
   var min=_cdISO(minISO), max=_cdISO(maxISO), span=Math.max(_cDias(min,max),1);
   var hojeISO=_hojeISO();
-  function realTerm(f){ var d=(DB.cronogramaDados&&DB.cronogramaDados[obraAtual]&&DB.cronogramaDados[obraAtual][f.id])||{}; if(d.realFim) return d.realFim; var fin=_finalizacao(f.id); if(fin&&fin.status==="aprovado") return f.fim||f.ini; return null; }
-  function plannedAt(iso){ var acc=0; folhas.forEach(function(f){ var fe=_cronoFimEf(f); var w=Math.max(f.dur,0.5); if(!f.ini){return;} if(iso>=fe) acc+=w; else if(iso<=f.ini) acc+=0; else { var frac=_cDias(_cdISO(f.ini),_cdISO(iso))/Math.max(_cDias(_cdISO(f.ini),_cdISO(fe)),1); acc+=w*Math.max(0,Math.min(1,frac)); } }); return totDur?acc/totDur*100:0; }
+  // Término REAL de conclusão (execução efetiva) — independente do planejado.
+  function realTerm(f){ var d=(DB.cronogramaDados&&DB.cronogramaDados[obraAtual]&&DB.cronogramaDados[obraAtual][f.id])||{}; if(d.realFim) return d.realFim; var fin=_finalizacao(f.id); if(fin&&fin.status==="aprovado"&&fin.aprovadoData) return paraISO(fin.aprovadoData); return null; }
+  // PLANEJADO acumulado até a data iso — usa EXCLUSIVAMENTE as datas do cronograma.
+  function plannedAt(iso){ var acc=0; folhas.forEach(function(f){ var pi=planIniDe(f), pf=planFimDe(f), w=Math.max(f.dur,0.5); if(!pi){return;} if(iso>=pf) acc+=w; else if(iso<=pi) acc+=0; else { var frac=_cDias(_cdISO(pi),_cdISO(iso))/Math.max(_cDias(_cdISO(pi),_cdISO(pf)),1); acc+=w*Math.max(0,Math.min(1,frac)); } }); return totDur?acc/totDur*100:0; }
   // Fração REAL executada de uma atividade até a data iso (baseada na execução efetiva):
   //  - concluída (data real de conclusão) → 100% a partir da data real;
   //  - em andamento → percentual efetivamente executado (atribuído a hoje, único ponto conhecido).
@@ -3197,11 +3214,10 @@ function abrirCurvaS(){
   if(!achou) diaDesvio=_cDias(max,_cdISO(hojeISO));
   var atraso = diaDesvio>0, statusTxt = diaDesvio===0?"No prazo":(atraso?(diaDesvio+" dia(s) atrasado"):((-diaDesvio)+" dia(s) adiantado"));
   var statusCor = diaDesvio===0?"#2e7d32":(atraso?"#c62828":"#2e7d32");
-  var cards='<div class="cs-ind">'
+  var cards='<div class="cs-ind cs-ind-3">'
     +'<div class="cs-card"><div class="cs-num" style="color:#1565c0;">'+Math.round(plNow)+'%</div><div class="cs-lbl">Planejado (hoje)</div></div>'
     +'<div class="cs-card"><div class="cs-num" style="color:#2e7d32;">'+reNow+'%</div><div class="cs-lbl">Realizado</div></div>'
-    +'<div class="cs-card"><div class="cs-num" style="color:'+(desvio<0?"#c62828":"#2e7d32")+';">'+(desvio>0?"+":"")+desvio+'%</div><div class="cs-lbl">Desvio acumulado</div></div>'
-    +'<div class="cs-card"><div class="cs-num" style="color:'+statusCor+';font-size:15px;">'+statusTxt+'</div><div class="cs-lbl">Cronograma</div></div>'
+    +'<div class="cs-card"><div class="cs-num" style="color:'+statusCor+';font-size:15px;">'+statusTxt+'</div><div class="cs-lbl">'+(diaDesvio===0?"Situação":(atraso?"Atraso":"Adiantamento"))+'</div></div>'
     +'</div>';
   var leg='<div class="cs-leg"><span><i style="background:#1565c0;"></i>Planejado</span><span><i style="background:#2e7d32;"></i>Realizado</span></div>';
   document.getElementById("modal-box").classList.add("modal-wide");
@@ -3802,16 +3818,39 @@ function _fmtBR(iso){ var p=String(iso).split("-"); return p[2]+"/"+p[1]+"/"+p[0
 function _hojeISO(){ var d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 
 function _cronoPct(id){ var o=(DB.cronogramaPct&&DB.cronogramaPct[obraAtual])||{}; var v=o[id]; return (typeof v==="number")?v:0; }
+function _nomeAtividade(id){ var oc=DB.obraCronograma&&DB.obraCronograma[obraAtual]; if(oc&&oc.tarefas){ for(var i=0;i<oc.tarefas.length;i++){ if(oc.tarefas[i].id===id) return oc.tarefas[i].nome; } } return ""; }
+// Define o percentual executado da atividade (#17). Status é derivado automaticamente do %.
 function setCronoPct(id,val){
   val=Math.max(0,Math.min(100,parseInt(val,10)||0));
+  var nome=_nomeAtividade(id);
+  // Regra de ficha obrigatória: não permite chegar a 100% sem ficha aprovada (exceto isentos).
+  if(val>=100 && !_podeConcluirDireto(id, nome)){ alert("⚠️ "+_MSG_FICHA_OBRIG); return false; }
   if(!DB.cronogramaPct) DB.cronogramaPct={};
   if(!DB.cronogramaPct[obraAtual]) DB.cronogramaPct[obraAtual]={};
-  var _antes=DB.cronogramaPct[obraAtual][id];
+  var _antes=DB.cronogramaPct[obraAtual][id]||0;
+  if(_antes===val) return true;
   DB.cronogramaPct[obraAtual][id]=val;
+  // Alimenta a Curva S (Realizado): registra/limpa a data real de conclusão.
+  var d=_cronoDados(id);
+  if(val>=100){ if(!d.realFim) d.realFim=_hojeISO(); } else if(d.realFim){ delete d.realFim; }
   registrarLog("crono-progresso",{obra:obraAtual,tarefa:id,pct:val});
-  registrarEvento("atividade_alterada",{entidade:"atividade",entidadeId:id,origem:"cronograma",antes:{pct:(_antes||0)},depois:{pct:val},detalhe:"Progresso manual alterado para "+val+"%"});
+  registrarEvento("atividade_alterada",{entidade:"atividade",entidadeId:id,origem:"cronograma",antes:{pct:_antes},depois:{pct:val},detalhe:"Progresso alterado de "+_antes+"% para "+val+"%"+(nome?": "+nome:"")});
   salvarDB();
-  renderCronograma();
+  if(modoAtual==="cronograma") renderCronograma();
+  return true;
+}
+// Editor de % no Side Panel (#17)
+function _cpPctLive(v){ var el=document.getElementById("crono-pct-v"); if(el) el.textContent=v+"%"; }
+function _cpPctPreset(id,v){ var s=document.getElementById("crono-pct"); if(s) s.value=v; _cpPctLive(v); _cpPctSalvar(id); }
+function _cpPctSalvar(id){
+  var s=document.getElementById("crono-pct"); if(!s) return;
+  var v=parseInt(s.value,10)||0;
+  var atual=(DB.cronogramaPct&&DB.cronogramaPct[obraAtual]&&DB.cronogramaPct[obraAtual][id])||0;
+  if(v===atual){ mostrarToast("Nenhuma alteração no progresso"); return; }
+  mostrarLoading("Salvando progresso…"); var t0=Date.now();
+  var ok=setCronoPct(id, v);
+  if(ok===false){ esconderLoading(); renderCronoPanel(id); return; }
+  salvarDBAgora().then(function(sv){ _finLoading(t0, function(){ mostrarToast(sv?"✓ Alterações salvas com sucesso":"⚠️ Falha ao salvar. Tente novamente.", !sv); renderCronoPanel(id); }); });
 }
 
 function _cronoTarefas(){
@@ -3897,7 +3936,12 @@ function _formularioDaAtividade(nome){
 function _atividadeTemFormulario(nome){ return _formularioDaAtividade(nome)!=null; }
 // REGRA (#7): atividade com formulário obrigatório só pode ser concluída com >=1 ficha APROVADA.
 // Vale para todos os perfis (inclusive admin/gestor). Sem formulário → conclusão direta permitida.
+// #16 — Palavras-chave que ISENTAM a atividade de ficha (serviços que, por natureza, não exigem
+// inspeção). Centralizado aqui para adicionar novas exceções sem mexer na regra de negócio.
+var _EXCECOES_FICHA=["desmontagem","demolicao","retirada"];
+function _atividadeIsentaFicha(nome){ var t=_normHdr(nome); return _EXCECOES_FICHA.some(function(k){ return t.indexOf(k)>=0; }); }
 function _podeConcluirDireto(taskId, nome){
+  if(_atividadeIsentaFicha(nome)) return true;           // #16 — desmontagem/demolição/retirada
   if(!_atividadeTemFormulario(nome)) return true;
   return _fichasDaAtividade(taskId).some(function(f){ return f.est&&f.est.aprovacao&&f.est.aprovacao.status==="aprovado"; });
 }
@@ -3927,15 +3971,21 @@ function _cronoStatus(tar){
     }
   } else {
   }
-  // Base: obras importadas com Percentual Concluído usam o % como fonte; demais usam o Finish (legado)
-  if(_obraUsaPct()){
-    if((_cronoPct(tar.id)||0) >= 100) return "concluida";
-  } else if(tar.fim){ return "concluida"; }
+  // Base — status derivado do PERCENTUAL executado (#17): 0=não iniciada, 1-99=em andamento, 100=concluída.
   var hoje=_hojeISO();
-  if(!tar.ini || hoje < tar.ini) return "futura";
-  // fim previsto estimado = início + duração (para detectar atraso quando não há Finish)
   var fimPrev = tar.fim || tar.ini;
-  if(!tar.fim && tar.dur>0){ var d=_cdISO(tar.ini); d.setDate(d.getDate()+tar.dur); fimPrev=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+  if(!tar.fim && tar.ini && tar.dur>0){ var d=_cdISO(tar.ini); d.setDate(d.getDate()+tar.dur); fimPrev=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+  if(_obraUsaPct()){
+    var p=_cronoPct(tar.id)||0;
+    if(p>=100) return "concluida";
+    if(fimPrev && hoje>fimPrev) return "atrasada";     // incompleta e já passou do término previsto
+    if(p>0) return "andamento";                         // 1–99% = em andamento
+    if(!tar.ini || hoje<tar.ini) return "futura";       // 0% e ainda não deveria ter iniciado
+    return "futura";                                    // 0% (não iniciada)
+  }
+  // Legado (obras sem coluna Percentual): Finish preenchido = concluída, senão datas.
+  if(tar.fim) return "concluida";
+  if(!tar.ini || hoje < tar.ini) return "futura";
   if(hoje > fimPrev) return "atrasada";
   return "andamento";
 }
@@ -3983,11 +4033,9 @@ function marcarConcluidoManual(taskId){
     aprovadoPor:(sessao?sessao.nome:""), aprovadoData:hoje, manual:true
   };
   _setTerminoReal(taskId); // Real término + Finish = hoje (guarda o término planejado original para reabrir)
-  registrarEvento("finalizacao_aprovada",{entidade:"finalizacao",entidadeId:taskId,origem:"cronograma",depois:{status:"aprovado",manual:true,realFim:hojeISO,finish:hojeISO},detalhe:"Concluído manualmente pelo gestor (término real "+hoje+"): "+nome});
-  salvarDB(); atualizarBadgePendencias();
-  if(modoAtual==="cronograma") renderCronograma();
-  renderCronoPanel(taskId);
-  mostrarStatus("✅ Concluída — término real e Finish marcados para hoje");
+  registrarEvento("finalizacao_aprovada",{entidade:"finalizacao",entidadeId:taskId,origem:"cronograma",depois:{status:"aprovado",manual:true,realFim:hojeISO},detalhe:"Concluído manualmente pelo gestor (término real "+hoje+"): "+nome});
+  atualizarBadgePendencias();
+  _persistirUI(function(){ if(modoAtual==="cronograma") renderCronograma(); renderCronoPanel(taskId); }, "✓ Atividade concluída");
 }
 function reabrirConcluidoManual(taskId){
   if(!podeAprovar()){ alert("Apenas Gestores e Administradores podem reabrir conclusões."); return; }
@@ -3999,10 +4047,8 @@ function reabrirConcluidoManual(taskId){
   if(oc&&oc.tarefas&&d&&d.fimPlan!=null){ for(var k=0;k<oc.tarefas.length;k++){ if(oc.tarefas[k].id===taskId){ oc.tarefas[k].fim=d.fimPlan; break; } } }
   if(d){ delete d.realFim; delete d.fimPlan; }
   registrarEvento("atividade_alterada",{entidade:"finalizacao",entidadeId:taskId,origem:"cronograma",antes:{status:(fin&&fin.status)||"aprovado"},depois:{status:"reaberto"},detalhe:"Conclusão revertida pelo gestor (término planejado restaurado)"});
-  salvarDB(); atualizarBadgePendencias();
-  if(modoAtual==="cronograma") renderCronograma();
-  renderCronoPanel(taskId);
-  mostrarStatus("↩ Conclusão revertida — término planejado restaurado");
+  atualizarBadgePendencias();
+  _persistirUI(function(){ if(modoAtual==="cronograma") renderCronograma(); renderCronoPanel(taskId); }, "✓ Conclusão revertida");
 }
 // Eventos de auditoria relacionados a uma atividade (a própria atividade + suas fichas)
 function _eventosDaAtividade(taskId, ligs){
@@ -4297,7 +4343,13 @@ function renderCronoPanel(id){
   else if(st==="atrasada"){ stExpl="O término previsto já passou e ainda não há Finish nem aprovação."; }
   else { stExpl="Atividade ainda não iniciada — prevista para uma data futura."; }
 
-  var editavel = !x.temFilhos && !x.fim && podeEditar();
+  var editavel = !x.temFilhos && podeEditar();   // #17 — % editável em qualquer atividade-folha
+  var resp=(fin&&fin.por)||(lig&&lig.est&&lig.est.respInsp)||"—";
+  var isenta=(!x.temFilhos)&&_atividadeIsentaFicha(x.nome);
+  // Última alteração (auditoria)
+  var evTask=(!x.temFilhos)?_eventosDaAtividade(id, ligs):[];
+  var ultEv=evTask.length?evTask[0]:null;
+  var ultData=""; if(ultEv){ try{ ultData=new Date(ultEv.ts).toLocaleString("pt-BR"); }catch(e){ ultData=ultEv.ts||""; } }
 
   // ===== HEADER =====
   var html='<div class="cp-head" style="background:'+info.bg+';">'
@@ -4305,28 +4357,35 @@ function renderCronoPanel(id){
     +'<div class="cp-h-nome">📌 '+escapeHtml(x.nome)+'</div>'
     +'<div class="cp-h-meta">'
       +'<span class="cp-badge" style="color:'+info.cor+';background:#fff;border:1px solid '+info.cor+'33;">'+info.ic+' '+stLblFull+'</span>'
+      +'<span class="cp-badge" style="color:#3a4659;background:#fff;border:1px solid #d4dae4;">📈 '+pct+'%</span>'
       +(anc.fase&&anc.fase!=="—"?'<span class="cp-fase">'+escapeHtml(anc.fase)+'</span>':'')
-    +'</div></div>';
+    +'</div>'
+    +(!x.temFilhos?'<div class="cp-h-resp">👤 '+escapeHtml(resp)+'</div>':'')
+  +'</div>';
 
   html+='<div class="cp-body">';
 
-  // ===== CARD RESUMO =====
-  html+='<div class="cp-card"><div class="cp-card-tit">Resumo</div><div class="cp-grid">'
-    +_cpLinha("📅","Início", x.ini?_fmtBR(x.ini):"—")
-    +_cpLinha("📅","Término", x.fim?_fmtBR(x.fim):'<span style="color:#c62828;">— (sem Finish)</span>')
+  // ===== SEÇÃO 1 — INFORMAÇÕES GERAIS =====
+  html+='<div class="cp-card"><div class="cp-card-tit">Informações gerais</div><div class="cp-grid">'
+    +_cpLinha("📌","Atividade", escapeHtml(x.nome))
+    +_cpLinha("📁","Marco", escapeHtml((anc.fase&&anc.fase!=="—")?anc.fase:"Geral"))
     +_cpLinha("⏱","Duração", x.dur+" dia(s)")
     +_cpLinha("📈","Progresso", pct+"%")
-    +_cpLinha("👤","Responsável", escapeHtml((fin&&fin.por)||"—"))
+    +_cpLinha("👤","Responsável", escapeHtml(resp))
     +_cpLinha("🔗","Predecessoras", x.pred?escapeHtml(x.pred):"—")
+    +(ultEv?_cpLinha("🕓","Última atualização", escapeHtml(ultData)):"")
+    +(ultEv?_cpLinha("✍","Por", escapeHtml(ultEv.usuario||"—")):"")
   +'</div>';
-  // editor de % (atividades-folha sem Finish)
+  // editor de % (qualquer atividade-folha) — slider + presets. Status derivado do %.
   if(editavel){
-    html+='<div class="cp-pct-edit"><label>Atualizar % concluído</label>'
-      +'<div class="cp-pct-row"><input type="range" id="crono-pct" min="0" max="100" step="5" value="'+pct+'" oninput="document.getElementById(\'crono-pct-v\').textContent=this.value+\'%\'">'
-      +'<b id="crono-pct-v">'+pct+'%</b>'
-      +'<button type="button" class="cp-btn cp-btn-pri" onclick="setCronoPct('+id+',document.getElementById(\'crono-pct\').value);renderCronoPanel('+id+')">💾 Salvar</button></div></div>';
+    var presets=[0,10,25,40,50,75,90,100].map(function(v){ return '<button type="button" class="cp-pct-chip'+(pct===v?" on":"")+'" onclick="_cpPctPreset('+id+','+v+')">'+v+'%</button>'; }).join('');
+    html+='<div class="cp-pct-edit"><label>Progresso executado</label>'
+      +'<div class="cp-pct-row"><input type="range" id="crono-pct" min="0" max="100" step="5" value="'+pct+'" oninput="_cpPctLive(this.value)">'
+      +'<b id="crono-pct-v">'+pct+'%</b></div>'
+      +'<div class="cp-pct-presets">'+presets+'</div>'
+      +'<button type="button" class="cp-btn cp-btn-pri cp-pct-save" onclick="_cpPctSalvar('+id+')">💾 Salvar progresso</button></div>';
   } else if(x.temFilhos){
-    html+='<div class="cp-nota">% calculado automaticamente pela média das atividades do grupo.</div>';
+    html+='<div class="cp-nota">% calculado automaticamente pela média (ponderada por duração) das atividades do grupo.</div>';
   }
   html+='</div>';
 
@@ -5783,9 +5842,7 @@ function confirmarAprovacao(acao){
   registrarHistorico(fichaId, acao==="aprovar"?"aprovação":"reprovação", obs.trim()||"");
   registrarLog(acao==="aprovar"?"aprovacao":"reprovacao", {fichaId:fichaId, obra:obraAtual});
   registrarEvento(acao==="aprovar"?"ficha_aprovada":"ficha_reprovada",{entidade:"ficha",entidadeId:fichaId,origem:"ficha",antes:{status:"submetido"},depois:{status:est.aprovacao.status,por:est.aprovacao.por},detalhe:(est.codigo?est.codigo+" — ":"")+(est.nome||"")+(obs.trim()?(" · "+obs.trim()):"")});
-  salvarDB();
-  fecharModalForce();
-  renderAtual();
+  _persistirUI(function(){ fecharModalForce(); renderAtual(); }, acao==="aprovar"?"✓ Ficha aprovada":"✓ Ficha reprovada");
 }
 
 function reabrirAprovacao(){
@@ -5849,7 +5906,7 @@ function confirmarSubmissao(){
   registrarHistorico(fichaId, "submeteu para aprovação");
   registrarLog("submissao",{fichaId:fichaId,obra:obraAtual});
   registrarEvento("ficha_submetida",{entidade:"ficha",entidadeId:fichaId,origem:"ficha",antes:{status:"pendente"},depois:{status:"submetido",por:est.aprovacao.por},detalhe:(est.codigo?est.codigo+" — ":"")+(est.nome||"")});
-  salvarDB(); fecharModalForce(); renderAtual();
+  _persistirUI(function(){ fecharModalForce(); renderAtual(); }, "✓ Ficha submetida para aprovação");
 }
 
 function devolverEdicao(){
